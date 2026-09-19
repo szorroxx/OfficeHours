@@ -1,0 +1,20 @@
+functions:
+  # Your custom Tiger Data tool
+  tiger_data_query:
+    _type: tiger_data_query
+    connection_string: "postgres://tsdbadmin:x5r29z6xoivr04k4@k6m06850hi.x1m52fmxdl.tsdb.cloud.timescale.com:36756/tsdb?sslmode=require"
+
+llms:
+  # The LLM the agent reasons with
+  nim_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning
+    temperature: 0.0
+
+workflow:
+  # tool_calling_agent is the simplest agent type — good for a hackathon
+  _type: tool_calling_agent
+  tool_names: [tiger_data_query]
+  llm_name: nim_llm
+  verbose: true
+  handle_tool_errors: true

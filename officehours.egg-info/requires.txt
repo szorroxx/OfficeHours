@@ -1,0 +1,4 @@
+nvidia-nat[langchain]
+asyncpg
+pydantic
+flask

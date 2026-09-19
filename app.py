@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template, request, jsonify
 from openai import OpenAI
 from dotenv import load_dotenv
+from nat.runtime.loader import load_workflow
 
 load_dotenv()  # reads .env file into environment variables
 
@@ -22,23 +23,14 @@ def home():
 
 
 @app.route("/api/prompt", methods=["POST"])
-def prompt_nemotron():
+async def prompt_nemotron():
     data = request.get_json()
     user_input = data.get("prompt", "")
 
-    if not user_input:
-        return jsonify({"error": "No prompt provided"}), 400
+    async with load_workflow("config.yml") as workflow:
+        result = await workflow.run(user_input)
 
-    try:
-        response = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": user_input + "\n\nPlease only response with a snippet of HTML code that can be embedded into a HTML div. Do not include any text outside of the HTML code. Do not include any script tags or JavaScript code. Do not include any CSS code. Only provide the HTML code. Make sure the HTML code is valid and can be embedded into a div. Make sure the HTML code is responsive and works well on different screen sizes. Make sure the HTML code is accessible and follows best practices for web accessibility. Make sure the final HTML code is easily readable by a human when it's rendered."}],
-        )
-        answer = response.choices[0].message.content
-        return jsonify({"response": answer})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return jsonify({"response": result})
 
 
 if __name__ == "__main__":

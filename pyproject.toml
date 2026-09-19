@@ -1,5 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "app"
+name = "officehours"
 version = "0.1.0"
-dependencies = [ "flask", "openai", "python-dotenv" ]
-requires-python = "~=3.12.0"
+requires-python = ">=3.10"
+dependencies = [
+    "nvidia-nat[langchain]",
+    "asyncpg",
+    "pydantic",
+    "flask",
+]
+
+[tool.setuptools]
+py-modules = ["tiger_data_tool", "app"]
+
+[tool.setuptools.packages.find]
+include = ["api*", "orchestrator*"]
+
+[project.entry-points.'nat.plugins']
+officehours = "tiger_data_tool"
