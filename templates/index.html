@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>College Organizer</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 0 20px; }
+    textarea { width: 100%; height: 80px; font-size: 1rem; padding: 8px; box-sizing: border-box; }
+    button { margin-top: 10px; padding: 10px 20px; font-size: 1rem; cursor: pointer; }
+    #response-box { margin-top: 20px; padding: 15px; background: #f4f4f4; border-radius: 8px; white-space: pre-wrap; min-height: 40px; }
+    #loading { display: none; color: #888; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Ask your assistant</h1>
+
+  <textarea id="prompt-input" placeholder="e.g. What's due for me this week?"></textarea>
+  <br>
+  <button id="submit-btn">Ask</button>
+  <div id="loading">Thinking...</div>
+  <div id="response-box"></div>
+
+  <script>
+    const submitBtn = document.getElementById("submit-btn");
+    const promptInput = document.getElementById("prompt-input");
+    const responseBox = document.getElementById("response-box");
+    const loading = document.getElementById("loading");
+
+    submitBtn.addEventListener("click", async () => {
+      const promptText = promptInput.value.trim();
+      if (!promptText) return;
+
+      loading.style.display = "block";
+      responseBox.textContent = "";
+      submitBtn.disabled = true;
+
+      try {
+        const res = await fetch("/api/prompt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: promptText }),
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+          responseBox.textContent = "Error: " + data.error;
+        } else {
+          responseBox.innerHTML = data.response;
+        }
+      } catch (err) {
+        responseBox.textContent = "Something went wrong: " + err;
+      } finally {
+        loading.style.display = "none";
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
