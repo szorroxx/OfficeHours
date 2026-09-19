@@ -27,10 +27,17 @@ async def prompt_nemotron():
     data = request.get_json()
     user_input = data.get("prompt", "")
 
-    async with load_workflow("config.yml") as workflow:
-        result = await workflow.run(user_input)
+    if not user_input:
+        return jsonify({"error": "No prompt provided"}), 400
 
-    return jsonify({"response": result})
+    try:
+        async with load_workflow("config.yml") as workflow:
+            async with workflow.run(user_input) as runner:
+                result = await runner.result(to_type=str)
+        return jsonify({"response": result})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

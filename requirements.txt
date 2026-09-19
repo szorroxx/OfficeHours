@@ -2,3 +2,4 @@ flask[async]
 openai
 python-dotenv
 nvidia-nat[langchain]
+ask-sdk
