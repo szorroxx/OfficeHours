@@ -1,0 +1,117 @@
+# NeMo Agent Toolkit workflow for Office Hours.
+#
+#   nat run --config_file config.yml --input "do I have anything overdue?"
+#
+# NO SECRETS IN THIS FILE. NAT interpolates ${VAR} from the environment, and
+# config.py loads .env at startup, so credentials stay in .env (which is
+# gitignored) and this file is safe to commit.
+#
+# Required in .env:
+#   NVIDIA_API_KEY=nvapi-...
+#   ANTHROPIC_API_KEY=sk-ant-...     (for the schedule / study-guide agents)
+#   DATABASE_URL=postgres://...      (read by db.py, not referenced here)
+#   MODE=mock                        (mock | live | replay)
+#
+# Note: MODE=mock makes every tool below return fixtures, so you can develop
+# and demo this workflow with no database and no credits.
+
+functions:
+  # ---- reads (fast, free) ----------------------------------------------
+  tiger_data_freshness:
+    _type: tiger_data_freshness
+
+  tiger_data_query:
+    _type: tiger_data_query
+    default_days: 14
+
+  tiger_data_overdue:
+    _type: tiger_data_overdue
+
+  tiger_data_schedule:
+    _type: tiger_data_schedule
+
+  tiger_data_workload_history:
+    _type: tiger_data_workload_history
+
+  tiger_data_events:
+    _type: tiger_data_events
+
+  # ---- writes (slower, cost money) -------------------------------------
+  canvas_refresh:
+    _type: canvas_refresh
+
+  make_schedule:
+    _type: make_schedule
+
+  make_study_guide:
+    _type: make_study_guide
+
+  update_preferences:
+    _type: update_preferences
+
+llms:
+  nim_llm:
+    _type: nim
+    # Super is the right default for tool calling: it's built for agentic
+    # orchestration. The previous value here was nemotron-3-nano-omni, which is
+    # the multimodal variant NVIDIA positions as a *perception* sub-agent
+    # (image/audio/video input) rather than an orchestrator -- the wrong tool
+    # for deciding which function to call.
+    #
+    # Confirm the exact ID your key can see with: python3 smoke_test.py
+    model_name: ${NEMOTRON_MODEL:-nvidia/nemotron-3-super-120b-a12b}
+    api_key: ${NVIDIA_API_KEY}
+    # Nemotron is a reasoning model. NVIDIA's guidance is temperature ~1.0 when
+    # reasoning is on and 0.0 when it's off; 0.0 with reasoning enabled tends to
+    # produce degenerate traces. Tool selection wants low variance, so if you
+    # keep temperature 0.0, disable thinking.
+    temperature: 0.0
+    max_tokens: 2048
+
+  # A smaller, faster model for the voice path later on.
+  nim_fast:
+    _type: nim
+    model_name: ${NEMOTRON_FAST_MODEL:-nvidia/nemotron-3-nano-30b-a3b}
+    api_key: ${NVIDIA_API_KEY}
+    temperature: 0.0
+    max_tokens: 600
+
+workflow:
+  _type: tool_calling_agent
+  llm_name: nim_llm
+  tool_names:
+    - tiger_data_freshness
+    - tiger_data_query
+    - tiger_data_overdue
+    - tiger_data_schedule
+    - tiger_data_workload_history
+    - tiger_data_events
+    - canvas_refresh
+    - make_schedule
+    - make_study_guide
+    - update_preferences
+  verbose: true
+  handle_tool_errors: true
+  # Without a cap, a confused model can loop on tool calls and burn credits.
+  max_iterations: 6
+  system_prompt: |
+    You are the orchestrator for Office Hours, a study assistant.
+
+    How to decide what to call:
+    - For anything about current coursework, call tiger_data_freshness first.
+      It is instant and free and tells you whether the stored data is stale.
+    - If the data is fresh, read it with tiger_data_query. Do not refresh.
+    - If it is stale, or the student asks for the latest, call canvas_refresh
+      once, then read the data.
+    - For "am I behind" or "anything overdue", use tiger_data_overdue.
+    - make_schedule and make_study_guide need real data. Read before you write.
+
+    Rules:
+    - Never invent an assignment, due date, grade, or event. If it isn't in the
+      tool results, say it isn't there.
+    - Never ask for or store a password. If the student offers one, tell them to
+      generate a revocable Canvas access token instead.
+    - Tools return JSON. Read the fields; don't just echo the JSON back.
+
+    When you have enough, stop calling tools and answer in 2-4 sentences.
+    Describe what the student needs to know, not which tools you used.
