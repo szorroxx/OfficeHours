@@ -1,0 +1,11 @@
+# Secrets. Never commit this.
+.env
+
+# Recorded model responses (they contain your data)
+cache/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
