@@ -1,0 +1,1046 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --paper: #F4F5F7;
+    --panel: #FFFFFF;
+    --ink: #1B1F3B;
+    --ink-soft: #3A3F5C;
+    --muted: #6B7280;
+    --line: #E6E7EB;
+    --accent: #4F46E5;
+    --red: #E5484D;
+    --amber: #C77700;
+    --green: #2A9D6B;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  .root { font-family: 'Inter', system-ui, sans-serif; color: var(--ink); min-height: 100%; }
+
+  /* ---------- Login ---------- */
+  .login { background: var(--ink); min-height: 560px; display: grid; place-items: center; padding: 40px 20px; }
+  .login-card { background: var(--panel); border-radius: 18px; padding: 36px 32px 30px; width: 100%; max-width: 372px; }
+  .wordmark { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -0.02em; display: flex; align-items: center; gap: 9px; }
+  .beacon { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 5px rgba(79,70,229,0.15); }
+  .tagline { color: var(--muted); font-size: 14px; margin-top: 8px; }
+  .field { margin-top: 18px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
+  .field input { width: 100%; font: inherit; font-size: 15px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 10px; outline: none; color: var(--ink); background: var(--panel); }
+  .field input:focus { border-color: var(--accent); }
+  .signin { width: 100%; margin-top: 24px; font: inherit; font-weight: 600; font-size: 15px; background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 12px; cursor: pointer; }
+  .signin:hover { background: #4038c9; }
+  .demo-note { text-align: center; color: var(--muted); font-size: 12px; margin-top: 16px; }
+
+  /* ---------- Dashboard shell ---------- */
+  .app { background: var(--paper); min-height: 100%; line-height: 1.5; }
+  .hero { background: var(--ink); color: var(--paper); padding: 34px 40px 30px; }
+  .hero-top { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  .greeting { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px; letter-spacing: -0.01em; }
+  .hero-right { display: flex; align-items: center; gap: 16px; }
+  .today { color: #A9ADC9; font-size: 14px; font-weight: 500; white-space: nowrap; }
+  .add-btn { font: inherit; font-weight: 600; font-size: 13px; color: #fff; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22); border-radius: 9px; padding: 8px 13px; cursor: pointer; white-space: nowrap; }
+  .add-btn:hover { background: rgba(255,255,255,0.18); }
+  .focus { margin-top: 22px; display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius); }
+  .focus-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .focus-label { color: #A9ADC9; font-size: 12px; font-weight: 600; }
+  .focus-title { font-weight: 600; font-size: 15px; }
+  .focus-when { margin-left: auto; font-size: 13px; font-weight: 600; white-space: nowrap; }
+
+  /* ---------- Schedule ---------- */
+  .section-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; color: var(--ink-soft); padding: 24px 40px 10px; }
+  .schedule { padding: 0 40px; }
+  .week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+  .day { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; min-height: 96px; }
+  .day.today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .day-name { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+  .day.today .day-name { color: var(--accent); }
+  .day-date { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .pills { display: flex; flex-direction: column; gap: 6px; }
+  .pill { border-left: 3px solid var(--muted); background: var(--paper); border-radius: 6px; padding: 5px 7px; }
+  .pill-title { font-size: 12px; font-weight: 600; line-height: 1.3; }
+  .pill-meta { font-size: 11px; color: var(--muted); }
+  .day-empty { font-size: 11px; color: var(--muted); }
+  @media (max-width: 900px) {
+    .week { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); overflow-x: auto; padding-bottom: 6px; }
+  }
+
+  /* ---------- Folders ---------- */
+  .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; padding: 14px 40px 48px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); display: flex; flex-direction: column; overflow: hidden; }
+  .panel-head { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
+  .panel-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+  .count { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--paper); border-radius: 20px; padding: 2px 9px; }
+  .source { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .list { padding: 6px 8px 10px; display: flex; flex-direction: column; }
+
+  .item { display: flex; gap: 12px; padding: 11px 10px; border-radius: 10px; align-items: flex-start; }
+  .item:hover { background: var(--paper); }
+  .item.done .item-title { text-decoration: line-through; color: var(--muted); }
+  .item.done .rail { opacity: 0.3; }
+  .rail { width: 4px; align-self: stretch; border-radius: 4px; flex-shrink: 0; background: var(--muted); }
+  .check { width: 19px; height: 19px; margin-top: 1px; border: 1.5px solid var(--line); border-radius: 6px; cursor: pointer; flex-shrink: 0; display: grid; place-items: center; transition: border-color 0.12s, background 0.12s; }
+  .check:hover { border-color: var(--accent); }
+  .check.on { background: var(--accent); border-color: var(--accent); }
+  .check.on svg { display: block; }
+  .check svg { display: none; width: 12px; height: 12px; }
+  .item-body { flex: 1; min-width: 0; }
+  .item-title { font-size: 14px; font-weight: 500; }
+  .item-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .item-when { font-size: 12px; font-weight: 600; margin-top: 3px; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; align-items: center; }
+  .chip { font-size: 11px; font-weight: 600; color: var(--ink-soft); background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: 1px 8px; }
+  .day-select { font: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink-soft); background: var(--panel); cursor: pointer; }
+  .del { border: none; background: none; color: var(--muted); cursor: pointer; font-size: 17px; line-height: 1; opacity: 0; padding: 0 2px; align-self: center; }
+  .item:hover .del { opacity: 1; }
+  .del:hover { color: var(--red); }
+
+  .todo-add { display: flex; gap: 8px; padding: 12px 12px 4px; }
+  .todo-add input { flex: 1; font: inherit; font-size: 14px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 9px; outline: none; background: var(--panel); color: var(--ink); }
+  .todo-add input:focus { border-color: var(--accent); }
+  .todo-add button { font: inherit; font-weight: 600; font-size: 14px; background: var(--accent); color: #fff; border: none; border-radius: 9px; padding: 0 16px; cursor: pointer; }
+  .todo-add button:hover { background: #4038c9; }
+  .empty { padding: 22px 12px; text-align: center; color: var(--muted); font-size: 13px; }
+
+  .footer { padding: 0 40px 30px; display: flex; justify-content: flex-end; gap: 20px; }
+  .linkbtn { font: inherit; font-size: 12px; color: var(--muted); background: none; border: none; cursor: pointer; }
+  .linkbtn:hover { color: var(--red); }
+
+  /* ---------- Add modal ---------- */
+  .modal-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(15,17,34,0.55); display: grid; place-items: center; padding: 20px; }
+  .modal { background: var(--panel); border-radius: 16px; width: 100%; max-width: 400px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(15,17,34,0.4); }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 14px; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 17px; }
+  .modal-head button { background: none; border: none; font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer; }
+  .modal-head button:hover { color: var(--ink); }
+  .seg { display: flex; gap: 6px; padding: 0 20px 4px; }
+  .seg button { flex: 1; font: inherit; font-weight: 600; font-size: 13px; padding: 8px 4px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); border-radius: 9px; cursor: pointer; }
+  .seg button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .add-fields { padding: 14px 20px 4px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+  .add-fields label { display: block; font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-bottom: 5px; }
+  .add-fields input { width: 100%; font: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; outline: none; color: var(--ink); background: var(--panel); }
+  .add-fields input:focus { border-color: var(--accent); }
+  .field-row { display: flex; gap: 10px; }
+  .field-row > div { flex: 1; }
+  .hint { font-size: 12px; color: var(--muted); font-weight: 400; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 20px 20px; }
+  .modal-actions button { font: inherit; font-weight: 600; font-size: 14px; border-radius: 9px; padding: 9px 16px; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+  .modal-actions .primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .modal-actions .primary:hover { background: #4038c9; }
+
+  .title-row { display: flex; align-items: center; gap: 6px; }
+  .chev { margin-left: auto; color: var(--muted); font-size: 16px; line-height: 1; transition: transform 0.15s; }
+  .item.open .chev { transform: rotate(90deg); }
+  .detail { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); flex-direction: column; gap: 9px; cursor: default; }
+  .item.open .detail { display: flex; }
+  .detail-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
+  .detail-k { color: var(--muted); }
+  .detail-v { color: var(--ink); font-weight: 500; text-align: right; }
+  .detail-ctrl { display: flex; flex-direction: column; gap: 5px; }
+  .detail-label { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .est-inputs { display: flex; gap: 8px; }
+  .est-inputs input { width: 72px; font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; outline: none; color: var(--ink); background: var(--panel); }
+  .est-inputs input:focus { border-color: var(--accent); }
+  .detail-actions { display: flex; gap: 8px; margin-top: 2px; }
+  .detail-btn { font: inherit; font-size: 12px; font-weight: 600; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); cursor: pointer; }
+  .detail-btn:hover { background: var(--paper); }
+  .detail-btn.danger { color: var(--red); border-color: #F3C6C8; }
+  .detail-btn.danger:hover { background: #FDECEC; }
+
+  .panel.flash { animation: flash 0.9s ease; }
+  @keyframes flash { 0% { box-shadow: 0 0 0 3px rgba(79,70,229,0.45); } 100% { box-shadow: 0 0 0 0 rgba(79,70,229,0); } }
+
+  /* ---------- Chat ---------- */
+  .chat-launch { position: fixed; right: 24px; bottom: 24px; z-index: 40; display: flex; align-items: center; gap: 9px; background: var(--accent); color: #fff; border: none; border-radius: 26px; padding: 13px 18px; cursor: pointer; font: inherit; font-weight: 600; font-size: 14px; box-shadow: 0 8px 24px rgba(27,31,59,0.24); }
+  .chat-launch:hover { background: #4038c9; }
+  .chat-launch svg { width: 18px; height: 18px; }
+  .chat { position: fixed; right: 24px; bottom: 24px; z-index: 41; width: 384px; max-width: calc(100vw - 32px); height: 540px; max-height: calc(100vh - 48px); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 16px 48px rgba(27,31,59,0.28); display: flex; flex-direction: column; overflow: hidden; }
+  .chat-head { background: var(--ink); color: var(--paper); padding: 15px 18px; display: flex; align-items: center; gap: 10px; }
+  .chat-head .beacon { width: 18px; height: 18px; box-shadow: 0 0 0 4px rgba(79,70,229,0.18); }
+  .chat-head-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; }
+  .chat-head-sub { color: #A9ADC9; font-size: 12px; }
+  .chat-close { margin-left: auto; background: none; border: none; color: #A9ADC9; cursor: pointer; font-size: 20px; line-height: 1; }
+  .chat-close:hover { color: #fff; }
+  .chat-log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .bubble { max-width: 82%; padding: 10px 13px; border-radius: 14px; font-size: 14px; line-height: 1.45; white-space: pre-wrap; word-wrap: break-word; }
+  .bubble.assistant { background: var(--paper); color: var(--ink); align-self: flex-start; border-bottom-left-radius: 5px; }
+  .bubble.user { background: var(--accent); color: #fff; align-self: flex-end; border-bottom-right-radius: 5px; }
+  .typing { align-self: flex-start; background: var(--paper); border-radius: 14px; border-bottom-left-radius: 5px; padding: 12px 14px; display: flex; gap: 4px; }
+  .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite; }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
+  .chat-input { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); }
+  .chat-input input { flex: 1; font: inherit; font-size: 14px; padding: 10px 13px; border: 1px solid var(--line); border-radius: 10px; outline: none; color: var(--ink); background: var(--panel); }
+  .chat-input input:focus { border-color: var(--accent); }
+  .chat-input button { font: inherit; font-weight: 600; font-size: 14px; background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 0 15px; cursor: pointer; }
+  .chat-input button:hover { background: #4038c9; }
+  .chat-input button:disabled { opacity: 0.5; cursor: default; }
+
+  @media (prefers-reduced-motion: reduce) { .typing span, .panel.flash { animation: none; } }
+  @media (max-width: 860px) {
+    .hero { padding: 28px 20px 24px; }
+    .section-title { padding: 20px 20px 10px; }
+    .schedule { padding: 0 20px; }
+    .board { padding: 14px 20px 40px; }
+    .footer { padding: 0 20px 24px; }
+    .chat { right: 12px; bottom: 12px; left: 12px; width: auto; height: calc(100vh - 24px); }
+    .chat-launch { right: 16px; bottom: 16px; }
+  }
+</style>
+
+<div class="root">
+  <!-- Login -->
+  <div class="login" id="login-view">
+    <div class="login-card">
+      <div class="wordmark"><span class="beacon"></span>Office Hours</div>
+      <div class="tagline">Everything due, in one place.</div>
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" type="text" autocomplete="username" placeholder="pittstudent" />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="********" />
+      </div>
+      <button class="signin" id="signin">Sign in</button>
+      <div class="demo-note">Demo mode. Any credentials work.</div>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="app" id="dashboard-view" style="display:none">
+    <header class="hero">
+      <div class="hero-top">
+        <div class="greeting" id="greeting">Loading...</div>
+        <div class="hero-right">
+          <div class="today" id="today"></div>
+          <button class="add-btn" id="open-add">+ Add item</button>
+        </div>
+      </div>
+      <div class="focus" id="focus" style="display:none">
+        <span class="focus-dot" id="focus-dot"></span>
+        <div>
+          <div class="focus-label">Next up</div>
+          <div class="focus-title" id="focus-title"></div>
+        </div>
+        <div class="focus-when" id="focus-when"></div>
+      </div>
+    </header>
+
+    <div class="section-title">This week</div>
+    <div class="schedule"><div class="week" id="week"></div></div>
+
+    <main class="board">
+      <section class="panel" id="panel-assignments">
+        <div class="panel-head">
+          <div class="panel-title">Assignments <span class="count" id="a-count">0</span></div>
+          <div class="source">Synced from Canvas</div>
+        </div>
+        <div class="list" id="assignments"></div>
+      </section>
+
+      <section class="panel" id="panel-exams">
+        <div class="panel-head">
+          <div class="panel-title">Upcoming exams <span class="count" id="x-count">0</span></div>
+          <div class="source">Synced from Canvas</div>
+        </div>
+        <div class="list" id="exams"></div>
+      </section>
+
+      <section class="panel" id="panel-events">
+        <div class="panel-head">
+          <div class="panel-title">Events <span class="count" id="e-count">0</span></div>
+          <div class="source">Synced from Canvas</div>
+        </div>
+        <div class="list" id="events"></div>
+      </section>
+
+      <section class="panel" id="panel-todos">
+        <div class="panel-head">
+          <div class="panel-title">To-do <span class="count" id="t-count">0</span></div>
+          <div class="source">Yours to manage</div>
+        </div>
+        <div class="todo-add">
+          <input id="todo-input" type="text" placeholder="Add a task and press Enter" maxlength="140" />
+          <button id="todo-btn">Add</button>
+        </div>
+        <div class="list" id="todos"></div>
+      </section>
+    </main>
+
+    <div class="footer">
+      <button class="linkbtn" id="reset">Reset demo data</button>
+      <button class="linkbtn" id="signout">Sign out</button>
+    </div>
+  </div>
+
+  <!-- Item templates. Each type's display slots are labeled with data-field.
+       The AI fills the DATA template (see backend/assistant.js TEMPLATES); the
+       frontend maps that data into these slots. data-optional rows drop out
+       when empty. data-mount points are where interactive controls are injected. -->
+  <template id="tpl-assignment"><div class="item">
+    <div class="rail" data-mount="rail"></div>
+    <div class="check" data-action="toggle"></div>
+    <div class="item-body" data-action="expand">
+      <div class="title-row"><div class="item-title" data-field="title"></div><span class="chev">&rsaquo;</span></div>
+      <div class="item-meta" data-field="meta"></div>
+      <div class="item-when" data-field="when"></div>
+      <div class="chip-row" data-mount="chips"></div>
+      <div class="detail">
+        <div class="detail-row"><span class="detail-k">Course</span><span class="detail-v" data-field="course"></span></div>
+        <div class="detail-row"><span class="detail-k">Due</span><span class="detail-v" data-field="dueFull"></span></div>
+        <div class="detail-row"><span class="detail-k">Source</span><span class="detail-v" data-field="sourceLabel"></span></div>
+        <div class="detail-ctrl"><div class="detail-label">Work on</div><div data-mount="workOn"></div></div>
+        <div data-mount="estimate"></div>
+        <div data-mount="actions"></div>
+      </div>
+    </div>
+  </div></template>
+
+  <template id="tpl-exam"><div class="item">
+    <div class="rail" data-mount="rail"></div>
+    <div class="check" data-action="toggle"></div>
+    <div class="item-body" data-action="expand">
+      <div class="title-row"><div class="item-title" data-field="title"></div><span class="chev">&rsaquo;</span></div>
+      <div class="item-meta" data-field="meta"></div>
+      <div class="item-when" data-field="when"></div>
+      <div class="chip-row" data-mount="chips"></div>
+      <div class="detail">
+        <div class="detail-row"><span class="detail-k">Course</span><span class="detail-v" data-field="course"></span></div>
+        <div class="detail-row"><span class="detail-k">When</span><span class="detail-v" data-field="whenFull"></span></div>
+        <div class="detail-row" data-optional><span class="detail-k">Location</span><span class="detail-v" data-field="location"></span></div>
+        <div class="detail-row"><span class="detail-k">Source</span><span class="detail-v" data-field="sourceLabel"></span></div>
+        <div data-mount="estimate"></div>
+        <div data-mount="actions"></div>
+      </div>
+    </div>
+  </div></template>
+
+  <template id="tpl-event"><div class="item">
+    <div class="rail" data-mount="rail"></div>
+    <div class="check" data-action="toggle"></div>
+    <div class="item-body" data-action="expand">
+      <div class="title-row"><div class="item-title" data-field="title"></div><span class="chev">&rsaquo;</span></div>
+      <div class="item-meta" data-field="meta"></div>
+      <div class="item-when" data-field="when"></div>
+      <div class="detail">
+        <div class="detail-row" data-optional><span class="detail-k">Location</span><span class="detail-v" data-field="location"></span></div>
+        <div class="detail-row"><span class="detail-k">Starts</span><span class="detail-v" data-field="startFull"></span></div>
+        <div class="detail-row"><span class="detail-k">Source</span><span class="detail-v" data-field="sourceLabel"></span></div>
+        <div data-mount="actions"></div>
+      </div>
+    </div>
+  </div></template>
+
+  <template id="tpl-todo"><div class="item">
+    <div class="check" data-action="toggle"></div>
+    <div class="item-body" data-action="expand">
+      <div class="title-row"><div class="item-title" data-field="title"></div><span class="chev">&rsaquo;</span></div>
+      <div class="chip-row" data-mount="chips"></div>
+      <div class="detail">
+        <div class="detail-row" data-optional><span class="detail-k">Added</span><span class="detail-v" data-field="added"></span></div>
+        <div data-mount="estimate"></div>
+        <div data-mount="actions"></div>
+      </div>
+    </div>
+  </div></template>
+
+  <!-- Add item -->
+  <div class="modal-overlay" id="add-overlay" style="display:none">
+    <div class="modal">
+      <div class="modal-head">Add to your board <button id="add-cancel-x">&times;</button></div>
+      <div class="seg" id="type-seg">
+        <button data-type="assignment" class="on">Assignment</button>
+        <button data-type="exam">Exam</button>
+        <button data-type="event">Event</button>
+        <button data-type="task">Task</button>
+      </div>
+      <div class="add-fields" id="add-fields"></div>
+      <div class="modal-actions">
+        <button id="add-cancel">Cancel</button>
+        <button id="add-submit" class="primary">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assistant chat -->
+  <button class="chat-launch" id="chat-launch" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H8l-4 4V5z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    Ask Office Hours
+  </button>
+  <div class="chat" id="chat-window" style="display:none">
+    <div class="chat-head">
+      <span class="beacon"></span>
+      <div>
+        <div class="chat-head-title">Office Hours assistant</div>
+        <div class="chat-head-sub">Reads your courses and updates the board</div>
+      </div>
+      <button class="chat-close" id="chat-close">&times;</button>
+    </div>
+    <div class="chat-log" id="chat-log"></div>
+    <div class="chat-input">
+      <input id="chat-text" type="text" placeholder="Ask about assignments, exams, events..." maxlength="500" />
+      <button id="chat-send">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---- Data shapes (storage keys) ----
+  // assignment: { id, title, course, dueISO, scheduledISO?, estimateMins?, source, completed }
+  // exam:       { id, title, course, dueISO, location?, estimateMins?, source, completed }
+  // event:      { id, title, location, startISO, source, completed }
+  // todo:       { id, text, done, estimateMins?, createdISO }
+  // completed:  [id, ...]   username: string   chat: [{ role, content }]
+
+  // Point this at your backend to make the server (TigerData/Postgres) the
+  // source of truth: the board loads from it, every change goes through it, and
+  // AI updates come back from it. Empty = fully local (browser storage + the
+  // built-in mock chat), so the standalone demo still runs.
+  // Example: 'https://your-app.onrender.com/api'
+  const API_BASE = '';
+  const backend = () => API_BASE !== '';
+
+  async function apiGet(path) {
+    const r = await fetch(API_BASE + path);
+    if (!r.ok) throw new Error('GET ' + path + ' -> ' + r.status);
+    return r.json();
+  }
+  async function apiSend(method, path, body) {
+    const r = await fetch(API_BASE + path, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+    if (!r.ok) throw new Error(method + ' ' + path + ' -> ' + r.status);
+    return method === 'DELETE' ? null : r.json();
+  }
+
+  const CHECK = '<svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const TYPE_COLOR = { assignment: 'var(--accent)', exam: 'var(--red)', event: 'var(--green)' };
+
+  const daysFromNow = n => { const d = new Date(); d.setHours(9,0,0,0); d.setDate(d.getDate()+n); return d.toISOString(); };
+
+  const seedAssignments = () => ([
+    { id:'a1', title:'Problem Set 5: Hermitian operators', course:'PHYS 1370 — Quantum', dueISO: daysFromNow(0), estimateMins:120, source:'canvas', completed:false },
+    { id:'a2', title:'Lab writeup: Gauss-Jordan inverse',   course:'CS 1550 — Systems',   dueISO: daysFromNow(2), estimateMins:90,  source:'canvas', completed:false },
+    { id:'a3', title:'Reading response, Ch. 3',             course:'CS 1501 — Algorithms', dueISO: daysFromNow(5), source:'canvas', completed:false },
+  ]);
+  const seedExams = () => ([
+    { id:'x1', title:'Midterm 1', course:'CS 1501 — Algorithms', dueISO: daysFromNow(6), location:'Lawrence 106', estimateMins:180, source:'canvas', completed:false },
+    { id:'x2', title:'Quiz 2', course:'PHYS 1370 — Quantum', dueISO: daysFromNow(3), location:'Thaw 102', source:'canvas', completed:false },
+  ]);
+  const seedEvents = () => ([
+    { id:'e1', title:'HackPitt kickoff', location:'Cathedral of Learning', startISO: daysFromNow(1), source:'canvas', completed:false },
+    { id:'e2', title:'Office hours: Dr. Reyes', location:'Sennott Sq. 6203', startISO: daysFromNow(3), source:'canvas', completed:false },
+  ]);
+
+  let assignments = [], exams = [], events = [], todos = [];
+  let username = '';
+
+  // Local persistence: Claude artifact storage when present, else browser
+  // localStorage (so it persists when hosted on Vercel). Used in local mode and
+  // for client-side chat history in both modes.
+  async function get(key, fallback) {
+    try {
+      if (typeof window !== 'undefined' && window.storage) { const r = await window.storage.get(key); return r ? JSON.parse(r.value) : fallback; }
+      const v = localStorage.getItem('oh:' + key); return v == null ? fallback : JSON.parse(v);
+    } catch { return fallback; }
+  }
+  async function set(key, value) {
+    try {
+      if (typeof window !== 'undefined' && window.storage) { await window.storage.set(key, JSON.stringify(value)); return; }
+      localStorage.setItem('oh:' + key, JSON.stringify(value));
+    } catch (e) { console.error('save failed', key, e); }
+  }
+
+  // ---- Date + formatting helpers ----
+  function daysUntil(iso) { return Math.ceil((new Date(iso) - new Date()) / 86400000); }
+  function urgency(iso) {
+    const d = daysUntil(iso);
+    if (d < 0)  return { color:'var(--red)',   label: d === -1 ? 'Overdue by 1 day' : `Overdue by ${-d} days` };
+    if (d === 0) return { color:'var(--red)',   label:'Due today' };
+    if (d <= 2)  return { color:'var(--amber)', label: d === 1 ? 'Due tomorrow' : `Due in ${d} days` };
+    return { color:'var(--green)', label:`Due in ${d} days` };
+  }
+  function examWhen(iso) {
+    const d = daysUntil(iso);
+    if (d < 0)  return { color:'var(--muted)', label:'Passed' };
+    if (d === 0) return { color:'var(--red)',   label:'Exam today' };
+    if (d <= 2)  return { color:'var(--amber)', label: d === 1 ? 'Exam tomorrow' : `In ${d} days` };
+    return { color:'var(--green)', label:`In ${d} days` };
+  }
+  function eventWhen(iso) {
+    const dt = new Date(iso), d = daysUntil(iso);
+    const t = dt.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+    if (d <= 0)  return { color:'var(--red)',   label:`Today, ${t}` };
+    if (d === 1) return { color:'var(--amber)', label:`Tomorrow, ${t}` };
+    if (d <= 2)  return { color:'var(--amber)', label:`In ${d} days` };
+    return { color:'var(--green)', label: dt.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' }) };
+  }
+  function estLabel(mins) {
+    if (!mins) return '';
+    const h = Math.floor(mins/60), m = mins%60;
+    if (h && m) return `~${h}h ${m}m`;
+    if (h) return `~${h}h`;
+    return `~${m}m`;
+  }
+  function dayKey(dLike) { const d = new Date(dLike); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function weekDays() { const base = new Date(); base.setHours(0,0,0,0); return Array.from({length:7}, (_,i) => { const d = new Date(base); d.setDate(base.getDate()+i); return d; }); }
+  function dayOptionISO(d) { const x = new Date(d); x.setHours(9,0,0,0); return x.toISOString(); }
+
+  function el(tag, cls, html) { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; }
+  function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+  function displayName() { return username ? username.charAt(0).toUpperCase() + username.slice(1) : 'there'; }
+
+  // ---- Expand state + detail helpers ----
+  let expanded = new Set();
+  function toggleExpand(id) { expanded.has(id) ? expanded.delete(id) : expanded.add(id); renderAll(); }
+
+  function fullDate(iso) { return new Date(iso).toLocaleString([], { weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }); }
+  function kindArray(k) { return k === 'assignments' ? assignments : k === 'exams' ? exams : k === 'events' ? events : todos; }
+
+  async function deleteItem(kind, id) {
+    const arr = kindArray(kind);
+    const i = arr.findIndex(x => x.id === id);
+    if (i >= 0) arr.splice(i, 1);
+    expanded.delete(id);
+    if (backend()) await apiSend('DELETE', '/' + kind + '/' + id);
+    else await set(kind, arr);
+    renderAll();
+  }
+  async function setEstimate(kind, id, mins) {
+    const it = kindArray(kind).find(x => x.id === id); if (!it) return;
+    if (mins) it.estimateMins = mins; else delete it.estimateMins;
+    if (backend()) await apiSend('PATCH', '/' + kind + '/' + id, { estimateMins: mins || null });
+    else await set(kind, kindArray(kind));
+    renderAll();
+  }
+
+  function labeledControl(label, node) {
+    const w = el('div','detail-ctrl');
+    w.appendChild(el('div','detail-label', label));
+    w.appendChild(node);
+    return w;
+  }
+  function estimateEditor(kind, item) {
+    const wrap = el('div','est-inputs');
+    const cur = item.estimateMins || 0;
+    const h = el('input'); h.type = 'number'; h.min = 0; h.placeholder = 'h'; if (cur) h.value = Math.floor(cur/60);
+    const m = el('input'); m.type = 'number'; m.min = 0; m.max = 59; m.placeholder = 'm'; if (cur) m.value = cur % 60;
+    const save = () => setEstimate(kind, item.id, (+h.value || 0) * 60 + (+m.value || 0));
+    h.onchange = save; m.onchange = save;
+    wrap.appendChild(h); wrap.appendChild(m);
+    return labeledControl('Estimated time', wrap);
+  }
+  function detailActions(actions) {
+    const r = el('div','detail-actions');
+    actions.forEach(a => { const b = el('button','detail-btn' + (a.danger ? ' danger' : ''), a.label); b.onclick = () => a.onClick(); r.appendChild(b); });
+    return r;
+  }
+  function chip(text) { return text ? el('span','chip', text) : null; }
+
+  // ---- Template hydration ----
+  // Each item type has an HTML <template id="tpl-TYPE"> whose [data-field] slots
+  // are filled from a view model. This keeps the display structure declarative:
+  // the fields an item exposes are visible in the markup, not buried in JS.
+  //   vm = { id, done, expandable, railColor, whenColor,
+  //          fields:{ slotName: text },   // filled into [data-field="slotName"]
+  //          chips:[node], controls:{ mountName: node }, onToggle, onDelete }
+  // Rows tagged [data-optional] are removed when their field is empty.
+  function hydrate(type, vm) {
+    const node = document.getElementById('tpl-' + type).content.firstElementChild.cloneNode(true);
+    const isOpen = vm.expandable && expanded.has(vm.id);
+    if (vm.done) node.classList.add('done');
+    if (isOpen) node.classList.add('open');
+
+    const rail = node.querySelector('[data-mount="rail"]');
+    if (rail) { if (vm.railColor) rail.style.background = vm.railColor; else rail.remove(); }
+
+    const check = node.querySelector('[data-action="toggle"]');
+    if (check) {
+      if (vm.onToggle) { if (vm.done) check.classList.add('on'); check.innerHTML = CHECK; check.onclick = (e) => { e.stopPropagation(); vm.onToggle(); }; }
+      else check.remove();
+    }
+
+    node.querySelectorAll('[data-field]').forEach(elm => {
+      const key = elm.getAttribute('data-field');
+      const val = vm.fields[key];
+      if (val == null || val === '') { const row = elm.closest('[data-optional]'); if (row) row.remove(); else elm.textContent = ''; }
+      else elm.textContent = val;
+      if (key === 'when' && vm.whenColor) elm.style.color = vm.whenColor;
+    });
+
+    const body = node.querySelector('[data-action="expand"]');
+    const chev = node.querySelector('.chev');
+    if (vm.expandable && body) { body.style.cursor = 'pointer'; body.onclick = () => toggleExpand(vm.id); }
+    else if (chev) chev.remove();
+
+    const chipsMount = node.querySelector('[data-mount="chips"]');
+    if (chipsMount && vm.chips) vm.chips.filter(Boolean).forEach(c => chipsMount.appendChild(c));
+
+    const detail = node.querySelector('.detail');
+    if (detail) {
+      detail.onclick = (e) => e.stopPropagation();
+      if (isOpen && vm.controls) {
+        for (const [name, ctrl] of Object.entries(vm.controls)) {
+          const m = detail.querySelector('[data-mount="' + name + '"]');
+          if (m && ctrl) m.appendChild(ctrl);
+        }
+      }
+    }
+
+    if (vm.onDelete) { const del = el('button','del','\u00d7'); del.onclick = (e) => { e.stopPropagation(); vm.onDelete(); }; node.appendChild(del); }
+    return node;
+  }
+
+  // ---- Header + focus ----
+  function renderHeader() {
+    const h = new Date().getHours();
+    const part = h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
+    document.getElementById('greeting').textContent = `Good ${part}, ${displayName()}`;
+    document.getElementById('today').textContent = new Date().toLocaleDateString([], { weekday:'long', month:'long', day:'numeric' });
+
+    const pool = [
+      ...assignments.filter(a => !a.completed).map(a => ({ iso:a.dueISO, title:a.title, kind:'assignment' })),
+      ...exams.filter(x => !x.completed).map(x => ({ iso:x.dueISO, title:x.title, kind:'exam' })),
+    ].sort((p,q) => new Date(p.iso) - new Date(q.iso));
+
+    const f = document.getElementById('focus');
+    if (pool.length) {
+      const n = pool[0];
+      const w = n.kind === 'exam' ? examWhen(n.iso) : urgency(n.iso);
+      document.getElementById('focus-dot').style.background = w.color;
+      document.getElementById('focus-title').textContent = (n.kind === 'exam' ? 'Exam: ' : '') + n.title;
+      const when = document.getElementById('focus-when');
+      when.textContent = w.label; when.style.color = w.color;
+      f.style.display = 'flex';
+    } else { f.style.display = 'none'; }
+  }
+
+  // ---- Schedule (this week) ----
+  function renderSchedule() {
+    const wk = document.getElementById('week');
+    wk.innerHTML = '';
+    const todayKey = dayKey(new Date());
+    weekDays().forEach(d => {
+      const key = dayKey(d);
+      const col = el('div', 'day' + (key === todayKey ? ' today' : ''));
+      col.appendChild(el('div','day-name', d.toLocaleDateString([], { weekday:'short' })));
+      col.appendChild(el('div','day-date', d.toLocaleDateString([], { month:'short', day:'numeric' })));
+      const pills = el('div','pills');
+
+      const entries = [];
+      events.filter(e => dayKey(e.startISO) === key).forEach(e =>
+        entries.push({ color:TYPE_COLOR.event, title:e.title, meta:new Date(e.startISO).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) }));
+      exams.filter(x => !x.completed && dayKey(x.dueISO) === key).forEach(x =>
+        entries.push({ color:TYPE_COLOR.exam, title:x.title, meta:'Exam' }));
+      assignments.filter(a => !a.completed).forEach(a => {
+        const placed = a.scheduledISO || a.dueISO;
+        if (dayKey(placed) === key) entries.push({ color:TYPE_COLOR.assignment, title:a.title, meta: a.scheduledISO ? 'Planned' : 'Due' });
+      });
+
+      if (!entries.length) { pills.appendChild(el('div','day-empty','—')); }
+      else entries.forEach(e => {
+        const p = el('div','pill'); p.style.borderLeftColor = e.color;
+        p.appendChild(el('div','pill-title', escapeHtml(e.title)));
+        p.appendChild(el('div','pill-meta', escapeHtml(e.meta)));
+        pills.appendChild(p);
+      });
+      col.appendChild(pills);
+      wk.appendChild(col);
+    });
+  }
+
+  // ---- Folder renderers ----
+  function scheduleSelect(a) {
+    const sel = el('select','day-select');
+    const none = el('option', null, 'Not scheduled'); none.value = ''; sel.appendChild(none);
+    const current = a.scheduledISO ? dayKey(a.scheduledISO) : '';
+    weekDays().forEach(d => {
+      const o = el('option', null, d.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' }));
+      o.value = dayOptionISO(d);
+      if (dayKey(o.value) === current) o.selected = true;
+      sel.appendChild(o);
+    });
+    if (!current) none.selected = true;
+    sel.onclick = (e) => e.stopPropagation();
+    sel.onchange = () => setAssignmentDay(a.id, sel.value);
+    return sel;
+  }
+
+  const sourceLabel = (s) => s === 'manual' ? 'Added manually' : 'Synced from Canvas';
+  const shortDate = (iso) => new Date(iso).toLocaleDateString([], { month:'short', day:'numeric' });
+
+  function renderAssignments() {
+    const box = document.getElementById('assignments'); box.innerHTML = '';
+    const rows = [...assignments].sort((x,y) => new Date(x.dueISO) - new Date(y.dueISO));
+    if (!rows.length) { box.appendChild(el('div','empty','Nothing synced yet.')); return; }
+    rows.forEach(a => {
+      const done = !!a.completed, u = urgency(a.dueISO), open = expanded.has(a.id);
+      box.appendChild(hydrate('assignment', {
+        id: a.id, expandable: true, done, railColor: u.color, whenColor: u.color,
+        fields: { title: a.title, meta: a.course || '\u2014', when: u.label, course: a.course || '\u2014', dueFull: fullDate(a.dueISO), sourceLabel: sourceLabel(a.source) },
+        chips: [ chip(estLabel(a.estimateMins)), a.scheduledISO ? chip('Planned ' + shortDate(a.scheduledISO)) : null ],
+        controls: open ? { workOn: scheduleSelect(a), estimate: estimateEditor('assignments', a), actions: detailActions([{ label:'Delete', danger:true, onClick:() => deleteItem('assignments', a.id) }]) } : null,
+        onToggle: () => toggleComplete('assignments', a),
+      }));
+    });
+  }
+  function renderExams() {
+    const box = document.getElementById('exams'); box.innerHTML = '';
+    const rows = [...exams].sort((x,y) => new Date(x.dueISO) - new Date(y.dueISO));
+    if (!rows.length) { box.appendChild(el('div','empty','No exams scheduled.')); return; }
+    rows.forEach(x => {
+      const done = !!x.completed, w = examWhen(x.dueISO), open = expanded.has(x.id);
+      box.appendChild(hydrate('exam', {
+        id: x.id, expandable: true, done, railColor: w.color, whenColor: w.color,
+        fields: { title: x.title, meta: [x.course, x.location].filter(Boolean).join(' \u00b7 '), when: w.label, course: x.course || '\u2014', whenFull: fullDate(x.dueISO), location: x.location || '', sourceLabel: sourceLabel(x.source) },
+        chips: [ chip(estLabel(x.estimateMins)) ],
+        controls: open ? { estimate: estimateEditor('exams', x), actions: detailActions([{ label:'Delete', danger:true, onClick:() => deleteItem('exams', x.id) }]) } : null,
+        onToggle: () => toggleComplete('exams', x),
+      }));
+    });
+  }
+  function renderEvents() {
+    const box = document.getElementById('events'); box.innerHTML = '';
+    const rows = [...events].sort((x,y) => new Date(x.startISO) - new Date(y.startISO));
+    if (!rows.length) { box.appendChild(el('div','empty','Nothing synced yet.')); return; }
+    rows.forEach(e => {
+      const done = !!e.completed, w = eventWhen(e.startISO), open = expanded.has(e.id);
+      box.appendChild(hydrate('event', {
+        id: e.id, expandable: true, done, railColor: w.color, whenColor: w.color,
+        fields: { title: e.title, meta: e.location || '', when: w.label, location: e.location || '', startFull: fullDate(e.startISO), sourceLabel: sourceLabel(e.source) },
+        controls: open ? { actions: detailActions([{ label:'Delete', danger:true, onClick:() => deleteItem('events', e.id) }]) } : null,
+        onToggle: () => toggleComplete('events', e),
+      }));
+    });
+  }
+  function renderTodos() {
+    const box = document.getElementById('todos'); box.innerHTML = '';
+    if (!todos.length) box.appendChild(el('div','empty','Add your first task above.'));
+    [...todos].sort((a,b) => (a.done - b.done)).forEach(t => {
+      const open = expanded.has(t.id);
+      box.appendChild(hydrate('todo', {
+        id: t.id, expandable: true, done: t.done,
+        fields: { title: t.text, added: t.createdISO ? shortDate(t.createdISO) : '' },
+        chips: [ chip(estLabel(t.estimateMins)) ],
+        controls: open ? { estimate: estimateEditor('todos', t), actions: detailActions([{ label:'Delete', danger:true, onClick:() => deleteItem('todos', t.id) }]) } : null,
+        onToggle: () => toggleTodo(t),
+        onDelete: () => deleteItem('todos', t.id),
+      }));
+    });
+  }
+
+  function counts() {
+    document.getElementById('a-count').textContent = assignments.filter(a => !a.completed).length;
+    document.getElementById('x-count').textContent = exams.filter(x => !x.completed).length;
+    document.getElementById('e-count').textContent = events.filter(e => !e.completed).length;
+    document.getElementById('t-count').textContent = todos.filter(t => !t.done).length;
+  }
+
+  function renderAll() {
+    renderHeader(); renderSchedule();
+    renderAssignments(); renderExams(); renderEvents(); renderTodos();
+    counts();
+  }
+
+  // ---- Mutations (route through the backend when configured, else local) ----
+  async function toggleComplete(kind, item) {
+    item.completed = !item.completed;
+    if (backend()) await apiSend('PATCH', '/' + kind + '/' + item.id, { completed: item.completed });
+    else await set(kind, kindArray(kind));
+    renderAll();
+  }
+  async function toggleTodo(t) {
+    t.done = !t.done;
+    if (backend()) await apiSend('PATCH', '/todos/' + t.id, { done: t.done });
+    else await set('todos', todos);
+    renderAll();
+  }
+  async function addItem(kind, item) {
+    kindArray(kind).push(item);
+    if (backend()) await apiSend('POST', '/' + kind, item);
+    else await set(kind, kindArray(kind));
+    renderAll();
+  }
+  async function setAssignmentDay(id, iso) {
+    const a = assignments.find(x => x.id === id); if (!a) return;
+    if (iso) a.scheduledISO = iso; else delete a.scheduledISO;
+    if (backend()) await apiSend('PATCH', '/assignments/' + id, { scheduledISO: iso || null });
+    else await set('assignments', assignments);
+    renderAll();
+  }
+
+  function flashPanel(id) {
+    const p = document.getElementById(id); if (!p) return;
+    p.classList.remove('flash'); void p.offsetWidth; p.classList.add('flash');
+    setTimeout(() => p.classList.remove('flash'), 900);
+  }
+
+  // Local-mode only: apply the AI's returned actions to the in-memory board.
+  // In backend mode the server applies them and we adopt its returned board.
+  async function applyActions(actions = []) {
+    for (const a of actions) {
+      const kind = a.type === 'addAssignments' ? 'assignments' : a.type === 'addExams' ? 'exams' : a.type === 'addEvents' ? 'events' : a.type === 'addTodos' ? 'todos' : null;
+      if (!kind) continue;
+      for (const it of (a.items || [])) { kindArray(kind).push(it); }
+      await set(kind, kindArray(kind));
+      flashPanel('panel-' + kind);
+    }
+    renderAll();
+  }
+
+  function adoptBoard(board) {
+    if (!board) return;
+    assignments = board.assignments || []; exams = board.exams || [];
+    events = board.events || []; todos = board.todos || [];
+    ['panel-assignments','panel-exams','panel-events','panel-todos'].forEach(flashPanel);
+    renderAll();
+  }
+
+  // ---- Assistant integration point ----
+  async function getAssistantReply(payload) {
+    if (backend()) return apiSend('POST', '/assistant', payload);
+    return mockCrawlerReply(payload);
+  }
+
+  let crawlStage = 'idle';
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  async function mockCrawlerReply({ message }) {
+    const text = String(message || '').toLowerCase();
+    await wait(650);
+    if (crawlStage === 'idle') {
+      if (/(canvas|assignment|homework|due|deadline|exam|check|look|scan|sync|event|class|course)/.test(text)) {
+        crawlStage = 'awaiting_login';
+        return { reply: "I can pull that from Canvas. First I need to sign in to your account. What's your Canvas username?" };
+      }
+      return { reply: "I can scan Canvas for assignments, exams, and events, or help manage your to-do list. Try: \"Look through my Canvas for upcoming assignments.\"" };
+    }
+    if (crawlStage === 'awaiting_login') {
+      crawlStage = 'awaiting_2fa';
+      return { reply: "Got it. Pitt requires two-factor authentication. Approve the Duo push, then reply with the code (or just \"approved\")." };
+    }
+    crawlStage = 'idle';
+    return {
+      reply: "Approved. I scanned your active courses and found 1 assignment, 1 exam, and 1 event. Adding them to your board.",
+      actions: [
+        { type:'addAssignments', items:[ { title:'Midterm study guide', course:'CS 1501 — Algorithms', dueISO: daysFromNow(4), estimateMins:120, source:'canvas', completed:false } ] },
+        { type:'addExams', items:[ { title:'Final project demo', course:'CS 1699 — Capstone', dueISO: daysFromNow(6), location:'Sennott 5317', source:'canvas', completed:false } ] },
+        { type:'addEvents', items:[ { title:'Review session', location:'Benedum G30', startISO: daysFromNow(2), source:'canvas', completed:false } ] },
+      ],
+    };
+  }
+
+  // ---- Chat UI ----
+  let messages = [], sending = false;
+  async function loadChat() {
+    messages = await get('chat', []);
+    if (!messages.length) {
+      messages = [{ role:'assistant', content:`Hi ${displayName()}, I'm the Office Hours assistant. Ask me to check Canvas for assignments, exams, and events, and I'll add them here.` }];
+      await set('chat', messages);
+    }
+    renderChat();
+  }
+  function renderChat() {
+    const log = document.getElementById('chat-log'); log.innerHTML = '';
+    messages.forEach(m => { const b = el('div','bubble ' + m.role); b.textContent = m.content; log.appendChild(b); });
+    if (sending) log.appendChild(el('div','typing','<span></span><span></span><span></span>'));
+    log.scrollTop = log.scrollHeight;
+  }
+  async function pushMessage(role, content) { messages.push({ role, content }); await set('chat', messages); renderChat(); }
+  async function sendChat() {
+    if (sending) return;
+    const input = document.getElementById('chat-text');
+    const text = input.value.trim(); if (!text) return;
+    const history = messages.map(m => ({ role:m.role, content:m.content }));
+    input.value = '';
+    await pushMessage('user', text);
+    sending = true; renderChat();
+    document.getElementById('chat-send').disabled = true;
+    try {
+      const res = await getAssistantReply({ message:text, history, dashboard:{ assignments, exams, events, todos } });
+      sending = false;
+      await pushMessage('assistant', (res && res.reply) || '');
+      if (backend()) adoptBoard(res && res.board);
+      else if (res && res.actions && res.actions.length) await applyActions(res.actions);
+    } catch (e) {
+      console.error('assistant error', e);
+      sending = false;
+      await pushMessage('assistant', "I couldn't reach the assistant just now. Try again in a moment.");
+    } finally { document.getElementById('chat-send').disabled = false; }
+  }
+  function toggleChat(open) {
+    const w = document.getElementById('chat-window');
+    const willOpen = open !== undefined ? open : w.style.display !== 'flex';
+    w.style.display = willOpen ? 'flex' : 'none';
+    document.getElementById('chat-launch').style.display = willOpen ? 'none' : 'flex';
+    if (willOpen) { renderChat(); setTimeout(() => document.getElementById('chat-text').focus(), 50); }
+  }
+
+  // ---- Add modal ----
+  let currentType = 'assignment';
+  function isoAt(dateStr, defHour, timeStr) {
+    const [y,m,d] = dateStr.split('-').map(Number);
+    let hh = defHour, mm = 0;
+    if (timeStr) { const p = timeStr.split(':'); hh = +p[0]; mm = +p[1]; }
+    return new Date(y, m-1, d, hh, mm, 0).toISOString();
+  }
+  function estimateFieldHTML() {
+    return `<div><label>Estimated time <span class="hint">(optional)</span></label>
+      <div class="field-row">
+        <div><input id="f-est-h" type="number" min="0" placeholder="hours"></div>
+        <div><input id="f-est-m" type="number" min="0" max="59" placeholder="minutes"></div>
+      </div></div>`;
+  }
+  function renderFields(type) {
+    const box = document.getElementById('add-fields');
+    const today = new Date().toISOString().slice(0,10);
+    if (type === 'assignment') {
+      box.innerHTML = `
+        <div><label>Title</label><input id="f-title" type="text" placeholder="Problem Set 6"></div>
+        <div><label>Course</label><input id="f-course" type="text" placeholder="CS 1550 — Systems"></div>
+        <div><label>Due date</label><input id="f-due" type="date" value="${today}"></div>
+        ${estimateFieldHTML()}`;
+    } else if (type === 'exam') {
+      box.innerHTML = `
+        <div><label>Title</label><input id="f-title" type="text" placeholder="Midterm 2"></div>
+        <div><label>Course</label><input id="f-course" type="text" placeholder="CS 1501 — Algorithms"></div>
+        <div class="field-row">
+          <div><label>Date</label><input id="f-date" type="date" value="${today}"></div>
+          <div><label>Time</label><input id="f-time" type="time" value="09:00"></div>
+        </div>
+        <div><label>Location <span class="hint">(optional)</span></label><input id="f-location" type="text" placeholder="Lawrence 106"></div>
+        ${estimateFieldHTML()}`;
+    } else if (type === 'event') {
+      box.innerHTML = `
+        <div><label>Title</label><input id="f-title" type="text" placeholder="Study group"></div>
+        <div><label>Location</label><input id="f-location" type="text" placeholder="Hillman Library"></div>
+        <div class="field-row">
+          <div><label>Date</label><input id="f-date" type="date" value="${today}"></div>
+          <div><label>Time</label><input id="f-time" type="time" value="12:00"></div>
+        </div>`;
+    } else {
+      box.innerHTML = `
+        <div><label>Task</label><input id="f-text" type="text" placeholder="Email professor about extension"></div>
+        ${estimateFieldHTML()}`;
+    }
+    const first = box.querySelector('input'); if (first) setTimeout(() => first.focus(), 30);
+  }
+  function readFields(type) {
+    const v = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+    const estMins = () => { const h = +v('f-est-h') || 0, m = +v('f-est-m') || 0; return h*60 + m; };
+    if (type === 'assignment') return { title:v('f-title'), course:v('f-course'), due:v('f-due'), est:estMins() };
+    if (type === 'exam')       return { title:v('f-title'), course:v('f-course'), date:v('f-date'), time:v('f-time'), location:v('f-location'), est:estMins() };
+    if (type === 'event')      return { title:v('f-title'), location:v('f-location'), date:v('f-date'), time:v('f-time') };
+    return { text:v('f-text'), est:estMins() };
+  }
+  function invalid(id) { const e = document.getElementById(id); if (e) { e.style.borderColor = 'var(--red)'; e.focus(); } }
+
+  async function submitAdd() {
+    const type = currentType, v = readFields(type), uid = 'm' + Date.now();
+    if (type === 'task') {
+      if (!v.text) return invalid('f-text');
+      await addItem('todos', { id:uid, text:v.text, done:false, estimateMins:v.est || undefined, createdISO:new Date().toISOString() });
+      flashPanel('panel-todos');
+    } else if (type === 'assignment') {
+      if (!v.title) return invalid('f-title');
+      await addItem('assignments', { id:uid, title:v.title, course:v.course || '—', dueISO: v.due ? isoAt(v.due, 9) : daysFromNow(0), estimateMins:v.est || undefined, source:'manual', completed:false });
+      flashPanel('panel-assignments');
+    } else if (type === 'exam') {
+      if (!v.title) return invalid('f-title');
+      await addItem('exams', { id:uid, title:v.title, course:v.course || '—', dueISO: v.date ? isoAt(v.date, 9, v.time) : daysFromNow(0), location:v.location || undefined, estimateMins:v.est || undefined, source:'manual', completed:false });
+      flashPanel('panel-exams');
+    } else {
+      if (!v.title) return invalid('f-title');
+      await addItem('events', { id:uid, title:v.title, location:v.location || '—', startISO: v.date ? isoAt(v.date, 12, v.time) : daysFromNow(0), source:'manual', completed:false });
+      flashPanel('panel-events');
+    }
+    closeAdd();
+  }
+  function openAdd() {
+    currentType = 'assignment';
+    document.querySelectorAll('#type-seg button').forEach(b => b.classList.toggle('on', b.dataset.type === 'assignment'));
+    renderFields('assignment');
+    document.getElementById('add-overlay').style.display = 'grid';
+  }
+  function closeAdd() { document.getElementById('add-overlay').style.display = 'none'; }
+
+  // ---- Auth + views ----
+  async function loadData() {
+    if (backend()) {
+      try {
+        const b = await apiGet('/board');
+        assignments = b.assignments || []; exams = b.exams || []; events = b.events || []; todos = b.todos || [];
+      } catch (e) {
+        console.error('board load failed', e);
+        assignments = []; exams = []; events = []; todos = [];
+      }
+      renderAll();
+      return;
+    }
+    assignments = await get('assignments', null); if (!assignments) { assignments = seedAssignments(); await set('assignments', assignments); }
+    exams = await get('exams', null); if (!exams) { exams = seedExams(); await set('exams', exams); }
+    events = await get('events', null); if (!events) { events = seedEvents(); await set('events', events); }
+    todos = await get('todos', []);
+    renderAll();
+  }
+  function showDashboard() {
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('dashboard-view').style.display = 'block';
+    document.getElementById('chat-launch').style.display = 'flex';
+    loadData(); loadChat();
+  }
+  function showLogin() {
+    document.getElementById('dashboard-view').style.display = 'none';
+    document.getElementById('chat-launch').style.display = 'none';
+    document.getElementById('chat-window').style.display = 'none';
+    document.getElementById('login-view').style.display = 'grid';
+  }
+  async function signIn() {
+    username = document.getElementById('username').value.trim();
+    await set('username', username);
+    document.getElementById('password').value = '';
+    showDashboard();
+  }
+  function addTodo() {
+    const input = document.getElementById('todo-input');
+    const text = input.value.trim(); if (!text) return;
+    input.value = '';
+    addItem('todos', { id:'t'+Date.now(), text, done:false, createdISO:new Date().toISOString() });
+  }
+
+  // ---- Wiring ----
+  document.getElementById('signin').onclick = signIn;
+  document.getElementById('username').addEventListener('keydown', e => { if (e.key === 'Enter') signIn(); });
+  document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') signIn(); });
+  document.getElementById('todo-btn').onclick = addTodo;
+  document.getElementById('todo-input').addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
+  document.getElementById('open-add').onclick = openAdd;
+  document.getElementById('add-cancel').onclick = closeAdd;
+  document.getElementById('add-cancel-x').onclick = closeAdd;
+  document.getElementById('add-submit').onclick = submitAdd;
+  document.getElementById('add-overlay').addEventListener('click', e => { if (e.target.id === 'add-overlay') closeAdd(); });
+  document.getElementById('add-fields').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') submitAdd(); });
+  document.querySelectorAll('#type-seg button').forEach(btn => {
+    btn.onclick = () => { currentType = btn.dataset.type; document.querySelectorAll('#type-seg button').forEach(b => b.classList.toggle('on', b === btn)); renderFields(currentType); };
+  });
+  document.getElementById('chat-launch').onclick = () => toggleChat(true);
+  document.getElementById('chat-close').onclick = () => toggleChat(false);
+  document.getElementById('chat-send').onclick = sendChat;
+  document.getElementById('chat-text').addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
+  document.getElementById('signout').onclick = () => { document.getElementById('username').value = ''; crawlStage = 'idle'; showLogin(); };
+  document.getElementById('reset').onclick = async () => {
+    messages = []; crawlStage = 'idle';
+    await set('chat', []);
+    if (backend()) {
+      try { const b = await apiSend('POST', '/reset'); assignments = b.assignments || []; exams = b.exams || []; events = b.events || []; todos = b.todos || []; }
+      catch (e) { console.error('reset failed', e); }
+    } else {
+      assignments = seedAssignments(); exams = seedExams(); events = seedEvents(); todos = [];
+      await set('assignments', assignments); await set('exams', exams); await set('events', events); await set('todos', todos);
+    }
+    renderAll(); await loadChat();
+  };
+
+  (async function init() {
+    username = await get('username', '') || '';
+    showLogin();
+  })();
+</script>
