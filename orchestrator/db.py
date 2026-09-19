@@ -13,6 +13,7 @@ can't disagree about the schema.
 Setup:
     python3 db.py --init     create tables + one demo student
     python3 db.py --seed     add fake assignments (for testing without crawling)
+    python3 db.py --url      check the connection string WITHOUT connecting
     python3 db.py --check    print row counts, confirm the connection works
     python3 db.py --reset    DROP EVERYTHING and re-init (asks first)
 """
@@ -41,6 +42,78 @@ _pool = None
 # --------------------------------------------------------------------------
 
 
+_PLACEHOLDER_MARKERS = (
+    "replace_me", "replaceme", "your-host", "yourhost", "<host>", "changeme",
+    "user:pass@", "example.com",
+)
+# Hostnames that are obviously the template, not a real server. 'localhost' is
+# deliberately NOT here -- that's a legitimate host for a local Postgres.
+_PLACEHOLDER_HOSTS = {"host", "hostname", "your_host", "your-host", "dbhost", "<host>"}
+
+
+def check_url(url: str | None = None) -> str | None:
+    """
+    Return a human-readable problem with DATABASE_URL, or None if it looks real.
+
+    Worth doing before we connect: psycopg's pool retries a bad host forever in
+    the background, which floods your terminal with the same DNS error and
+    tells you nothing useful.
+
+    Pass nothing to check the configured DATABASE_URL. Pass a string to check
+    that string -- including an empty one, which is a real thing to validate.
+    (The old `url or DATABASE_URL` treated "" as "no argument given" and
+    silently checked the environment instead.)
+    """
+    if url is None:
+        url = DATABASE_URL
+
+    if not url:
+        return ("DATABASE_URL is empty.\n"
+                "Put the Timescale connection string in your .env file.")
+
+    lowered = url.lower()
+    if any(m in lowered for m in _PLACEHOLDER_MARKERS):
+        return ("DATABASE_URL is still the example placeholder from "
+                ".env.example.\nReplace it with the real Timescale connection "
+                "string from Rowan.")
+
+    if not lowered.startswith(("postgres://", "postgresql://")):
+        return (f"DATABASE_URL should start with postgres:// — got "
+                f"'{url[:24]}...'")
+
+    from urllib.parse import urlparse
+
+    try:
+        parts = urlparse(url)
+    except ValueError as exc:
+        return f"DATABASE_URL could not be parsed: {exc}"
+
+    if not parts.hostname:
+        return "DATABASE_URL has no hostname in it."
+
+    if parts.hostname.lower() in _PLACEHOLDER_HOSTS:
+        return (f"DATABASE_URL's hostname is literally '{parts.hostname}' — "
+                f"that's the placeholder, not a real server.\n"
+                f"A Timescale string looks like:\n"
+                f"  postgres://tsdbadmin:PASSWORD@abc123.xyz.tsdb.cloud."
+                f"timescale.com:36756/tsdb?sslmode=require")
+
+    # urlparse raises on .port only when you touch it, so check it explicitly.
+    try:
+        port = parts.port
+    except ValueError:
+        return ("DATABASE_URL's port isn't a number. If it says ':port', "
+                "that's the placeholder — use the real one.")
+    if port is None:
+        return "DATABASE_URL has no port. Timescale usually uses a 5-digit port."
+
+    if "sslmode" not in lowered:
+        # Not fatal, just likely to fail against Timescale Cloud.
+        return None
+
+    return None
+
+
 def pool():
     """
     A connection pool is a small set of reusable open connections. Opening a
@@ -49,14 +122,37 @@ def pool():
     """
     global _pool
     if _pool is None:
-        if not DATABASE_URL:
+        problem = check_url()
+        if problem:
             raise RuntimeError(
-                "DATABASE_URL is not set. Put the Timescale connection string "
-                "in your .env file (and make sure .env is in .gitignore)."
+                f"Can't connect to Tiger Data.\n\n{problem}\n\n"
+                f"Check it with:  python3 db.py --url\n"
+                f"Meanwhile you can keep working with MODE=mock, which needs "
+                f"no database at all."
             )
+
         from psycopg_pool import ConnectionPool
 
-        _pool = ConnectionPool(DATABASE_URL, min_size=1, max_size=4, open=True)
+        # open=False then open(wait=True, timeout=...) so a bad host fails ONCE
+        # with a real error. With open=True the pool retries in the background
+        # forever and just spams the same DNS failure.
+        _pool = ConnectionPool(DATABASE_URL, min_size=1, max_size=4, open=False)
+        try:
+            _pool.open(wait=True, timeout=12)
+        except Exception as exc:  # noqa: BLE001
+            _pool.close()
+            _pool = None
+            raise RuntimeError(
+                f"Couldn't reach the database within 12 seconds.\n\n"
+                f"  {type(exc).__name__}: {str(exc)[:200]}\n\n"
+                f"Common causes:\n"
+                f"  - wrong password (Timescale shows it only once at creation)\n"
+                f"  - the string was rotated, so ask Rowan for the current one\n"
+                f"  - your wifi blocks the port, or the Timescale service is paused\n"
+                f"  - missing ?sslmode=require at the end\n\n"
+                f"Run `python3 db.py --url` to sanity-check the string, and use "
+                f"MODE=mock to keep working without a database."
+            ) from exc
     return _pool
 
 
@@ -67,6 +163,9 @@ def query(sql: str, params: tuple = (), fetch: str = "all") -> Any:
     Params are passed separately from the SQL string, never formatted into it.
     That is what makes SQL injection impossible here: the database treats them
     as values, never as code.
+
+    Results are passed through jsonable() so everything this module returns can
+    be handed straight to json.dumps. See that function for why.
     """
     from psycopg.rows import dict_row
 
@@ -74,10 +173,49 @@ def query(sql: str, params: tuple = (), fetch: str = "all") -> Any:
         with conn.cursor(row_factory=dict_row) as cur:
             cur.execute(sql, params)
             if fetch == "all":
-                return cur.fetchall()
+                return [jsonable(dict(r)) for r in cur.fetchall()]
             if fetch == "one":
-                return cur.fetchone()
+                row = cur.fetchone()
+                return jsonable(dict(row)) if row else None
             return None
+
+
+def jsonable(value: Any) -> Any:
+    """
+    Convert database types into things json.dumps can handle.
+
+    Postgres hands back Python objects that are NOT JSON-serializable:
+
+        TIMESTAMPTZ  -> datetime.datetime
+        DATE         -> datetime.date
+        NUMERIC      -> decimal.Decimal
+        interval     -> datetime.timedelta
+
+    Every tool result eventually gets json.dumps'd, either into a message for
+    the model or into the response for the website. So one un-converted value
+    anywhere in a result crashes the whole request with
+    "Object of type datetime is not JSON serializable" -- and it only shows up
+    when a query happens to return a row containing one, which is why an empty
+    result set can pass while a populated one fails.
+
+    Doing the conversion here, once, means nothing downstream has to remember.
+    """
+    from datetime import date, datetime, timedelta
+    from decimal import Decimal
+
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        # float, not str: the model and the frontend both want to do arithmetic
+        # with points and est_hours.
+        return float(value)
+    if isinstance(value, timedelta):
+        return value.total_seconds()
+    if isinstance(value, dict):
+        return {k: jsonable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [jsonable(v) for v in value]
+    return value
 
 
 def make_id(*parts: str) -> str:
@@ -153,12 +291,12 @@ def get_profile(student_id: str = DEFAULT_STUDENT) -> dict:
         (student_id,),
         fetch="one",
     )
-    return dict(row) if row else {}
+    return row or {}
 
 
 def get_courses(student_id: str = DEFAULT_STUDENT) -> list[dict]:
     return [
-        dict(r)
+        r
         for r in query(
             """SELECT code, title, instructor, canvas_id, last_crawled_at
                FROM courses WHERE student_id = %s ORDER BY code""",
@@ -192,7 +330,35 @@ def get_assignments(
         params.append(int(due_within_days))
 
     sql.append("ORDER BY due_at NULLS LAST LIMIT 100")
-    return [dict(r) for r in query(" ".join(sql), tuple(params))]
+    return [
+        r
+        for r in query(" ".join(sql), tuple(params))]
+
+
+def get_overdue(student_id: str = DEFAULT_STUDENT) -> list[dict]:
+    """
+    Work that is past its due date and still not submitted.
+
+    Done in SQL rather than in Python because the database knows what time it
+    is: now() is evaluated server-side, so there's no timezone mismatch between
+    your laptop and the stored timestamps.
+    """
+    return [
+        r
+        for r in query(
+            """SELECT id, course_code, title, kind, due_at, points, est_hours,
+                      status,
+                      EXTRACT(EPOCH FROM (now() - due_at)) / 86400 AS days_late
+               FROM assignments
+               WHERE student_id = %s
+                 AND status = 'open'
+                 AND due_at IS NOT NULL
+                 AND due_at < now()
+               ORDER BY due_at ASC
+               LIMIT 100""",
+            (student_id,),
+        )
+    ]
 
 
 def get_schedule(student_id: str = DEFAULT_STUDENT) -> dict:
@@ -214,7 +380,7 @@ def get_schedule(student_id: str = DEFAULT_STUDENT) -> dict:
     return {
         "generated_at": newest["generated_at"],
         "rationale": newest["rationale"],
-        "blocks": [dict(b) for b in blocks],
+        "blocks": list(blocks),
     }
 
 
@@ -226,12 +392,14 @@ def get_study_sets(student_id: str = DEFAULT_STUDENT, course: str | None = None)
         sql += " AND course_code ILIKE %s"
         params.append(f"%{course}%")
     sql += " ORDER BY created_at DESC LIMIT 20"
-    return [dict(r) for r in query(sql, tuple(params))]
+    return [
+        r
+        for r in query(sql, tuple(params))]
 
 
 def get_events(within_days: int = 14) -> list[dict]:
     return [
-        dict(r)
+        r
         for r in query(
             """SELECT id, title, starts_at, location, url, tags
                FROM campus_events
@@ -279,7 +447,7 @@ def get_workload_history(student_id: str = DEFAULT_STUDENT, days: int = 30) -> l
     exactly what a trend chart needs.
     """
     return [
-        dict(r)
+        r
         for r in query(
             """SELECT time_bucket('1 day', observed_at) AS day,
                       course_code,
@@ -437,6 +605,59 @@ def save_schedule(student_id: str, blocks: list[dict], rationale: str = "") -> d
                 errors.append(str(exc))
 
     out = {"blocks_written": written, "generation_id": gen}
+    if errors:
+        out["validation_errors"] = errors
+    return out
+
+
+def add_schedule_blocks(student_id: str, blocks: list[dict],
+                        note: str = "") -> dict:
+    """
+    Add blocks to the CURRENT schedule rather than starting a new generation.
+
+    save_schedule() tags its blocks with a fresh generation_id, and
+    get_schedule() reads only the newest generation -- so calling it to add one
+    event would silently hide every existing block. This reuses the latest
+    generation_id, or starts one if there is no schedule yet.
+    """
+    newest = query(
+        """SELECT generation_id FROM schedule_blocks
+           WHERE student_id = %s ORDER BY generated_at DESC LIMIT 1""",
+        (student_id,),
+        fetch="one",
+    )
+    gen = newest["generation_id"] if newest else uuid.uuid4().hex[:12]
+
+    written, errors = 0, []
+    for b in blocks or []:
+        try:
+            starts = _as_datetime(b.get("starts_at") or b.get("start"), "starts_at")
+            if starts is None:
+                raise ValidationError("starts_at is required")
+            query(
+                """INSERT INTO schedule_blocks
+                       (student_id, assignment_id, task, starts_at, ends_at,
+                        est_minutes, priority, generation_id, rationale)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (
+                    student_id,
+                    _text(b.get("assignment_id"), "assignment_id", limit=40),
+                    _text(b.get("task"), "task", required=True, limit=300),
+                    starts,
+                    _as_datetime(b.get("ends_at") or b.get("end"), "ends_at"),
+                    _as_int(b.get("est_minutes"), "est_minutes"),
+                    _as_int(b.get("priority"), "priority"),
+                    gen,
+                    _text(note, "note", limit=2000),
+                ),
+                fetch="none",
+            )
+            written += 1
+        except ValidationError as exc:
+            if len(errors) < 5:
+                errors.append(str(exc))
+
+    out = {"blocks_added": written, "generation_id": gen}
     if errors:
         out["validation_errors"] = errors
     return out
@@ -609,6 +830,39 @@ def seed(student_id: str = DEFAULT_STUDENT) -> None:
     print("seeded")
 
 
+def show_url() -> None:
+    """Sanity-check DATABASE_URL without connecting or printing the password."""
+    from urllib.parse import urlparse
+
+    if not DATABASE_URL:
+        print("DATABASE_URL is empty. Add it to .env")
+        return
+
+    problem = check_url()
+    try:
+        parts = urlparse(DATABASE_URL)
+        host, port, user = parts.hostname, None, parts.username
+        try:
+            port = parts.port
+        except ValueError:
+            port = "(not a number)"
+        db_name = (parts.path or "").lstrip("/")
+    except Exception:  # noqa: BLE001
+        host = port = user = db_name = "(unparseable)"
+
+    print("DATABASE_URL breakdown (password hidden):")
+    print(f"  user:     {user}")
+    print(f"  host:     {host}")
+    print(f"  port:     {port}")
+    print(f"  database: {db_name}")
+    print(f"  sslmode:  {'yes' if 'sslmode' in DATABASE_URL.lower() else 'MISSING'}")
+    print()
+    if problem:
+        print(f"PROBLEM:\n{problem}")
+    else:
+        print("Looks well-formed. Try: python3 db.py --check")
+
+
 def check() -> None:
     tables = ["students", "courses", "assignments", "schedule_blocks",
               "study_sets", "campus_events", "workload_snapshots", "study_sessions"]
@@ -638,7 +892,9 @@ def reset() -> None:
 
 if __name__ == "__main__":
     args = set(sys.argv[1:])
-    if "--init" in args:
+    if "--url" in args:
+        show_url()
+    elif "--init" in args:
         init()
     elif "--seed" in args:
         seed()

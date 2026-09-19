@@ -1,0 +1,5835 @@
+{
+  "exported_at": "2026-09-19T23:29:40.531Z",
+  "courses": [
+    {
+      "id": 325283,
+      "name": "2261 CS 0447 SEC1070 COMPUTR ORGZTN & ASSMBLY LANG",
+      "course_code": "2261 CS 0447 SEC1070",
+      "start_at": null,
+      "enrollment_term_id": 29,
+      "term": {
+        "id": 29,
+        "name": "Fall 2025-2026",
+        "start_at": "2025-08-18T04:00:00Z",
+        "end_at": "2026-12-31T05:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2019-05-20T20:51:55Z"
+      },
+      "assignments": [
+        {
+          "id": 1957065,
+          "name": "Exam 1",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325283/assignments/1957065",
+          "published": true,
+          "assignment_group_id": 702754,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 83
+        },
+        {
+          "id": 1991347,
+          "name": "Exam 2",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325283/assignments/1991347",
+          "published": true,
+          "assignment_group_id": 702754,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 92
+        },
+        {
+          "id": 1999128,
+          "name": "Final Exam",
+          "due_at": null,
+          "points_possible": 150,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325283/assignments/1999128",
+          "published": true,
+          "assignment_group_id": 705113,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 118.5
+        },
+        {
+          "id": 1935271,
+          "name": "Lab 0",
+          "due_at": null,
+          "points_possible": 1,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325283/assignments/1935271",
+          "published": true,
+          "assignment_group_id": 635166,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 1939982,
+          "name": "Lab 1",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325283/assignments/1939982",
+          "published": true,
+          "assignment_group_id": 679550,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 1943761,
+          "name": "Lab 2",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325283/assignments/1943761",
+          "published": true,
+          "assignment_group_id": 679550,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 1946726,
+          "name": "Lab 3",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325283/assignments/1946726",
+          "published": true,
+          "assignment_group_id": 679550,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 1955708,
+          "name": "Lab 4",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325283/assignments/1955708",
+          "published": true,
+          "assignment_group_id": 679550,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 1963537,
+          "name": "Lab 5",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325283/assignments/1963537",
+          "published": true,
+          "assignment_group_id": 679550,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 1965931,
+          "name": "Lab 6",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325283/assignments/1965931",
+          "published": true,
+          "assignment_group_id": 679550,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 1975521,
+          "name": "Lab 7",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325283/assignments/1975521",
+          "published": true,
+          "assignment_group_id": 679550,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 1980316,
+          "name": "Lab 8",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325283/assignments/1980316",
+          "published": true,
+          "assignment_group_id": 679550,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 1975192,
+          "name": "Proj 1",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325283/assignments/1975192",
+          "published": true,
+          "assignment_group_id": 705112,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 100
+        },
+        {
+          "id": 1989485,
+          "name": "Proj 2",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325283/assignments/1989485",
+          "published": true,
+          "assignment_group_id": 705112,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 90
+        }
+      ]
+    },
+    {
+      "id": 325466,
+      "name": "2261 CS 1501 SEC1065 ALGORITHMS DATA STRUCTURES 2",
+      "course_code": "2261 CS 1501 SEC1065",
+      "start_at": null,
+      "enrollment_term_id": 29,
+      "term": {
+        "id": 29,
+        "name": "Fall 2025-2026",
+        "start_at": "2025-08-18T04:00:00Z",
+        "end_at": "2026-12-31T05:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2019-05-20T20:51:55Z"
+      },
+      "assignments": [
+        {
+          "id": 1926385,
+          "name": "Homework 1",
+          "due_at": "2025-09-06T03:59:59Z",
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926385",
+          "published": true,
+          "assignment_group_id": 676295,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 8
+        },
+        {
+          "id": 1926397,
+          "name": "Lab 1",
+          "due_at": "2025-09-11T03:59:00Z",
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926397",
+          "published": true,
+          "assignment_group_id": 676296,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 1926389,
+          "name": "Homework 2",
+          "due_at": "2025-09-13T03:59:59Z",
+          "points_possible": 11,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926389",
+          "published": true,
+          "assignment_group_id": 676295,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 8
+        },
+        {
+          "id": 1926398,
+          "name": "Lab 2",
+          "due_at": "2025-09-18T03:59:59Z",
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926398",
+          "published": true,
+          "assignment_group_id": 676296,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 1944193,
+          "name": "Assignment 1 Scaffold (Not For Grade)",
+          "due_at": "2025-09-20T03:59:00Z",
+          "points_possible": 0,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1944193",
+          "published": true,
+          "assignment_group_id": 676291,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1926390,
+          "name": "Homework 3",
+          "due_at": "2025-09-20T03:59:59Z",
+          "points_possible": 12,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926390",
+          "published": true,
+          "assignment_group_id": 676295,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 8
+        },
+        {
+          "id": 1926376,
+          "name": "Assignment 1",
+          "due_at": "2025-09-25T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926376",
+          "published": true,
+          "assignment_group_id": 676291,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 97
+        },
+        {
+          "id": 1926391,
+          "name": "Homework 4",
+          "due_at": "2025-09-27T03:59:59Z",
+          "points_possible": 13,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926391",
+          "published": true,
+          "assignment_group_id": 676295,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 9
+        },
+        {
+          "id": 1926399,
+          "name": "Lab 3",
+          "due_at": "2025-10-02T03:59:59Z",
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926399",
+          "published": true,
+          "assignment_group_id": 676296,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 1951944,
+          "name": "Assignment 2 Scaffold",
+          "due_at": "2025-10-04T03:59:59Z",
+          "points_possible": 0,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1951944",
+          "published": true,
+          "assignment_group_id": 676291,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 1926392,
+          "name": "Homework 5",
+          "due_at": "2025-10-04T03:59:59Z",
+          "points_possible": 14,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926392",
+          "published": true,
+          "assignment_group_id": 676295,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 9
+        },
+        {
+          "id": 1926377,
+          "name": "Assignment 2",
+          "due_at": "2025-10-17T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926377",
+          "published": true,
+          "assignment_group_id": 676291,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 99
+        },
+        {
+          "id": 1926393,
+          "name": "Homework 6",
+          "due_at": "2025-10-18T03:59:59Z",
+          "points_possible": 14,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926393",
+          "published": true,
+          "assignment_group_id": 676295,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 1926400,
+          "name": "Lab 4",
+          "due_at": "2025-10-23T03:59:59Z",
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926400",
+          "published": true,
+          "assignment_group_id": 676296,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 1964125,
+          "name": "Assignment 3 Scaffold",
+          "due_at": "2025-10-25T03:59:59Z",
+          "points_possible": 0,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1964125",
+          "published": true,
+          "assignment_group_id": 676291,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1926394,
+          "name": "Homework 7",
+          "due_at": "2025-10-25T03:59:59Z",
+          "points_possible": 12,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926394",
+          "published": true,
+          "assignment_group_id": 676295,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 1926395,
+          "name": "Homework 8",
+          "due_at": "2025-11-04T04:59:59Z",
+          "points_possible": 12,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926395",
+          "published": true,
+          "assignment_group_id": 676295,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 9.5
+        },
+        {
+          "id": 1926378,
+          "name": "Assignment 3",
+          "due_at": "2025-11-06T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926378",
+          "published": true,
+          "assignment_group_id": 676291,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 63
+        },
+        {
+          "id": 1926396,
+          "name": "Homework 9",
+          "due_at": "2025-11-08T04:59:59Z",
+          "points_possible": 11,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926396",
+          "published": true,
+          "assignment_group_id": 676295,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 8
+        },
+        {
+          "id": 1926401,
+          "name": "Lab 5",
+          "due_at": "2025-11-11T04:59:59Z",
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926401",
+          "published": true,
+          "assignment_group_id": 676296,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 1926386,
+          "name": "Homework 10",
+          "due_at": "2025-11-15T04:59:59Z",
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926386",
+          "published": true,
+          "assignment_group_id": 676295,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 1926379,
+          "name": "Assignment 4",
+          "due_at": "2025-11-20T04:59:00Z",
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926379",
+          "published": true,
+          "assignment_group_id": 676291,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 98
+        },
+        {
+          "id": 1926387,
+          "name": "Homework 11",
+          "due_at": "2025-11-22T04:59:59Z",
+          "points_possible": 12,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926387",
+          "published": true,
+          "assignment_group_id": 676295,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 9.5
+        },
+        {
+          "id": 1926402,
+          "name": "Lab 6",
+          "due_at": "2025-12-04T04:59:59Z",
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926402",
+          "published": true,
+          "assignment_group_id": 676296,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 1926388,
+          "name": "Homework 12",
+          "due_at": "2025-12-06T04:59:59Z",
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926388",
+          "published": true,
+          "assignment_group_id": 676295,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 9
+        },
+        {
+          "id": 1926380,
+          "name": "Assignment 5",
+          "due_at": "2025-12-16T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926380",
+          "published": true,
+          "assignment_group_id": 676291,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 150
+        },
+        {
+          "id": 1926381,
+          "name": "Bonus Homework",
+          "due_at": "2025-12-16T04:59:59Z",
+          "points_possible": 0,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926381",
+          "published": true,
+          "assignment_group_id": 676295,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 5.5
+        },
+        {
+          "id": 1926382,
+          "name": "Bonus Lab",
+          "due_at": "2025-12-16T04:59:59Z",
+          "points_possible": 0,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926382",
+          "published": true,
+          "assignment_group_id": 676296,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 1926384,
+          "name": "Final Exam",
+          "due_at": null,
+          "points_possible": 80,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926384",
+          "published": true,
+          "assignment_group_id": 676293,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 55
+        },
+        {
+          "id": 1926403,
+          "name": "Midterm Exam",
+          "due_at": null,
+          "points_possible": 55,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926403",
+          "published": true,
+          "assignment_group_id": 676292,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 46
+        },
+        {
+          "id": 1926405,
+          "name": "OMET Bonus",
+          "due_at": null,
+          "points_possible": 0,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926405",
+          "published": true,
+          "assignment_group_id": 676293,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 4
+        },
+        {
+          "id": 1926406,
+          "name": "Recitation Attendance Bonus",
+          "due_at": null,
+          "points_possible": 0,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926406",
+          "published": true,
+          "assignment_group_id": 676293,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 1926407,
+          "name": "Recitation Attendance Count",
+          "due_at": null,
+          "points_possible": 0,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1926407",
+          "published": true,
+          "assignment_group_id": 676296,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 1940680,
+          "name": "TH-Totals",
+          "due_at": null,
+          "points_possible": 64,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/325466/assignments/1940680",
+          "published": true,
+          "assignment_group_id": 676294,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 27.5
+        }
+      ]
+    },
+    {
+      "id": 334302,
+      "name": "2261 MATH 0280 SEC1030 INTRO TO MATRICES & LINEAR ALG",
+      "course_code": "2261 MATH 0280 SEC1030",
+      "start_at": null,
+      "enrollment_term_id": 29,
+      "term": {
+        "id": 29,
+        "name": "Fall 2025-2026",
+        "start_at": "2025-08-18T04:00:00Z",
+        "end_at": "2026-12-31T05:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2019-05-20T20:51:55Z"
+      },
+      "assignments": [
+        {
+          "id": 1887601,
+          "name": "Exam 1",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334302/assignments/1887601",
+          "published": true,
+          "assignment_group_id": 669568,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 72
+        },
+        {
+          "id": 1887603,
+          "name": "Exam 2",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334302/assignments/1887603",
+          "published": true,
+          "assignment_group_id": 669568,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 42
+        },
+        {
+          "id": 1887604,
+          "name": "Final",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334302/assignments/1887604",
+          "published": true,
+          "assignment_group_id": 669568,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 78
+        },
+        {
+          "id": 1887606,
+          "name": "Practice Assignment 1",
+          "due_at": null,
+          "points_possible": null,
+          "submission_types": [
+            "not_graded"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334302/assignments/1887606",
+          "published": true,
+          "assignment_group_id": 669567,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1887608,
+          "name": "Practice Assignment 2",
+          "due_at": null,
+          "points_possible": null,
+          "submission_types": [
+            "not_graded"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334302/assignments/1887608",
+          "published": true,
+          "assignment_group_id": 669567,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1887609,
+          "name": "Practice Assignment 3",
+          "due_at": null,
+          "points_possible": null,
+          "submission_types": [
+            "not_graded"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334302/assignments/1887609",
+          "published": true,
+          "assignment_group_id": 669567,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1887610,
+          "name": "Practice Assignment 4",
+          "due_at": null,
+          "points_possible": null,
+          "submission_types": [
+            "not_graded"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334302/assignments/1887610",
+          "published": true,
+          "assignment_group_id": 669567,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1887611,
+          "name": "Practice Assignment 5",
+          "due_at": null,
+          "points_possible": null,
+          "submission_types": [
+            "not_graded"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334302/assignments/1887611",
+          "published": true,
+          "assignment_group_id": 669567,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1887612,
+          "name": "Practice Assignment 6",
+          "due_at": null,
+          "points_possible": null,
+          "submission_types": [
+            "not_graded"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334302/assignments/1887612",
+          "published": true,
+          "assignment_group_id": 669567,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1887613,
+          "name": "Practice Assignment 7",
+          "due_at": null,
+          "points_possible": null,
+          "submission_types": [
+            "not_graded"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334302/assignments/1887613",
+          "published": true,
+          "assignment_group_id": 669567,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1887614,
+          "name": "Practice Assignment 8",
+          "due_at": null,
+          "points_possible": null,
+          "submission_types": [
+            "not_graded"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334302/assignments/1887614",
+          "published": true,
+          "assignment_group_id": 669567,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1887615,
+          "name": "Practice Assignment 9",
+          "due_at": null,
+          "points_possible": null,
+          "submission_types": [
+            "not_graded"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334302/assignments/1887615",
+          "published": true,
+          "assignment_group_id": 669567,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1887616,
+          "name": "Webwork",
+          "due_at": null,
+          "points_possible": 169,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334302/assignments/1887616",
+          "published": true,
+          "assignment_group_id": 669566,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 104.38
+        }
+      ]
+    },
+    {
+      "id": 334409,
+      "name": "2261 MATH 0290 SEC1090 DIFFERENTIAL EQUATIONS",
+      "course_code": "2261 MATH 0290 SEC1090",
+      "start_at": null,
+      "enrollment_term_id": 29,
+      "term": {
+        "id": 29,
+        "name": "Fall 2025-2026",
+        "start_at": "2025-08-18T04:00:00Z",
+        "end_at": "2026-12-31T05:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2019-05-20T20:51:55Z"
+      },
+      "assignments": [
+        {
+          "id": 1940717,
+          "name": "Homework 2",
+          "due_at": "2025-09-15T03:59:59Z",
+          "points_possible": 20,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334409/assignments/1940717",
+          "published": true,
+          "assignment_group_id": 644284,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 9
+        },
+        {
+          "id": 1932556,
+          "name": "Homework 1   ",
+          "due_at": "2025-09-29T03:59:59Z",
+          "points_possible": 15,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334409/assignments/1932556",
+          "published": true,
+          "assignment_group_id": 644284,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 10
+        },
+        {
+          "id": 1946302,
+          "name": "Homework 3",
+          "due_at": "2025-09-29T03:59:59Z",
+          "points_possible": 15,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334409/assignments/1946302",
+          "published": true,
+          "assignment_group_id": 644284,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 6
+        },
+        {
+          "id": 1948865,
+          "name": "Homework 4",
+          "due_at": "2025-10-06T03:59:59Z",
+          "points_possible": 15,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334409/assignments/1948865",
+          "published": true,
+          "assignment_group_id": 644284,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 7
+        },
+        {
+          "id": 1960578,
+          "name": "Homework 5",
+          "due_at": "2025-10-30T03:59:59Z",
+          "points_possible": 25,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334409/assignments/1960578",
+          "published": true,
+          "assignment_group_id": 644284,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 10
+        },
+        {
+          "id": 1968085,
+          "name": "Homework 6",
+          "due_at": "2025-11-06T04:59:59Z",
+          "points_possible": 35,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334409/assignments/1968085",
+          "published": true,
+          "assignment_group_id": 644284,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 14
+        },
+        {
+          "id": 1990961,
+          "name": "Midterm 1",
+          "due_at": "2025-12-03T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334409/assignments/1990961",
+          "published": true,
+          "assignment_group_id": 644284,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 71
+        },
+        {
+          "id": 1980976,
+          "name": "Homework 7",
+          "due_at": "2025-12-04T04:59:59Z",
+          "points_possible": 27,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334409/assignments/1980976",
+          "published": true,
+          "assignment_group_id": 644284,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 11
+        },
+        {
+          "id": 1981041,
+          "name": "Homework 8",
+          "due_at": "2025-12-05T04:59:59Z",
+          "points_possible": 23,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334409/assignments/1981041",
+          "published": true,
+          "assignment_group_id": 644284,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 4
+        },
+        {
+          "id": 2011173,
+          "name": "Final",
+          "due_at": null,
+          "points_possible": 200,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334409/assignments/2011173",
+          "published": true,
+          "assignment_group_id": 644284,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 86
+        },
+        {
+          "id": 1992767,
+          "name": "Midterm2",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/334409/assignments/1992767",
+          "published": true,
+          "assignment_group_id": 644284,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 93
+        }
+      ]
+    },
+    {
+      "id": 337971,
+      "name": "2261 PHYS 0477 SEC1020 INT THERMAL AND MODERN PHYSICS",
+      "course_code": "2261 PHYS 0477 SEC1020",
+      "start_at": null,
+      "enrollment_term_id": 29,
+      "term": {
+        "id": 29,
+        "name": "Fall 2025-2026",
+        "start_at": "2025-08-18T04:00:00Z",
+        "end_at": "2026-12-31T05:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2019-05-20T20:51:55Z"
+      },
+      "assignments": [
+        {
+          "id": 1883886,
+          "name": "Homework #1",
+          "due_at": "2025-09-15T03:59:00Z",
+          "points_possible": 9,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/337971/assignments/1883886",
+          "published": true,
+          "assignment_group_id": 647850,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 9
+        },
+        {
+          "id": 1938718,
+          "name": "Homework #2",
+          "due_at": "2025-09-22T03:59:00Z",
+          "points_possible": 9,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/337971/assignments/1938718",
+          "published": true,
+          "assignment_group_id": 647850,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 9
+        },
+        {
+          "id": 1940380,
+          "name": "Pre-departmental survey for Physics 477 - Extra Credit - Worth 1/2 homework assignment",
+          "due_at": "2025-10-01T03:59:00Z",
+          "points_possible": 4.5,
+          "submission_types": [
+            "online_url"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/337971/assignments/1940380",
+          "published": true,
+          "assignment_group_id": 647850,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 4.5
+        },
+        {
+          "id": 1946573,
+          "name": "Homework #3",
+          "due_at": "2025-10-02T03:59:59Z",
+          "points_possible": 9,
+          "submission_types": [
+            "online_text_entry",
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/337971/assignments/1946573",
+          "published": true,
+          "assignment_group_id": 647850,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 5.5
+        },
+        {
+          "id": 1955974,
+          "name": "Homework #4",
+          "due_at": "2025-10-20T03:59:00Z",
+          "points_possible": 9,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/337971/assignments/1955974",
+          "published": true,
+          "assignment_group_id": 647850,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 9
+        },
+        {
+          "id": 1963673,
+          "name": "Homework #5",
+          "due_at": "2025-10-27T03:59:59Z",
+          "points_possible": 9,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/337971/assignments/1963673",
+          "published": true,
+          "assignment_group_id": 647850,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 9
+        },
+        {
+          "id": 1967224,
+          "name": "Homework #6",
+          "due_at": "2025-11-03T04:59:00Z",
+          "points_possible": 9,
+          "submission_types": [
+            "online_text_entry",
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/337971/assignments/1967224",
+          "published": true,
+          "assignment_group_id": 647850,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 8
+        },
+        {
+          "id": 1960372,
+          "name": "Exam #1",
+          "due_at": "2025-11-06T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/337971/assignments/1960372",
+          "published": true,
+          "assignment_group_id": 647850,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 79
+        },
+        {
+          "id": 1974510,
+          "name": "Homework #7",
+          "due_at": "2025-11-17T04:59:00Z",
+          "points_possible": 9,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/337971/assignments/1974510",
+          "published": true,
+          "assignment_group_id": 647850,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 1987497,
+          "name": "Exam #2",
+          "due_at": "2025-11-22T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_text_entry"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/337971/assignments/1987497",
+          "published": true,
+          "assignment_group_id": 647850,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 97
+        },
+        {
+          "id": 1993569,
+          "name": "Post-exam Well and Barrier",
+          "due_at": "2025-12-04T04:59:00Z",
+          "points_possible": 4.5,
+          "submission_types": [
+            "online_text_entry"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/337971/assignments/1993569",
+          "published": true,
+          "assignment_group_id": 647850,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1979211,
+          "name": "Post-departmental survey for Physics 477 - Extra Credit - Worth 1/2 homework assignment",
+          "due_at": "2025-12-06T04:59:00Z",
+          "points_possible": 4.5,
+          "submission_types": [
+            "online_text_entry",
+            "online_url"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/337971/assignments/1979211",
+          "published": true,
+          "assignment_group_id": 647850,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1985217,
+          "name": "Homework #8",
+          "due_at": "2025-12-10T04:59:00Z",
+          "points_possible": 9,
+          "submission_types": [
+            "online_text_entry",
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/337971/assignments/1985217",
+          "published": true,
+          "assignment_group_id": 647850,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 8
+        },
+        {
+          "id": 1999064,
+          "name": "Final Exam",
+          "due_at": "2025-12-13T04:59:00Z",
+          "points_possible": 140,
+          "submission_types": [
+            "online_text_entry"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/337971/assignments/1999064",
+          "published": true,
+          "assignment_group_id": 647850,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 69
+        },
+        {
+          "id": 2002600,
+          "name": "Final Score",
+          "due_at": "2025-12-13T04:59:00Z",
+          "points_possible": 103,
+          "submission_types": [
+            "online_text_entry"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/337971/assignments/2002600",
+          "published": true,
+          "assignment_group_id": 647850,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 74
+        }
+      ]
+    },
+    {
+      "id": 350332,
+      "name": "2264 CS 0449 SEC1200 INTRO TO SYSTEMS SOFTWARE",
+      "course_code": "2264 CS 0449 SEC1200",
+      "start_at": null,
+      "enrollment_term_id": 243,
+      "term": {
+        "id": 243,
+        "name": "Spring 2025-2026",
+        "start_at": "2026-01-05T05:00:00Z",
+        "end_at": "2027-04-30T04:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2025-06-23T21:14:14Z"
+      },
+      "assignments": [
+        {
+          "id": 2106101,
+          "name": "Exam 1",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350332/assignments/2106101",
+          "published": true,
+          "assignment_group_id": 724198,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 84.5
+        },
+        {
+          "id": 2135265,
+          "name": "Exam 2",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350332/assignments/2135265",
+          "published": true,
+          "assignment_group_id": 724198,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 66.5
+        },
+        {
+          "id": 2082675,
+          "name": "Lab 1",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350332/assignments/2082675",
+          "published": true,
+          "assignment_group_id": 724196,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 2082676,
+          "name": "Lab 2",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350332/assignments/2082676",
+          "published": true,
+          "assignment_group_id": 724196,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 2095457,
+          "name": "Lab 3",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350332/assignments/2095457",
+          "published": true,
+          "assignment_group_id": 724196,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 2095460,
+          "name": "Lab 4",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350332/assignments/2095460",
+          "published": true,
+          "assignment_group_id": 724196,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 2095461,
+          "name": "Lab 5",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350332/assignments/2095461",
+          "published": true,
+          "assignment_group_id": 724196,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 2105187,
+          "name": "Lab 6",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350332/assignments/2105187",
+          "published": true,
+          "assignment_group_id": 724196,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 2114870,
+          "name": "Lab 7",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350332/assignments/2114870",
+          "published": true,
+          "assignment_group_id": 724196,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 2129632,
+          "name": "Lab 8",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350332/assignments/2129632",
+          "published": true,
+          "assignment_group_id": 724196,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 10
+        },
+        {
+          "id": 2095458,
+          "name": "Project 1",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350332/assignments/2095458",
+          "published": true,
+          "assignment_group_id": 724197,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 80
+        },
+        {
+          "id": 2101107,
+          "name": "Project 2",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350332/assignments/2101107",
+          "published": true,
+          "assignment_group_id": 724197,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 100
+        },
+        {
+          "id": 2121832,
+          "name": "Project 3",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350332/assignments/2121832",
+          "published": true,
+          "assignment_group_id": 724197,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 90
+        },
+        {
+          "id": 2129631,
+          "name": "Project 4",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350332/assignments/2129631",
+          "published": true,
+          "assignment_group_id": 724197,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 90
+        }
+      ]
+    },
+    {
+      "id": 350489,
+      "name": "2264 CS 1502 SEC1220 FORMAL METHODS IN COMPUTER SCI",
+      "course_code": "2264 CS 1502 SEC1220",
+      "start_at": null,
+      "enrollment_term_id": 243,
+      "term": {
+        "id": 243,
+        "name": "Spring 2025-2026",
+        "start_at": "2026-01-05T05:00:00Z",
+        "end_at": "2027-04-30T04:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2025-06-23T21:14:14Z"
+      },
+      "assignments": [
+        {
+          "id": 2050870,
+          "name": "Assignment 1",
+          "due_at": "2026-02-09T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050870",
+          "published": true,
+          "assignment_group_id": 718142,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 96.5
+        },
+        {
+          "id": 2050871,
+          "name": "Assignment 2",
+          "due_at": "2026-02-16T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050871",
+          "published": true,
+          "assignment_group_id": 718142,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 98
+        },
+        {
+          "id": 2050872,
+          "name": "Assignment 3",
+          "due_at": "2026-02-23T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050872",
+          "published": true,
+          "assignment_group_id": 718142,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 84
+        },
+        {
+          "id": 2050874,
+          "name": "Assignment 4",
+          "due_at": "2026-03-02T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050874",
+          "published": true,
+          "assignment_group_id": 718142,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 2050864,
+          "name": "Midterm Exam",
+          "due_at": "2026-03-04T21:20:00Z",
+          "points_possible": 62,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050864",
+          "published": true,
+          "assignment_group_id": 718143,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 46.5
+        },
+        {
+          "id": 2050841,
+          "name": "Practice Quiz: Configuration",
+          "due_at": "2026-03-09T03:59:59Z",
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050841",
+          "published": true,
+          "assignment_group_id": 718146,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 5
+        },
+        {
+          "id": 2050858,
+          "name": "Practice Quiz: Deterministic Finite Automaton (DFA)",
+          "due_at": "2026-03-09T03:59:59Z",
+          "points_possible": 16,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050858",
+          "published": true,
+          "assignment_group_id": 718146,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2050860,
+          "name": "Practice Quiz: DFA to Regular Expression (GNFA)",
+          "due_at": "2026-03-09T03:59:59Z",
+          "points_possible": 11,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050860",
+          "published": true,
+          "assignment_group_id": 718146,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2050856,
+          "name": "Practice Quiz: Mathematical Preliminaries",
+          "due_at": "2026-03-09T03:59:59Z",
+          "points_possible": 12,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050856",
+          "published": true,
+          "assignment_group_id": 718146,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2050843,
+          "name": "Practice Quiz: Nondeterministic Finite Automaton (NFA)",
+          "due_at": "2026-03-09T03:59:59Z",
+          "points_possible": 15,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050843",
+          "published": true,
+          "assignment_group_id": 718146,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2050839,
+          "name": "Practice Quiz: Regular Expressions",
+          "due_at": "2026-03-09T03:59:59Z",
+          "points_possible": 19,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050839",
+          "published": true,
+          "assignment_group_id": 718146,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2050849,
+          "name": "Practice Quiz: Regular Language VS Non-Regular Language",
+          "due_at": "2026-03-09T03:59:59Z",
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050849",
+          "published": true,
+          "assignment_group_id": 718146,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2050862,
+          "name": "Practice Quiz: String Length",
+          "due_at": "2026-03-09T03:59:59Z",
+          "points_possible": 9,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050862",
+          "published": true,
+          "assignment_group_id": 718146,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2050853,
+          "name": "Practice Quiz: Turing Machine",
+          "due_at": "2026-03-09T03:59:59Z",
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050853",
+          "published": true,
+          "assignment_group_id": 718146,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 4
+        },
+        {
+          "id": 2050840,
+          "name": "Practice Quiz: Writing Proof (Non-regular Language Proof)",
+          "due_at": "2026-03-09T03:59:59Z",
+          "points_possible": 14,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050840",
+          "published": true,
+          "assignment_group_id": 718146,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2050875,
+          "name": "Assignment 5",
+          "due_at": "2026-03-23T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050875",
+          "published": true,
+          "assignment_group_id": 718142,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 100
+        },
+        {
+          "id": 2050876,
+          "name": "Assignment 6",
+          "due_at": "2026-03-30T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050876",
+          "published": true,
+          "assignment_group_id": 718142,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 100
+        },
+        {
+          "id": 2050877,
+          "name": "Assignment 7",
+          "due_at": "2026-04-13T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050877",
+          "published": true,
+          "assignment_group_id": 718142,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 88
+        },
+        {
+          "id": 2050878,
+          "name": "Assignment 8",
+          "due_at": "2026-04-20T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050878",
+          "published": true,
+          "assignment_group_id": 718142,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 100
+        },
+        {
+          "id": 2050846,
+          "name": "Final Exam",
+          "due_at": "2026-04-22T20:20:00Z",
+          "points_possible": 62,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050846",
+          "published": true,
+          "assignment_group_id": 718144,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 38.89
+        },
+        {
+          "id": 2050848,
+          "name": "Practice Quiz: Decidability",
+          "due_at": "2026-04-27T03:59:59Z",
+          "points_possible": 10,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050848",
+          "published": true,
+          "assignment_group_id": 718146,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 10
+        },
+        {
+          "id": 2050854,
+          "name": "Practice Quiz: Header (Signature) of a TM",
+          "due_at": "2026-04-27T03:59:59Z",
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050854",
+          "published": true,
+          "assignment_group_id": 718146,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2050838,
+          "name": "Practice Quiz: Reducibility",
+          "due_at": "2026-04-27T03:59:59Z",
+          "points_possible": 19,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050838",
+          "published": true,
+          "assignment_group_id": 718146,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2050844,
+          "name": "Practice Quiz: Time Complexity",
+          "due_at": "2026-04-27T03:59:59Z",
+          "points_possible": 7,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050844",
+          "published": true,
+          "assignment_group_id": 718146,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 7
+        },
+        {
+          "id": 2050851,
+          "name": "Practice Quiz: Using Helper TMs",
+          "due_at": "2026-04-27T03:59:59Z",
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050851",
+          "published": true,
+          "assignment_group_id": 718146,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 5
+        },
+        {
+          "id": 2050868,
+          "name": "4% Practice Quizzes",
+          "due_at": null,
+          "points_possible": 15,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350489/assignments/2050868",
+          "published": true,
+          "assignment_group_id": 718145,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 5
+        }
+      ]
+    },
+    {
+      "id": 350531,
+      "name": "2264 CS 1503 SEC1200 MATH FNDTNS MACHINE LEARNING",
+      "course_code": "2264 CS 1503 SEC1200",
+      "start_at": null,
+      "enrollment_term_id": 243,
+      "term": {
+        "id": 243,
+        "name": "Spring 2025-2026",
+        "start_at": "2026-01-05T05:00:00Z",
+        "end_at": "2027-04-30T04:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2025-06-23T21:14:14Z"
+      },
+      "assignments": [
+        {
+          "id": 2078107,
+          "name": "Homework + Recitation 1",
+          "due_at": "2026-01-23T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350531/assignments/2078107",
+          "published": true,
+          "assignment_group_id": 723389,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 83
+        },
+        {
+          "id": 2082706,
+          "name": "Homework 2 (Combinatorics)",
+          "due_at": "2026-01-31T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350531/assignments/2082706",
+          "published": true,
+          "assignment_group_id": 723389,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 81
+        },
+        {
+          "id": 2086787,
+          "name": "Homework 3 (Monte Carlo craps simulation)",
+          "due_at": "2026-02-07T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350531/assignments/2086787",
+          "published": true,
+          "assignment_group_id": 723389,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 85
+        },
+        {
+          "id": 2092421,
+          "name": "Homework 4 (Bayes theorem and conditional prob)",
+          "due_at": "2026-02-14T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350531/assignments/2092421",
+          "published": true,
+          "assignment_group_id": 723389,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 100
+        },
+        {
+          "id": 2096962,
+          "name": "Homework 5 (BBNs)",
+          "due_at": "2026-02-28T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350531/assignments/2096962",
+          "published": true,
+          "assignment_group_id": 723389,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 93
+        },
+        {
+          "id": 2105813,
+          "name": "Exam 1",
+          "due_at": "2026-03-04T04:59:00Z",
+          "points_possible": 50,
+          "submission_types": [
+            "on_paper"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350531/assignments/2105813",
+          "published": true,
+          "assignment_group_id": 758375,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 36
+        },
+        {
+          "id": 2109130,
+          "name": "Homework 6 (Calc review and MLE)",
+          "due_at": "2026-03-24T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350531/assignments/2109130",
+          "published": true,
+          "assignment_group_id": 723389,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 95
+        },
+        {
+          "id": 2117420,
+          "name": "Homework 7: MAP estimates and continuous random variables",
+          "due_at": "2026-04-10T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350531/assignments/2117420",
+          "published": true,
+          "assignment_group_id": 723389,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 65
+        },
+        {
+          "id": 2126616,
+          "name": "Assignment 8 (Linear Models and Grad. Ascent)",
+          "due_at": "2026-04-25T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350531/assignments/2126616",
+          "published": true,
+          "assignment_group_id": 723389,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 2106578,
+          "name": "Adjustment1",
+          "due_at": null,
+          "points_possible": 0,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350531/assignments/2106578",
+          "published": true,
+          "assignment_group_id": 758375,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 4
+        },
+        {
+          "id": 2131912,
+          "name": "Exam 2",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "on_paper"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350531/assignments/2131912",
+          "published": true,
+          "assignment_group_id": 761798,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 85
+        },
+        {
+          "id": 2131910,
+          "name": "Recitation adjust",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/350531/assignments/2131910",
+          "published": true,
+          "assignment_group_id": 761797,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 100
+        }
+      ]
+    },
+    {
+      "id": 353069,
+      "name": "2264 ENGCMP 0450 SEC1030 RESEARCH WRITING",
+      "course_code": "2264 ENGCMP 0450 SEC1030",
+      "start_at": null,
+      "enrollment_term_id": 243,
+      "term": {
+        "id": 243,
+        "name": "Spring 2025-2026",
+        "start_at": "2026-01-05T05:00:00Z",
+        "end_at": "2027-04-30T04:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2025-06-23T21:14:14Z"
+      },
+      "assignments": [
+        {
+          "id": 2026505,
+          "name": "Workshop Participation",
+          "due_at": "2026-01-22T17:15:00Z",
+          "points_possible": 20,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2026505",
+          "published": true,
+          "assignment_group_id": 713762,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 2026322,
+          "name": "Writing + Research Schedule",
+          "due_at": "2026-01-27T04:59:00Z",
+          "points_possible": 20,
+          "submission_types": [
+            "online_url",
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2026322",
+          "published": true,
+          "assignment_group_id": 689811,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 20
+        },
+        {
+          "id": 2082631,
+          "name": "Workshop Participation 2",
+          "due_at": "2026-02-18T17:15:00Z",
+          "points_possible": 20,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2082631",
+          "published": true,
+          "assignment_group_id": 713762,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 20
+        },
+        {
+          "id": 2026361,
+          "name": "Source Collection",
+          "due_at": "2026-02-19T04:59:00Z",
+          "points_possible": 80,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2026361",
+          "published": true,
+          "assignment_group_id": 689811,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 0
+        },
+        {
+          "id": 2026463,
+          "name": "Literature Review",
+          "due_at": "2026-02-19T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2026463",
+          "published": true,
+          "assignment_group_id": 713754,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 2024209,
+          "name": "Research Journal",
+          "due_at": "2026-02-19T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "discussion_topic"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2024209",
+          "published": true,
+          "assignment_group_id": 689811,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 79
+        },
+        {
+          "id": 2026471,
+          "name": "Introduction",
+          "due_at": "2026-02-24T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_text_entry"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2026471",
+          "published": true,
+          "assignment_group_id": 713754,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 2082632,
+          "name": "Workshop Participation 3",
+          "due_at": "2026-02-26T17:15:00Z",
+          "points_possible": 20,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2082632",
+          "published": true,
+          "assignment_group_id": 713762,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 20
+        },
+        {
+          "id": 2026464,
+          "name": "Methodology",
+          "due_at": "2026-03-03T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_text_entry"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2026464",
+          "published": true,
+          "assignment_group_id": 713754,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 100
+        },
+        {
+          "id": 2082634,
+          "name": "Workshop Participation 4",
+          "due_at": "2026-03-05T17:15:00Z",
+          "points_possible": 20,
+          "submission_types": [
+            "online_text_entry"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2082634",
+          "published": true,
+          "assignment_group_id": 713762,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 20
+        },
+        {
+          "id": 2026477,
+          "name": "Results/Discussion",
+          "due_at": "2026-03-17T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_text_entry"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2026477",
+          "published": true,
+          "assignment_group_id": 713754,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 100
+        },
+        {
+          "id": 2082636,
+          "name": "Workshop Participation 5",
+          "due_at": "2026-03-17T16:15:00Z",
+          "points_possible": 20,
+          "submission_types": [
+            "online_text_entry"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2082636",
+          "published": true,
+          "assignment_group_id": 713762,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 20
+        },
+        {
+          "id": 2026478,
+          "name": "Conclusion + Abstract",
+          "due_at": "2026-03-24T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_text_entry"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2026478",
+          "published": true,
+          "assignment_group_id": 713754,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 100
+        },
+        {
+          "id": 2082637,
+          "name": "Workshop Participation 6",
+          "due_at": "2026-03-24T16:15:00Z",
+          "points_possible": 20,
+          "submission_types": [
+            "online_text_entry"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2082637",
+          "published": true,
+          "assignment_group_id": 713762,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 20
+        },
+        {
+          "id": 2026525,
+          "name": "Final Draft Excerpt",
+          "due_at": "2026-04-07T03:59:59Z",
+          "points_possible": 0,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2026525",
+          "published": true,
+          "assignment_group_id": 713762,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2082640,
+          "name": "Workshop Participation 7",
+          "due_at": "2026-04-09T16:15:00Z",
+          "points_possible": 40,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2082640",
+          "published": true,
+          "assignment_group_id": 713762,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 40
+        },
+        {
+          "id": 2082641,
+          "name": "Workshop Participation 8",
+          "due_at": "2026-04-14T16:15:00Z",
+          "points_possible": 40,
+          "submission_types": [
+            "online_text_entry"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2082641",
+          "published": true,
+          "assignment_group_id": 713762,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 40
+        },
+        {
+          "id": 2026532,
+          "name": "Engagement with Peer Posters",
+          "due_at": "2026-04-16T16:15:00Z",
+          "points_possible": 30,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2026532",
+          "published": true,
+          "assignment_group_id": 713769,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 30
+        },
+        {
+          "id": 2026531,
+          "name": "Poster Presentation",
+          "due_at": "2026-04-17T03:59:00Z",
+          "points_possible": 80,
+          "submission_types": [
+            "on_paper"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2026531",
+          "published": true,
+          "assignment_group_id": 713769,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 73
+        },
+        {
+          "id": 2110511,
+          "name": "Engagement with Peer Posters",
+          "due_at": "2026-04-21T16:15:00Z",
+          "points_possible": 30,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2110511",
+          "published": true,
+          "assignment_group_id": 713769,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 30
+        },
+        {
+          "id": 2026544,
+          "name": "Final Research Paper",
+          "due_at": "2026-04-29T03:59:00Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_text_entry",
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2026544",
+          "published": true,
+          "assignment_group_id": 713771,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 97
+        },
+        {
+          "id": 2129592,
+          "name": "Participation Bonus",
+          "due_at": null,
+          "points_possible": 0,
+          "submission_types": [
+            "online_text_entry"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2129592",
+          "published": true,
+          "assignment_group_id": 713762,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 20
+        },
+        {
+          "id": 2120494,
+          "name": "Roll Call Attendance",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/353069/assignments/2120494",
+          "published": true,
+          "assignment_group_id": 713754,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": 358832,
+      "name": "2264 MUSIC 0620 SEC1040 UNIVERSITY ORCHESTRA",
+      "course_code": "2264 MUSIC 0620 SEC1040",
+      "start_at": null,
+      "enrollment_term_id": 243,
+      "term": {
+        "id": 243,
+        "name": "Spring 2025-2026",
+        "start_at": "2026-01-05T05:00:00Z",
+        "end_at": "2027-04-30T04:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2025-06-23T21:14:14Z"
+      },
+      "assignments": [
+        {
+          "id": 2077398,
+          "name": "Roll Call Attendance",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/358832/assignments/2077398",
+          "published": true,
+          "assignment_group_id": 695576,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": 361913,
+      "name": "2264 PHYS 1331 SEC1060 MECHANICS",
+      "course_code": "2264 PHYS 1331 SEC1060",
+      "start_at": null,
+      "enrollment_term_id": 243,
+      "term": {
+        "id": 243,
+        "name": "Spring 2025-2026",
+        "start_at": "2026-01-05T05:00:00Z",
+        "end_at": "2027-04-30T04:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2025-06-23T21:14:14Z"
+      },
+      "assignments": [
+        {
+          "id": 2062558,
+          "name": "Homework 1",
+          "due_at": "2026-01-17T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/361913/assignments/2062558",
+          "published": true,
+          "assignment_group_id": 698656,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 72
+        },
+        {
+          "id": 2079513,
+          "name": "Homework 2",
+          "due_at": "2026-01-24T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/361913/assignments/2079513",
+          "published": true,
+          "assignment_group_id": 698656,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 85
+        },
+        {
+          "id": 2083684,
+          "name": "Homework 3",
+          "due_at": "2026-02-05T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/361913/assignments/2083684",
+          "published": true,
+          "assignment_group_id": 698656,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 92
+        },
+        {
+          "id": 2090337,
+          "name": "Homework 4",
+          "due_at": "2026-02-13T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/361913/assignments/2090337",
+          "published": true,
+          "assignment_group_id": 698656,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 2096915,
+          "name": "Hour Exam 1 posted here with solutions.",
+          "due_at": "2026-02-16T18:00:00Z",
+          "points_possible": 100,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/361913/assignments/2096915",
+          "published": true,
+          "assignment_group_id": 735247,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2095454,
+          "name": "Homework 5",
+          "due_at": "2026-02-21T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/361913/assignments/2095454",
+          "published": true,
+          "assignment_group_id": 698656,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 100
+        },
+        {
+          "id": 2099548,
+          "name": "Homework 6",
+          "due_at": "2026-02-28T04:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/361913/assignments/2099548",
+          "published": true,
+          "assignment_group_id": 698656,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 2102586,
+          "name": "Homework 7",
+          "due_at": "2026-03-14T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/361913/assignments/2102586",
+          "published": true,
+          "assignment_group_id": 698656,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 2108615,
+          "name": "Homework 8",
+          "due_at": "2026-03-28T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/361913/assignments/2108615",
+          "published": true,
+          "assignment_group_id": 698656,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 2118769,
+          "name": "Homework 9",
+          "due_at": "2026-04-11T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/361913/assignments/2118769",
+          "published": true,
+          "assignment_group_id": 698656,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 68
+        },
+        {
+          "id": 2125694,
+          "name": "Hour Exam 3 Posted Here with Solutions",
+          "due_at": "2026-04-14T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/361913/assignments/2125694",
+          "published": true,
+          "assignment_group_id": 735247,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2125420,
+          "name": "Homework 10",
+          "due_at": "2026-04-23T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/361913/assignments/2125420",
+          "published": true,
+          "assignment_group_id": 698656,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": 0
+        },
+        {
+          "id": 2134810,
+          "name": "Final Examination ",
+          "due_at": "2026-05-02T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/361913/assignments/2134810",
+          "published": true,
+          "assignment_group_id": 762368,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2118981,
+          "name": "Hour Exam 2 posted here with solutions",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "none"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/361913/assignments/2118981",
+          "published": true,
+          "assignment_group_id": 735247,
+          "workflow_state": "graded",
+          "submitted": false,
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": 382303,
+      "name": "2271 CS 1675 SEC1100 INTRO TO MACHINE LEARNING",
+      "course_code": "2271 CS 1675 SEC1100",
+      "start_at": null,
+      "enrollment_term_id": 245,
+      "term": {
+        "id": 245,
+        "name": "Fall 2026-2027",
+        "start_at": "2026-08-17T04:00:00Z",
+        "end_at": "2027-12-31T05:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2026-01-06T20:45:21Z"
+      },
+      "assignments": [
+        {
+          "id": 2201014,
+          "name": "Homework 01",
+          "due_at": "2026-09-03T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/382303/assignments/2201014",
+          "published": true,
+          "assignment_group_id": 741536,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 100
+        },
+        {
+          "id": 2201105,
+          "name": "Quiz 01",
+          "due_at": "2026-09-09T03:59:59Z",
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/382303/assignments/2201105",
+          "published": true,
+          "assignment_group_id": 741536,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 5
+        },
+        {
+          "id": 2265784,
+          "name": "Homework 02",
+          "due_at": "2026-09-12T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/382303/assignments/2265784",
+          "published": true,
+          "assignment_group_id": 741536,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2270488,
+          "name": "Homework 03",
+          "due_at": "2026-09-22T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/382303/assignments/2270488",
+          "published": true,
+          "assignment_group_id": 741536,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": 382312,
+      "name": "2271 CS 1684 SEC1010 BIAS & ETHICAL IMPLICTNS IN AI",
+      "course_code": "2271 CS 1684 SEC1010",
+      "start_at": null,
+      "enrollment_term_id": 245,
+      "term": {
+        "id": 245,
+        "name": "Fall 2026-2027",
+        "start_at": "2026-08-17T04:00:00Z",
+        "end_at": "2027-12-31T05:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2026-01-06T20:45:21Z"
+      },
+      "assignments": [
+        {
+          "id": 2268241,
+          "name": "Preproposal",
+          "due_at": "2026-09-10T03:59:59Z",
+          "points_possible": 0,
+          "submission_types": [
+            "online_text_entry"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/382312/assignments/2268241",
+          "published": true,
+          "assignment_group_id": 787111,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2268246,
+          "name": "Topic 1: Human subjects in AI (pre-class)",
+          "due_at": "2026-09-16T17:00:00Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/382312/assignments/2268246",
+          "published": true,
+          "assignment_group_id": 787113,
+          "workflow_state": "submitted",
+          "submitted": true,
+          "score": null
+        },
+        {
+          "id": 2272719,
+          "name": "Topic 1: Human subjects in AI (post class)",
+          "due_at": "2026-09-19T17:00:00Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/382312/assignments/2272719",
+          "published": true,
+          "assignment_group_id": 787114,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2272737,
+          "name": "Proposal",
+          "due_at": "2026-09-28T03:59:59Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/382312/assignments/2272737",
+          "published": true,
+          "assignment_group_id": 787694,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2274470,
+          "name": "Topic 2: Ethics in AI (pre-class)",
+          "due_at": "2026-09-30T17:00:00Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/382312/assignments/2274470",
+          "published": true,
+          "assignment_group_id": 787113,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2274471,
+          "name": "Topic 1: Human subjects in AI (post class) Copy",
+          "due_at": "2026-10-03T17:00:00Z",
+          "points_possible": 100,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/382312/assignments/2274471",
+          "published": true,
+          "assignment_group_id": 787114,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": 392486,
+      "name": "2271 MUSIC 0516 SEC1010 VIOLA",
+      "course_code": "2271 MUSIC 0516 SEC1010",
+      "start_at": null,
+      "enrollment_term_id": 245,
+      "term": {
+        "id": 245,
+        "name": "Fall 2026-2027",
+        "start_at": "2026-08-17T04:00:00Z",
+        "end_at": "2027-12-31T05:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2026-01-06T20:45:21Z"
+      },
+      "assignments": []
+    },
+    {
+      "id": 392600,
+      "name": "2271 MUSIC 0620 SEC1040 UNIVERSITY ORCHESTRA",
+      "course_code": "2271 MUSIC 0620 SEC1040",
+      "start_at": null,
+      "enrollment_term_id": 245,
+      "term": {
+        "id": 245,
+        "name": "Fall 2026-2027",
+        "start_at": "2026-08-17T04:00:00Z",
+        "end_at": "2027-12-31T05:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2026-01-06T20:45:21Z"
+      },
+      "assignments": [
+        {
+          "id": 2239776,
+          "name": "Roll Call Attendance",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/392600/assignments/2239776",
+          "published": true,
+          "assignment_group_id": 781851,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": 392630,
+      "name": "2271 MUSIC 0672 SEC1020 CHAMBER MUSIC",
+      "course_code": "2271 MUSIC 0672 SEC1020",
+      "start_at": null,
+      "enrollment_term_id": 245,
+      "term": {
+        "id": 245,
+        "name": "Fall 2026-2027",
+        "start_at": "2026-08-17T04:00:00Z",
+        "end_at": "2027-12-31T05:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2026-01-06T20:45:21Z"
+      },
+      "assignments": []
+    },
+    {
+      "id": 392794,
+      "name": "2271 MUSIC 1431 SEC1000 INSTRUMNTATION & ORCHESTRATION",
+      "course_code": "2271 MUSIC 1431 SEC1000",
+      "start_at": null,
+      "enrollment_term_id": 245,
+      "term": {
+        "id": 245,
+        "name": "Fall 2026-2027",
+        "start_at": "2026-08-17T04:00:00Z",
+        "end_at": "2027-12-31T05:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2026-01-06T20:45:21Z"
+      },
+      "assignments": []
+    },
+    {
+      "id": 395498,
+      "name": "2271 PHYS 1351 SEC1040 INTERMEDT ELECTRCITY/MAGNETISM",
+      "course_code": "2271 PHYS 1351 SEC1040",
+      "start_at": null,
+      "enrollment_term_id": 245,
+      "term": {
+        "id": 245,
+        "name": "Fall 2026-2027",
+        "start_at": "2026-08-17T04:00:00Z",
+        "end_at": "2027-12-31T05:00:00Z",
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2026-01-06T20:45:21Z"
+      },
+      "assignments": [
+        {
+          "id": 2249873,
+          "name": "HW01",
+          "due_at": "2026-09-03T03:59:59Z",
+          "points_possible": 4,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/395498/assignments/2249873",
+          "published": true,
+          "assignment_group_id": 783808,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 2249871,
+          "name": "FinalExam",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/395498/assignments/2249871",
+          "published": true,
+          "assignment_group_id": 783812,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": 366800,
+      "name": "Academic Integrity Modules",
+      "course_code": "Academic Integrity Modules",
+      "start_at": null,
+      "enrollment_term_id": 32,
+      "term": {
+        "id": 32,
+        "name": "Organization",
+        "start_at": null,
+        "end_at": null,
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2019-06-07T18:32:36Z"
+      },
+      "assignments": [
+        {
+          "id": 1997515,
+          "name": "Academic Integrity Final Quiz",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/366800/assignments/1997515",
+          "published": true,
+          "assignment_group_id": 708493,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 90
+        },
+        {
+          "id": 1997516,
+          "name": "Academic Integrity Overview",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/366800/assignments/1997516",
+          "published": true,
+          "assignment_group_id": 708493,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 100
+        },
+        {
+          "id": 1997517,
+          "name": "Cheating",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/366800/assignments/1997517",
+          "published": true,
+          "assignment_group_id": 708493,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 100
+        },
+        {
+          "id": 1997518,
+          "name": "Citations",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/366800/assignments/1997518",
+          "published": true,
+          "assignment_group_id": 708493,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 100
+        },
+        {
+          "id": 1997519,
+          "name": "Integrating Research",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/366800/assignments/1997519",
+          "published": true,
+          "assignment_group_id": 708493,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 100
+        },
+        {
+          "id": 1997520,
+          "name": "Pitt Policies on Academic Integrity",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/366800/assignments/1997520",
+          "published": true,
+          "assignment_group_id": 708493,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 100
+        },
+        {
+          "id": 1997521,
+          "name": "Plagiarism",
+          "due_at": null,
+          "points_possible": 100,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/366800/assignments/1997521",
+          "published": true,
+          "assignment_group_id": 708493,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 100
+        }
+      ]
+    },
+    {
+      "id": 256693,
+      "name": "Living Off-Campus: The Fundamentals",
+      "course_code": "Living Off-Campus: The Fundamentals",
+      "start_at": null,
+      "enrollment_term_id": 32,
+      "term": {
+        "id": 32,
+        "name": "Organization",
+        "start_at": null,
+        "end_at": null,
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2019-06-07T18:32:36Z"
+      },
+      "assignments": []
+    },
+    {
+      "id": 42220,
+      "name": "Open Lab @ Canvas",
+      "course_code": "Open Lab @ Canvas",
+      "start_at": "2020-07-08T19:46:00Z",
+      "enrollment_term_id": 32,
+      "term": {
+        "id": 32,
+        "name": "Organization",
+        "start_at": null,
+        "end_at": null,
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2019-06-07T18:32:36Z"
+      },
+      "assignments": [
+        {
+          "id": 321322,
+          "name": "(old) Assignment: Illustrator Design for Epilog Zing Final Assessment",
+          "due_at": null,
+          "points_possible": 17,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/321322",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 853717,
+          "name": "(old) Assignment: Illustrator Design for Epilog Zing Final Assessment",
+          "due_at": null,
+          "points_possible": 17,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/853717",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 298797,
+          "name": "(old) Final Assessment: Create a model in Tinkercad",
+          "due_at": null,
+          "points_possible": 6,
+          "submission_types": [
+            "online_upload"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/298797",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 573302,
+          "name": "(old) Self Check: Finishing Your Print",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/573302",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 768349,
+          "name": "(old) Self Check: Formlabs Use Cases and Safety",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/768349",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 576314,
+          "name": "(old) Self Check: Removing Scaffolding and Finishing your 3D Print",
+          "due_at": null,
+          "points_possible": 9,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/576314",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 500108,
+          "name": "(old) Self Check: Silhouette Studio Design Quiz 1",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/500108",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 500146,
+          "name": "(old) Self Check: Silhouette Studio Design Quiz 2",
+          "due_at": null,
+          "points_possible": 6,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/500146",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 573299,
+          "name": "(old) Self Check: Using Preform and Starting Your Print",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/573299",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 674026,
+          "name": "(old) Self Check: Working with Formlabs Printers",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/674026",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 762972,
+          "name": "(old) Self-Check: 3D Printing at Open Lab",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/762972",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 444415,
+          "name": "(old) Self-check: Completing Your Laser Cut, Cleaning Up, and Making a Reservation",
+          "due_at": null,
+          "points_possible": 9,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/444415",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 495983,
+          "name": "(old) Self-Check: Cutting with Cameo",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/495983",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 479173,
+          "name": "(old) Self-Check: Dual Extrusion Quiz",
+          "due_at": null,
+          "points_possible": 7,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/479173",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 444413,
+          "name": "(old) Self-check: Getting Ready to Start Your Laser Cut",
+          "due_at": null,
+          "points_possible": 8,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/444413",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 444824,
+          "name": "(old) Self-check: Guidelines, Health and Safety",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/444824",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 438496,
+          "name": "(old) Self-check: Intro to Cura: Final Quiz",
+          "due_at": null,
+          "points_possible": 6,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/438496",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 495962,
+          "name": "(old) Self-Check: Is the Cameo Ready for Action?",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/495962",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 354037,
+          "name": "(old) Self-Check: Open Lab Pandemic Policies",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/354037",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 444838,
+          "name": "(old) Self-check: Preparing, Printing, and Troubleshooting",
+          "due_at": null,
+          "points_possible": 8,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/444838",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 444863,
+          "name": "(old) Self-check: Safety and post-print",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/444863",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 495984,
+          "name": "(old) Self-Check: Stick it to 'em! (2020)",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/495984",
+          "published": true,
+          "assignment_group_id": 327034,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 853712,
+          "name": "ARCHIVED: Self-check: Laser Guidelines and Safety Protocols",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/853712",
+          "published": true,
+          "assignment_group_id": 111269,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 891752,
+          "name": "Authorization: 3D Scanners",
+          "due_at": null,
+          "points_possible": 1,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/891752",
+          "published": true,
+          "assignment_group_id": 327044,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 844725,
+          "name": "Authorization: Garmin VIRB 360 camera",
+          "due_at": null,
+          "points_possible": 1,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/844725",
+          "published": true,
+          "assignment_group_id": 327037,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 844806,
+          "name": "Authorization: New Open Lab member",
+          "due_at": null,
+          "points_possible": 1,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/844806",
+          "published": true,
+          "assignment_group_id": 111269,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1522620,
+          "name": "First Arduino Quiz",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1522620",
+          "published": true,
+          "assignment_group_id": 556445,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 324509,
+          "name": "Honor Code and Etiquette Agreement",
+          "due_at": null,
+          "points_possible": 1,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/324509",
+          "published": true,
+          "assignment_group_id": 111269,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1522549,
+          "name": "Quiz: 3D Printing Orientation",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1522549",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1501416,
+          "name": "Quiz: Adobe Illustrator",
+          "due_at": null,
+          "points_possible": 8,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1501416",
+          "published": true,
+          "assignment_group_id": 327036,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1845305,
+          "name": "Quiz: Adobe Illustrator Copy",
+          "due_at": null,
+          "points_possible": 8,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1845305",
+          "published": true,
+          "assignment_group_id": 327036,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1523377,
+          "name": "Quiz: After Printing",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1523377",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1523385,
+          "name": "Quiz: After Printing",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1523385",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1523384,
+          "name": "Quiz: Before Printing",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1523384",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1539554,
+          "name": "Quiz: Before Printing",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1539554",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1495562,
+          "name": "Quiz: Designing for Vinyl Cutting",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1495562",
+          "published": true,
+          "assignment_group_id": 327035,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1523326,
+          "name": "Quiz: Filament Printing Basics",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1523326",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1845282,
+          "name": "Quiz: Filament Printing Basics Copy",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1845282",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1501418,
+          "name": "Quiz: Laser Cutting Basics",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1501418",
+          "published": true,
+          "assignment_group_id": 327036,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1845304,
+          "name": "Quiz: Laser Cutting Basics Copy",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1845304",
+          "published": true,
+          "assignment_group_id": 327036,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1501417,
+          "name": "Quiz: Laser Safety",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1501417",
+          "published": true,
+          "assignment_group_id": 327036,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1845303,
+          "name": "Quiz: Laser Safety Copy",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1845303",
+          "published": true,
+          "assignment_group_id": 327036,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1523380,
+          "name": "Quiz: Resin Printing Basics",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1523380",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1495563,
+          "name": "Quiz: Silhouette Studio",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1495563",
+          "published": true,
+          "assignment_group_id": 327035,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1629078,
+          "name": "Quiz: Silhouette Studio",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1629078",
+          "published": true,
+          "assignment_group_id": 448667,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1614565,
+          "name": "Quiz: Stay Safe!",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1614565",
+          "published": true,
+          "assignment_group_id": 496097,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1614569,
+          "name": "Quiz: The Basics",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1614569",
+          "published": true,
+          "assignment_group_id": 496097,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1523382,
+          "name": "Quiz: Using PreForm",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1523382",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1495550,
+          "name": "Quiz: Vinyl Cutting Basics",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1495550",
+          "published": true,
+          "assignment_group_id": 327035,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1488571,
+          "name": "Quiz: What is Open Lab?",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1488571",
+          "published": true,
+          "assignment_group_id": 111269,
+          "workflow_state": "pending_review",
+          "submitted": true,
+          "score": 5
+        },
+        {
+          "id": 1538448,
+          "name": "Second Arduino Quiz",
+          "due_at": null,
+          "points_possible": 0,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1538448",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1358828,
+          "name": "Self Check: 2D Scanning Pre-training",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1358828",
+          "published": true,
+          "assignment_group_id": 111269,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1488572,
+          "name": "Self Check: Open Lab Policies",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1488572",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 4
+        },
+        {
+          "id": 1229568,
+          "name": "Self Check: Using the Leo",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1229568",
+          "published": true,
+          "assignment_group_id": 327044,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1358832,
+          "name": "Self Check: Using the Quartz Scanner",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1358832",
+          "published": true,
+          "assignment_group_id": 111269,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 404160,
+          "name": "Self-Check:  Use Cases and Components",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/404160",
+          "published": true,
+          "assignment_group_id": 327042,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 630585,
+          "name": "Self-Check: 3D Basics Quiz",
+          "due_at": null,
+          "points_possible": 6,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/630585",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 282923,
+          "name": "Self-Check: 3D Scanners",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/282923",
+          "published": true,
+          "assignment_group_id": 327044,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 893307,
+          "name": "Self-Check: 3D Scanning Pre-Training",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/893307",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 926986,
+          "name": "Self-Check: Accessibility Features and Locating Resources & Tutorials for Advanced Sewing",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/926986",
+          "published": true,
+          "assignment_group_id": 111269,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 630588,
+          "name": "Self-Check: Advanced 3D Tools Quiz",
+          "due_at": null,
+          "points_possible": 7,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/630588",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 611340,
+          "name": "Self-Check: Applied XR Concepts",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/611340",
+          "published": true,
+          "assignment_group_id": 327041,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 580055,
+          "name": "Self-Check: Applying and Troubleshooting HTV",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/580055",
+          "published": true,
+          "assignment_group_id": 327035,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 411510,
+          "name": "Self-Check: Are You RasPi Ready?",
+          "due_at": null,
+          "points_possible": 6,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/411510",
+          "published": true,
+          "assignment_group_id": 327042,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 470649,
+          "name": "Self-Check: Arrays",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/470649",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 572161,
+          "name": "Self-Check: Best Practices When Filming 360° Video",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/572161",
+          "published": true,
+          "assignment_group_id": 327037,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 580052,
+          "name": "Self-Check: Choosing and Using HTV",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/580052",
+          "published": true,
+          "assignment_group_id": 327035,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 926991,
+          "name": "Self-Check: Cleaning Up and Putting Away the Sewing Machine",
+          "due_at": null,
+          "points_possible": 1,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/926991",
+          "published": true,
+          "assignment_group_id": 111269,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 853714,
+          "name": "Self-check: Completing Your Laser Cut and Cleaning Up",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/853714",
+          "published": true,
+          "assignment_group_id": 327036,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1343216,
+          "name": "Self-check: Completing Your Laser Cut and Cleaning Up",
+          "due_at": null,
+          "points_possible": 6,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1343216",
+          "published": true,
+          "assignment_group_id": 448667,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 458682,
+          "name": "Self-Check: Conditional Statements",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/458682",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 926990,
+          "name": "Self-Check: Creating a Seam on the Sewing Machine",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/926990",
+          "published": true,
+          "assignment_group_id": 111269,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 854986,
+          "name": "Self-Check: Cutting with Cameo",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/854986",
+          "published": true,
+          "assignment_group_id": 327035,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 458683,
+          "name": "Self-Check: Data Representation",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/458683",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 646719,
+          "name": "Self-Check: Design in Unity Quiz 1",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/646719",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 583987,
+          "name": "Self-Check: Design in Unity Quiz 2",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/583987",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 579479,
+          "name": "Self-Check: Design in Unity Quiz 3",
+          "due_at": null,
+          "points_possible": 1,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/579479",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 648419,
+          "name": "Self-Check: Downloading and the ZBrushCoreMini User Interface",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/648419",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 787304,
+          "name": "Self-Check: Dual Extrusion Quiz (2022)",
+          "due_at": null,
+          "points_possible": 8,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/787304",
+          "published": true,
+          "assignment_group_id": 327032,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 630584,
+          "name": "Self-Check: Edits and Constraints Quiz",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/630584",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 853713,
+          "name": "Self-check: Epilog Anatomy and Materials",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/853713",
+          "published": true,
+          "assignment_group_id": 327036,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 854754,
+          "name": "Self-check: Epilog Anatomy and Materials",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/854754",
+          "published": true,
+          "assignment_group_id": 327036,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1343218,
+          "name": "Self-check: Epilog Anatomy and Materials",
+          "due_at": null,
+          "points_possible": 7,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1343218",
+          "published": true,
+          "assignment_group_id": 448667,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 444376,
+          "name": "Self-check: Epilog Guidelines and Safety Protocols",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/444376",
+          "published": true,
+          "assignment_group_id": 327036,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 786772,
+          "name": "Self-Check: Finishing Your Resin Print (2022)",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/786772",
+          "published": true,
+          "assignment_group_id": 327033,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 786770,
+          "name": "Self-Check: Formlabs Use Cases and Safety (2022)",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/786770",
+          "published": true,
+          "assignment_group_id": 327033,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 458685,
+          "name": "Self-Check: Functions",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/458685",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 611338,
+          "name": "Self-Check: General XR Concepts",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/611338",
+          "published": true,
+          "assignment_group_id": 327041,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1343219,
+          "name": "Self-check: Glowforge",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1343219",
+          "published": true,
+          "assignment_group_id": 448667,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 924504,
+          "name": "Self-Check: Identify Small Parts and Hazards",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/924504",
+          "published": true,
+          "assignment_group_id": 111269,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 924502,
+          "name": "Self-Check: Identify the Sewing Machine Parts",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/924502",
+          "published": true,
+          "assignment_group_id": 111269,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 322560,
+          "name": "Self-Check: Illustrator Design for Vinyl Quiz 1",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/322560",
+          "published": true,
+          "assignment_group_id": 327035,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 322568,
+          "name": "Self-Check: Illustrator Design for Vinyl Quiz 2",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/322568",
+          "published": true,
+          "assignment_group_id": 327035,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 560286,
+          "name": "Self-Check: Illustrator Design for Vinyl Quiz 3",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/560286",
+          "published": true,
+          "assignment_group_id": 327035,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 853716,
+          "name": "Self-Check: Illustrator for Laser Quiz",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/853716",
+          "published": true,
+          "assignment_group_id": 142372,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 321089,
+          "name": "Self-Check: Illustrator for Laser Quiz",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/321089",
+          "published": true,
+          "assignment_group_id": 327036,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1343217,
+          "name": "Self-Check: Illustrator for Laser Quiz",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1343217",
+          "published": true,
+          "assignment_group_id": 448667,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 448294,
+          "name": "Self-Check: Illustrator for Print and Screen Graphics Quiz",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/448294",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1343495,
+          "name": "Self-Check: Illustrator for the Shaper Origin",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1343495",
+          "published": true,
+          "assignment_group_id": 496097,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 445899,
+          "name": "Self-check: Intro to Illustrator quiz 1",
+          "due_at": null,
+          "points_possible": 7,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/445899",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 445901,
+          "name": "Self-check: Intro to Illustrator quiz 2",
+          "due_at": null,
+          "points_possible": 7,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/445901",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 445902,
+          "name": "Self-check: Intro to Illustrator quiz 3",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/445902",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 445904,
+          "name": "Self-check: Intro to Illustrator quiz 4",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/445904",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 298793,
+          "name": "Self-check: Intro to Tinkercad Quiz 1",
+          "due_at": null,
+          "points_possible": 6,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/298793",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 298794,
+          "name": "Self-check: Intro to Tinkercad Quiz 2",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/298794",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 411626,
+          "name": "Self-Check: Introduction to Cura - Printer Settings",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/411626",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 413686,
+          "name": "Self-Check: Introduction to Cura - Quiz 1",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/413686",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 321094,
+          "name": "Self-Check: Laser Engraving Photographs",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/321094",
+          "published": true,
+          "assignment_group_id": 327036,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 572160,
+          "name": "Self-Check: Limitations and Capabilities of 360° Video",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/572160",
+          "published": true,
+          "assignment_group_id": 327037,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 716914,
+          "name": "Self-Check: OL 3D Printers",
+          "due_at": null,
+          "points_possible": 6,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/716914",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 602623,
+          "name": "Self-Check: PHTV",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/602623",
+          "published": true,
+          "assignment_group_id": 327035,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 527447,
+          "name": "Self-Check: Physics in Unity",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/527447",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 926987,
+          "name": "Self-Check: Preparing Your Fabric",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/926987",
+          "published": true,
+          "assignment_group_id": 111269,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 606647,
+          "name": "Self-Check: Printable Materials & the Vinyl Cutter",
+          "due_at": null,
+          "points_possible": 8,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/606647",
+          "published": true,
+          "assignment_group_id": 327035,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 786773,
+          "name": "Self-Check: Removing Scaffolding and Finishing your 3D Prints",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/786773",
+          "published": true,
+          "assignment_group_id": 327038,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 786768,
+          "name": "Self-check: Safety and Anatomy of an Ultimaker",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/786768",
+          "published": true,
+          "assignment_group_id": 327032,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 446584,
+          "name": "Self-Check: Setting Up and Recording with Garmin VIRB 360",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/446584",
+          "published": true,
+          "assignment_group_id": 327037,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 926989,
+          "name": "Self-Check: Setting up the Sewing Machine",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/926989",
+          "published": true,
+          "assignment_group_id": 111269,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1354152,
+          "name": "Self-Check: Setting up the Workspace and Settings",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1354152",
+          "published": true,
+          "assignment_group_id": 496097,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 787198,
+          "name": "Self-check: Setting up your print on an Ultimaker",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/787198",
+          "published": true,
+          "assignment_group_id": 327032,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1335561,
+          "name": "Self-Check: Shaper Origin Anatomy and Safety Protocols",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1335561",
+          "published": true,
+          "assignment_group_id": 496097,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 630583,
+          "name": "Self-Check: Shapr3D Sketching Quiz",
+          "due_at": null,
+          "points_possible": 11,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/630583",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 855321,
+          "name": "Self-Check: Silhouette Studio Design",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/855321",
+          "published": true,
+          "assignment_group_id": 327035,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 854985,
+          "name": "Self-Check: Stick it to 'em!",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/854985",
+          "published": true,
+          "assignment_group_id": 327035,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 924503,
+          "name": "Self-Check: Stitches, Fabrics, and Projects!",
+          "due_at": null,
+          "points_possible": 6,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/924503",
+          "published": true,
+          "assignment_group_id": 111269,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 786769,
+          "name": "Self-check: Ultimaker post-print",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/786769",
+          "published": true,
+          "assignment_group_id": 327032,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 858984,
+          "name": "Self-Check: Unity Basics",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/858984",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 413378,
+          "name": "Self-check: Unity Editor Basics",
+          "due_at": null,
+          "points_possible": 8,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/413378",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 413413,
+          "name": "Self-Check: Unity Materials & Assets",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/413413",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 527443,
+          "name": "Self-Check: Unity Scripts",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/527443",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 579452,
+          "name": "Self-Check: Unity Terrain Tools Quiz",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/579452",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 527471,
+          "name": "Self-Check: User Input in Unity",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/527471",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 605040,
+          "name": "Self-Check: Using Preform (2022)",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/605040",
+          "published": true,
+          "assignment_group_id": 327033,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 527444,
+          "name": "Self-Check: Using Scripts to Move GameObjects",
+          "due_at": null,
+          "points_possible": 8,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/527444",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1345210,
+          "name": "Self-Check: Using the Shaper Origin",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1345210",
+          "published": true,
+          "assignment_group_id": 496097,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1207438,
+          "name": "Self-Check: Using the Space Spider",
+          "due_at": null,
+          "points_possible": 8,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1207438",
+          "published": true,
+          "assignment_group_id": 327044,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 643366,
+          "name": "Self-Check: Using VR Headsets",
+          "due_at": null,
+          "points_possible": 10,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/643366",
+          "published": true,
+          "assignment_group_id": 327041,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 465405,
+          "name": "Self-Check: Variables",
+          "due_at": null,
+          "points_possible": 6,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/465405",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 855225,
+          "name": "Self-check: Vinyl Cutter materials & design considerations",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/855225",
+          "published": true,
+          "assignment_group_id": 327035,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 446585,
+          "name": "Self-Check: VIRB Mobile App and Editing",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/446585",
+          "published": true,
+          "assignment_group_id": 327037,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 663004,
+          "name": "Self-Check: VR Headset Basics",
+          "due_at": null,
+          "points_possible": 6,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/663004",
+          "published": true,
+          "assignment_group_id": 327041,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 786771,
+          "name": "Self-Check: Working with Formlabs Printers (2022)",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/786771",
+          "published": true,
+          "assignment_group_id": 327033,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 648447,
+          "name": "Self-Check: ZBrushCoreMini Community",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/648447",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 648396,
+          "name": "Self-Check: ZBrushCoreMini Sculpting",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/648396",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 607267,
+          "name": "Self-Evaluation: Apply Physics to Your Game",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/607267",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 607281,
+          "name": "Self-Evaluation: Complete Your Game",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/607281",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 599945,
+          "name": "Self-Evaluation: Create a Kickball Scene in Unity",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/599945",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 605791,
+          "name": "Self-Evaluation: Create a Road Scene in Unity Quiz",
+          "due_at": null,
+          "points_possible": 4,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/605791",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 607252,
+          "name": "Self-Evaluation: Create a Script",
+          "due_at": null,
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/607252",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 856563,
+          "name": "Self-Evaluation: Formlabs Sliced File",
+          "due_at": null,
+          "points_possible": 7,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/856563",
+          "published": true,
+          "assignment_group_id": 327033,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 854716,
+          "name": "Self-Evaluation: Illustrator Laser Design",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/854716",
+          "published": true,
+          "assignment_group_id": 327036,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1183417,
+          "name": "Self-Evaluation: Illustrator Laser Design",
+          "due_at": null,
+          "points_possible": 5,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1183417",
+          "published": true,
+          "assignment_group_id": 448667,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 607256,
+          "name": "Self-Evaluation: Move Your Player",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/607256",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 855338,
+          "name": "Self-Evaluation: Silhouette Studio Design",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/855338",
+          "published": true,
+          "assignment_group_id": 327035,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 849754,
+          "name": "Self-Evaluation: Tinkercad model",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/849754",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 855850,
+          "name": "Self-Evaluation: Ultimaker Sliced File",
+          "due_at": null,
+          "points_possible": 6,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/855850",
+          "published": true,
+          "assignment_group_id": 327032,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 599807,
+          "name": "Self-Evaluation: Unity Basic Scene Creation",
+          "due_at": null,
+          "points_possible": 1,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/599807",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 607275,
+          "name": "Self-Evaluation: Update Camera Position as Player Moves",
+          "due_at": null,
+          "points_possible": 7,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/607275",
+          "published": true,
+          "assignment_group_id": 327039,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        },
+        {
+          "id": 1539246,
+          "name": "Third Arduino Quiz",
+          "due_at": null,
+          "points_possible": 3,
+          "submission_types": [
+            "external_tool"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/42220/assignments/1539246",
+          "published": true,
+          "assignment_group_id": 556445,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": 287564,
+      "name": "SCI Academic Advising Hub",
+      "course_code": "SCI Academic Advising Hub",
+      "start_at": null,
+      "enrollment_term_id": 32,
+      "term": {
+        "id": 32,
+        "name": "Organization",
+        "start_at": null,
+        "end_at": null,
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2019-06-07T18:32:36Z"
+      },
+      "assignments": [
+        {
+          "id": 2092817,
+          "name": "Spring 2026 Flipped Advising Assignment",
+          "due_at": "2026-03-12T03:59:59Z",
+          "points_possible": 3,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/287564/assignments/2092817",
+          "published": true,
+          "assignment_group_id": 724801,
+          "workflow_state": "graded",
+          "submitted": true,
+          "score": 3
+        },
+        {
+          "id": 2271720,
+          "name": "Fall 2026 Flipped Advising Assignment",
+          "due_at": "2026-10-12T03:59:59Z",
+          "points_possible": 2,
+          "submission_types": [
+            "online_quiz"
+          ],
+          "html_url": "https://canvas.pitt.edu/courses/287564/assignments/2271720",
+          "published": true,
+          "assignment_group_id": 724801,
+          "workflow_state": "unsubmitted",
+          "submitted": false,
+          "score": null
+        }
+      ]
+    },
+    {
+      "id": 202095,
+      "name": "Undergraduate Student Success Resources",
+      "course_code": "Undergraduate Student Success Resources",
+      "start_at": null,
+      "enrollment_term_id": 32,
+      "term": {
+        "id": 32,
+        "name": "Organization",
+        "start_at": null,
+        "end_at": null,
+        "workflow_state": "active",
+        "grading_period_group_id": null,
+        "created_at": "2019-06-07T18:32:36Z"
+      },
+      "assignments": []
+    }
+  ],
+  "total_assignments": 358,
+  "planner": [
+    {
+      "type": "assignment",
+      "title": "Topic 1: Human subjects in AI (post class)",
+      "due": "2026-09-19T17:00:00Z",
+      "course_id": 382312
+    },
+    {
+      "type": "assignment",
+      "title": "Homework 03",
+      "due": "2026-09-22T03:59:59Z",
+      "course_id": 382303
+    },
+    {
+      "type": "assignment",
+      "title": "Proposal",
+      "due": "2026-09-28T03:59:59Z",
+      "course_id": 382312
+    },
+    {
+      "type": "assignment",
+      "title": "Topic 2: Ethics in AI (pre-class)",
+      "due": "2026-09-30T17:00:00Z",
+      "course_id": 382312
+    },
+    {
+      "type": "assignment",
+      "title": "Topic 1: Human subjects in AI (post class) Copy",
+      "due": "2026-10-03T17:00:00Z",
+      "course_id": 382312
+    },
+    {
+      "type": "discussion_topic",
+      "title": "Finding Project Teammates",
+      "due": "2026-10-08T04:00:00Z",
+      "course_id": 382312
+    },
+    {
+      "type": "quiz",
+      "title": "Fall 2026 Flipped Advising Assignment",
+      "due": "2026-10-12T03:59:59Z",
+      "course_id": 287564
+    }
+  ]
+}

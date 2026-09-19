@@ -80,32 +80,321 @@ Rules:
 
 def render_spec(prompt: str, summary: str, steps: list[dict],
                 channel: str = "web") -> dict:
-    """Ask Claude how to lay out the result, then validate hard."""
+    """
+    Ask Claude how to lay out the result, then validate hard.
+
+    If Claude is unavailable -- bad API key, no network, rate limited -- we fall
+    back to building cards in plain Python from the tool results. The display
+    agent makes the layout smarter; it is NOT allowed to be the reason a
+    correct answer never reaches the screen.
+    """
+    fallback = fallback_spec(summary, steps)
+
     payload = {
         "user_asked": prompt,
         "orchestrator_summary": summary,
         "tool_results": [
-            {"tool": s["tool"], "arguments": s["arguments"], "result": s["result_preview"]}
+            {"tool": s["tool"], "arguments": s["arguments"],
+             "result": s.get("result", s["result_preview"])}
             for s in steps
         ],
         "channel": channel,
     }
 
-    spec = cache.claude(
-        system="You decide how a study-assistant dashboard renders a result.\n\n"
-               + RENDER_CONTRACT,
-        user=_json(payload),
-        max_tokens=3000,
-        label=f"display:{channel}",
-    )
+    try:
+        spec = cache.claude(
+            system="You decide how a study-assistant dashboard renders a result.\n\n"
+                   + RENDER_CONTRACT,
+            user=_json(payload),
+            max_tokens=3000,
+            label=f"display:{channel}",
+        )
+    except Exception as exc:  # noqa: BLE001
+        note = _explain(exc)
+        print(f"[display] Claude unavailable, built cards locally: {note}")
+        fallback["_display_note"] = note
+        return fallback
 
     if "error" in spec:
-        # The display agent failing should never lose the answer.
-        return validate({"speech": summary, "headline": "Here's what I found",
-                         "cards": [{"type": "text", "title": "Summary", "body": summary}]},
-                        fallback_summary=summary)
+        fallback["_display_note"] = str(spec["error"])[:200]
+        return fallback
 
-    return validate(spec, fallback_summary=summary)
+    validated = validate(spec, fallback_summary=summary)
+    # If validation threw everything away, the deterministic version beats a
+    # lone "Summary" card.
+    if (len(validated["cards"]) == 1
+            and validated["cards"][0]["type"] == "text"
+            and len(fallback["cards"]) > 1):
+        fallback["speech"] = validated["speech"]
+        return fallback
+    return validated
+
+
+def _explain(exc: Exception) -> str:
+    """Turn an SDK exception into something worth reading."""
+    text = str(exc)
+    status = getattr(exc, "status_code", None)
+    lowered = text.lower()
+    if status == 401 or "invalid x-api-key" in lowered or "authentication" in lowered:
+        return ("ANTHROPIC_API_KEY is invalid or missing. Get one at "
+                "console.anthropic.com and put it in .env")
+    if status == 429 or "rate limit" in lowered:
+        return "Anthropic rate limit hit"
+    if "credit" in lowered or "quota" in lowered:
+        return "Anthropic account is out of credit"
+    return f"{type(exc).__name__}: {text[:140]}"
+
+
+# --------------------------------------------------------------------------
+# Deterministic fallback: cards without a model
+# --------------------------------------------------------------------------
+
+
+def fallback_spec(summary: str, steps: list[dict]) -> dict:
+    """
+    Build cards directly from the tool results, in plain Python.
+
+    No model, no cost, no latency, identical output every time. Each tool has a
+    known result shape, so the mapping is mechanical. Worth having for three
+    reasons: the site works with no Anthropic key at all, a rate limit can't
+    break your demo, and it is the obvious thing to fall back to.
+    """
+    cards: list[dict] = []
+    for step in steps:
+        if not step.get("ok"):
+            continue
+        data = _result_of(step)
+        if data is None:
+            continue
+        card = _card_for(step["tool"], data)
+        if card:
+            cards.append(card)
+
+    if not cards:
+        cards = [{"type": "text", "title": "Result",
+                  "body": summary or "Nothing to show."}]
+
+    return validate(
+        {"speech": summary, "headline": _headline(cards, summary), "cards": cards},
+        fallback_summary=summary,
+    )
+
+
+def _result_of(step: dict) -> dict | None:
+    """
+    Get the tool's result as a dict.
+
+    Prefer step["result"], which is the real object. step["result_preview"] is
+    truncated to 400 chars for the UI trace, so parsing that silently failed
+    on anything longer -- which was every multi-item result.
+    """
+    import json
+
+    result = step.get("result")
+    if isinstance(result, dict):
+        return result
+
+    raw = step.get("result_preview") or ""
+    if raw.endswith("..."):
+        return None  # genuinely truncated, nothing to parse
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _card_for(tool: str, data: dict) -> dict | None:
+    items = data.get("items") or []
+
+    if tool == "get_overdue":
+        if not items:
+            return {"type": "alert", "title": "Nothing overdue",
+                    "body": "Everything with a due date is still ahead of you."}
+        return {"type": "assignment_list", "title": f"Overdue ({len(items)})",
+                "items": [_assignment_row(a, late=True) for a in items[:12]]}
+
+    if tool == "get_assignments":
+        if not items:
+            return {"type": "alert", "title": "No assignments stored",
+                    "body": "Try refreshing from Canvas."}
+        return {"type": "assignment_list", "title": "Assignments",
+                "items": [_assignment_row(a) for a in items[:12]]}
+
+    if tool in ("get_schedule", "make_schedule"):
+        blocks = data.get("blocks") or []
+        if not blocks:
+            return None
+        return {"type": "schedule", "title": "Your plan",
+                "blocks": [{
+                    "day": _day(b.get("starts_at") or b.get("day")),
+                    "start": _time(b.get("starts_at") or b.get("start")),
+                    "end": _time(b.get("ends_at") or b.get("end")),
+                    "task": str(b.get("task", ""))[:120],
+                    "est_minutes": _int(b.get("est_minutes")),
+                } for b in blocks[:20]]}
+
+    if tool == "make_study_guide":
+        sections = data.get("sections") or []
+        if not sections:
+            return None
+        return {"type": "study_set",
+                "title": ("Study set: " + str(data.get("course", ""))).strip(": "),
+                "sections": [{
+                    "topic": str(s.get("topic", ""))[:120],
+                    "summary": str(s.get("summary", ""))[:1000],
+                    "questions": [str(q)[:300] for q in (s.get("questions") or [])][:6],
+                } for s in sections[:6]]}
+
+    if tool == "find_campus_events":
+        if not items:
+            return None
+        return {"type": "event_list",
+                "title": f"Campus events ({data.get('source', 'live')})",
+                "items": [{"title": str(e.get("title", ""))[:120],
+                           "when": _when(e.get("starts_at")),
+                           "where": str(e.get("location") or "")[:80]}
+                          for e in items[:10]]}
+
+    if tool == "fetch_page":
+        text = str(data.get("text") or "")
+        # Strip the untrusted-content markers before showing a human.
+        for marker in ("--- BEGIN UNTRUSTED WEB CONTENT ---",
+                       "--- END UNTRUSTED WEB CONTENT ---"):
+            text = text.replace(marker, "")
+        body = "\n".join(
+            line for line in text.splitlines()
+            if line.strip() and not line.startswith("The text below was")
+        )[:900]
+        if not body:
+            return None
+        return {"type": "text",
+                "title": f"From {str(data.get('url', ''))[:60]}", "body": body}
+
+    if tool == "get_events":
+        if not items:
+            return None
+        return {"type": "event_list", "title": "On campus",
+                "items": [{"title": str(e.get("title", ""))[:120],
+                           "when": _when(e.get("starts_at")),
+                           "where": str(e.get("location") or "")[:80]}
+                          for e in items[:10]]}
+
+    if tool == "get_workload_history":
+        points = data.get("points") or []
+        if not points:
+            return None
+        by_course: dict[str, list] = {}
+        for pt in points:
+            by_course.setdefault(str(pt.get("course_code", "?")), []).append(
+                {"x": str(pt.get("day"))[:10], "y": _float(pt.get("est_hours"))})
+        return {"type": "workload_chart", "title": "Estimated hours over time",
+                "series": [{"label": c, "points": p}
+                           for c, p in list(by_course.items())[:6]]}
+
+    if tool == "check_freshness":
+        stale = [c for c in (data.get("courses") or []) if c.get("stale")]
+        if not stale:
+            return None
+        names = ", ".join(str(c.get("course")) for c in stale[:5])
+        return {"type": "alert", "title": "Data may be out of date",
+                "body": f"{len(stale)} course(s) not refreshed recently: {names}"}
+
+    if tool == "refresh_from_canvas":
+        note = data.get("note") or f"Synced {data.get('synced', 0)} assignments."
+        return {"type": "text", "title": "Refreshed from Canvas",
+                "body": str(note)[:400]}
+
+    if tool == "update_preferences":
+        saved = data.get("prefs_keys") or []
+        body = f"Saved: {', '.join(map(str, saved))}." if saved else "Nothing saved."
+        if data.get("rejected_fields"):
+            body += (f" Refused to store {', '.join(data['rejected_fields'])} - "
+                     f"credentials are never saved.")
+        return {"type": "text", "title": "Preferences", "body": body[:400]}
+
+    return None
+
+
+def _assignment_row(a: dict, late: bool = False) -> dict:
+    hours = _float(a.get("est_hours"))
+    row = {
+        "title": str(a.get("title", ""))[:140],
+        "course": str(a.get("course_code") or a.get("course") or "")[:40],
+        "due": _when(a.get("due_at")),
+        "priority": _int(a.get("priority")),
+        "est_minutes": int(hours * 60) if hours else 0,
+    }
+    if late and a.get("days_late") is not None:
+        row["due"] = f"{row['due']} ({_float(a.get('days_late')):.1f} days late)"
+    return row
+
+
+def _when(value: object) -> str:
+    dt = _dt(value)
+    if dt is None:
+        return "no due date"
+    return dt.strftime("%a %b %d, %I:%M%p").replace(" 0", " ").replace("AM", "am").replace("PM", "pm")
+
+
+def _day(value: object) -> str:
+    dt = _dt(value)
+    return dt.strftime("%a") if dt else str(value or "")[:12]
+
+
+def _time(value: object) -> str:
+    dt = _dt(value)
+    if dt is None:
+        return str(value or "")[:10]
+    return dt.strftime("%I:%M%p").lstrip("0").replace("AM", "am").replace("PM", "pm")
+
+
+def _dt(value: object):
+    from datetime import datetime
+
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        return value
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+
+
+def _int(value: object) -> int:
+    try:
+        return int(float(value))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 0
+
+
+def _float(value: object) -> float:
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _headline(cards: list[dict], summary: str) -> str:
+    first = cards[0] if cards else {}
+    kind = first.get("type")
+    if kind == "assignment_list":
+        n = len(first.get("items") or [])
+        if "Overdue" in str(first.get("title", "")):
+            return f"{n} overdue" if n else "Nothing overdue"
+        return f"{n} assignment{'s' if n != 1 else ''}"
+    if kind == "schedule":
+        return f"{len(first.get('blocks') or [])} study blocks"
+    if kind == "study_set":
+        return "Study set ready"
+    if kind == "event_list":
+        return f"{len(first.get('items') or [])} events"
+    if kind == "workload_chart":
+        return "Workload trend"
+    if kind == "alert":
+        return str(first.get("title", ""))[:60]
+    return (summary.split(".")[0][:60] or "Your coursework")
 
 
 def validate(spec: dict, fallback_summary: str = "") -> dict:

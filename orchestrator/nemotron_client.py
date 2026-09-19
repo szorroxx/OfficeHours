@@ -41,6 +41,84 @@ FAST_MODEL = os.getenv("NEMOTRON_FAST_MODEL", "nvidia/nemotron-3-nano-30b-a3b")
 _THINK_BLOCK = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
 _ORPHAN_CLOSE = re.compile(r"^.*?</think>\s*", re.DOTALL)
 
+# --------------------------------------------------------------------------
+# Endpoint capability detection
+#
+# Nemotron is served in several places and they don't all accept the same
+# extras. The hosted build.nvidia.com endpoint returns
+#     400 Validation: Unsupported parameter(s): `thinking_token_budget`
+# while a self-hosted NIM container accepts that same parameter happily.
+#
+# Rather than guess, we learn: the first time the endpoint rejects a parameter
+# we record it here and stop sending it. Costs one wasted request per session
+# instead of a crashed run.
+#
+# You can also pre-seed this from .env, e.g.
+#     NEMOTRON_UNSUPPORTED=thinking_token_budget,low_effort
+# --------------------------------------------------------------------------
+
+UNSUPPORTED_PARAMS: set[str] = {
+    p.strip() for p in os.getenv("NEMOTRON_UNSUPPORTED", "").split(",") if p.strip()
+}
+
+# Known by default: the hosted endpoint doesn't take this one, and it's the
+# common case for a hackathon. Set NEMOTRON_ALLOW_THINKING_BUDGET=1 if you
+# switch to self-hosted NIM and want it back.
+if os.getenv("NEMOTRON_ALLOW_THINKING_BUDGET") != "1":
+    UNSUPPORTED_PARAMS.add("thinking_token_budget")
+
+_UNSUPPORTED_RE = re.compile(
+    r"unsupported parameter\(?s?\)?[:\s]", re.IGNORECASE
+)
+# Keys that belong to the error envelope, not to our request. Without this
+# filter, parsing "{'error': {'message': '...', 'type': 'Bad Request'}}" would
+# decide that 'type' and 'code' are unsupported parameters.
+_ENVELOPE_KEYS = {"error", "message", "type", "code", "param", "detail", "object"}
+
+
+def _parse_unsupported(message: str) -> set[str]:
+    """
+    Pull parameter names out of an error like:
+        Validation: Unsupported parameter(s): `thinking_token_budget`
+
+    NVIDIA backtick-quotes the offending names, so those are what we trust.
+    The surrounding text is a Python dict repr full of single-quoted keys, and
+    picking those up would ban parameters we never sent.
+    """
+    if not _UNSUPPORTED_RE.search(message):
+        return set()
+
+    # Preferred: backtick-quoted names, which is what the API actually emits.
+    names = set(re.findall(r"`([A-Za-z_][A-Za-z0-9_]*)`", message))
+    if names:
+        return names - _ENVELOPE_KEYS
+
+    # Fallback for endpoints that phrase it differently: look only at the text
+    # immediately after the marker, and stop at the first quote or brace.
+    tail = _UNSUPPORTED_RE.split(message, maxsplit=1)[-1]
+    tail = re.split(r"['\"}]", tail, maxsplit=1)[0]
+    names = {n.strip() for n in tail.split(",") if n.strip().isidentifier()}
+    return names - _ENVELOPE_KEYS
+
+
+def _drop_unsupported(extra: dict[str, Any]) -> dict[str, Any]:
+    """Remove anything this endpoint has told us it won't accept."""
+    if not UNSUPPORTED_PARAMS:
+        return extra
+
+    cleaned = {k: v for k, v in extra.items() if k not in UNSUPPORTED_PARAMS}
+
+    # chat_template_kwargs is nested, so filter inside it too.
+    ctk = cleaned.get("chat_template_kwargs")
+    if isinstance(ctk, dict):
+        ctk = {k: v for k, v in ctk.items() if k not in UNSUPPORTED_PARAMS}
+        if ctk:
+            cleaned["chat_template_kwargs"] = ctk
+        else:
+            cleaned.pop("chat_template_kwargs", None)
+
+    return cleaned
+
 
 class NemotronBudgetError(RuntimeError):
     """Reasoning consumed the whole token budget and no answer came back."""
@@ -166,6 +244,14 @@ class NemotronClient:
         extra: dict[str, Any] = {"chat_template_kwargs": ctk}
         if thinking != "off" and thinking_token_budget:
             extra["thinking_token_budget"] = thinking_token_budget
+
+        # Different Nemotron deployments accept different extras. The hosted
+        # build.nvidia.com endpoint rejects thinking_token_budget, while a
+        # self-hosted NIM container accepts it. Rather than hardcode which is
+        # which, we drop anything this endpoint has already told us it doesn't
+        # support (see _strip_unsupported in _with_retries).
+        extra = _drop_unsupported(extra)
+        ctk = extra.get("chat_template_kwargs", ctk)
         kwargs["extra_body"] = extra
 
         if self.mock:
@@ -181,7 +267,8 @@ class NemotronClient:
 
         def do_call() -> dict:
             resp = self._with_retries(
-                lambda: self._client.chat.completions.create(**kwargs)
+                lambda: self._client.chat.completions.create(**kwargs),
+                request=kwargs,
             )
             return _as_dict(_normalize(resp))
 
@@ -214,7 +301,8 @@ class NemotronClient:
 
     # ----------------------------------------------------------------------
 
-    def _with_retries(self, fn: Callable[[], Any]) -> Any:
+    def _with_retries(self, fn: Callable[[], Any],
+                      request: dict[str, Any] | None = None) -> Any:
         last = None
         for attempt in range(self.max_retries):
             try:
@@ -222,6 +310,26 @@ class NemotronClient:
             except Exception as exc:  # noqa: BLE001 - SDK exception types vary
                 last = exc
                 status = getattr(exc, "status_code", None)
+
+                # A 400 complaining about a parameter is fixable: note which
+                # one the endpoint dislikes and retry without it. This is why
+                # the whole run doesn't die when a deployment is fussy.
+                if status == 400:
+                    bad = _parse_unsupported(str(exc))
+                    if bad and not bad <= UNSUPPORTED_PARAMS:
+                        UNSUPPORTED_PARAMS.update(bad)
+                        print(f"[nemotron] endpoint rejected {sorted(bad)} — "
+                              f"dropping and retrying")
+                        # Rebuild the body in place. `fn` closes over this same
+                        # dict, so mutating it changes what the retry sends --
+                        # without this the retry re-sends the rejected field.
+                        if request is not None and "extra_body" in request:
+                            request["extra_body"] = _drop_unsupported(
+                                request["extra_body"]
+                            )
+                        continue
+                    raise
+
                 retryable = status in (408, 409, 429, 500, 502, 503, 504)
                 if not retryable or attempt == self.max_retries - 1:
                     raise

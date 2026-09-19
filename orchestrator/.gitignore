@@ -9,3 +9,9 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Real saved Canvas pages contain your session key, user id, email, and a
+# personal feed token. Use make_dummy_canvas.py instead.
+Dashboard.html
+*_raw.html
+canvas_raw/

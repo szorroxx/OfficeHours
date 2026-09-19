@@ -1,18 +1,37 @@
 # Model APIs
-openai>=1.40.0              # used only as an OpenAI-compatible client for NVIDIA
-anthropic>=0.40.0           # Claude worker + display agents
+# openai is used only as an OpenAI-compatible client for NVIDIA's endpoint
+openai>=1.40.0
+anthropic>=0.40.0
 
 # Web server
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 pydantic>=2.8.0
 
-# Tiger Data (Timescale is Postgres, so this is just a Postgres driver)
+# Tiger Data. Timescale is Postgres, so this is just a Postgres driver.
 psycopg[binary,pool]>=3.2.0
 
 # Canvas parsing
 beautifulsoup4>=4.12.0
-requests>=2.32.0            # only needed if CANVAS_SOURCE=http
+# requests is only needed if CANVAS_SOURCE=http
+requests>=2.32.0
 
-# HTML templates (for when Kenneth's templates land)
+# HTML templates, for when Kenneth's templates land
 jinja2>=3.1.0
+
+# So test_loop.py can validate config.yml
+pyyaml>=6.0
+
+# Optional: NeMo Agent Toolkit, only if you run the NAT workflow.
+# Uncomment to install:
+# nvidia-nat
+
+# asyncpg is deliberately NOT listed. tiger_data_tool.py delegates to db.py,
+# which uses psycopg. Two drivers against one schema is how the two halves of
+# the project drift apart.
+
+# Optional: renders JavaScript-heavy pages (Notion, Canvas, most modern sites).
+# Downloads a ~150MB browser, so it is not installed by default.
+#   pip install playwright
+#   playwright install chromium
+# playwright>=1.45.0

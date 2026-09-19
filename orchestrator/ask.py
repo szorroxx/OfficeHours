@@ -46,7 +46,7 @@ def main() -> int:
         print(f"{BOLD}tool calls{RESET}")
         for step in run.steps:
             mark = f"{GREEN}ok{RESET}" if step["ok"] else f"{RED}fail{RESET}"
-            args = json.dumps(step["arguments"])[:70]
+            args = json.dumps(step["arguments"], default=str)[:70]
             print(f"  [{mark}] {step['tool']}({args})  {step['ms']}ms")
             if not step["ok"]:
                 print(f"        {RED}{step['result_preview'][:200]}{RESET}")
@@ -55,6 +55,8 @@ def main() -> int:
     print(f"{BOLD}summary{RESET}\n  {run.summary}\n")
 
     print(f"{BOLD}display{RESET}")
+    if run.display_note:
+        print(f"  {DIM}note: {run.display_note}{RESET}")
     print(f"  headline: {run.display.get('headline')}")
     print(f"  speech:   {run.display.get('speech')}")
     for card in run.display.get("cards", []):

@@ -75,16 +75,43 @@ def load(path: Path | None = None, override: bool = False) -> dict[str, str]:
     return found
 
 
+def _looks_real(value: str, prefix: str = "") -> bool:
+    """
+    A value that's present but still the .env.example placeholder is worse than
+    a missing one -- it looks configured and then fails confusingly. So check
+    for the template text, not just for non-emptiness.
+    """
+    if not value:
+        return False
+    lowered = value.lower()
+    if any(m in lowered for m in
+           ("replace_me", "replaceme", "user:pass@", "@host:", "changeme",
+            "your-host", "<host>")):
+        return False
+    return value.startswith(prefix) if prefix else True
+
+
 def status() -> dict:
     """Used by /health and the CLI tools to show what got loaded."""
+    nvidia = os.getenv("NVIDIA_API_KEY", "")
+    anthropic = os.getenv("ANTHROPIC_API_KEY", "")
+    database = os.getenv("DATABASE_URL", "")
     return {
         "env_file": str(ENV_PATH),
         "env_file_exists": ENV_PATH.exists(),
         "mode": os.getenv("MODE", "mock"),
-        "has_nvidia_key": bool(os.getenv("NVIDIA_API_KEY", "").startswith("nvapi-")),
-        "has_anthropic_key": bool(os.getenv("ANTHROPIC_API_KEY", "").startswith("sk-ant")),
-        "has_database_url": bool(os.getenv("DATABASE_URL", "").startswith("postgres")),
+        "nvidia_key": _describe(nvidia, "nvapi-"),
+        "anthropic_key": _describe(anthropic, "sk-ant"),
+        "database_url": _describe(database, "postgres"),
     }
+
+
+def _describe(value: str, prefix: str) -> str:
+    if not value:
+        return "missing"
+    if not _looks_real(value, prefix):
+        return "PLACEHOLDER — still the .env.example value"
+    return "set"
 
 
 # Runs the moment anything imports this module.
