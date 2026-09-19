@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OfficeHours Dashboard</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <h1>OfficeHours</h1>
+        <p>Canvas + campus insights in one study dashboard.</p>
+      </div>
+      <span class="badge">Vercel Ready</span>
+    </header>
+
+    <main class="layout">
+      <!-- Module: Source ingestion controls -->
+      <section class="card">
+        <h2>Data Sources</h2>
+        <label for="canvasLink">Canvas link</label>
+        <input id="canvasLink" placeholder="https://canvas.example.edu/course/123" />
+        <label for="otherSources">Other sites or notes (comma separated)</label>
+        <input id="otherSources" placeholder="campus calendar, textbook portal" />
+      </section>
+
+      <!-- Module: Nemotron prompt box -->
+      <section class="card">
+        <h2>Nemotron Prompt</h2>
+        <textarea
+          id="promptInput"
+          rows="5"
+          placeholder="Ask Nemotron to change your schedule, reprioritize tasks, or summarize updates"
+        ></textarea>
+        <button id="runPrompt">Run Prompt</button>
+        <p id="statusText" class="muted">Ready.</p>
+      </section>
+
+      <!-- Module: Dashboard assignments/tests -->
+      <section class="card wide">
+        <h2>Homework + Upcoming Tests</h2>
+        <div id="taskList" class="task-list"></div>
+      </section>
+
+      <!-- Module: Generated schedule -->
+      <section class="card">
+        <h2>Suggested Schedule</h2>
+        <ul id="scheduleList"></ul>
+      </section>
+
+      <!-- Module: Study set builder -->
+      <section class="card">
+        <h2>Study Sets</h2>
+        <ul id="studySetList"></ul>
+      </section>
+
+      <!-- Module: Voice summary output -->
+      <section class="card wide accent">
+        <h2>Voice Summary</h2>
+        <p id="voiceSummary">Loading summary...</p>
+        <button id="loadAlexa">Load Alexa Preset Output</button>
+      </section>
+
+      <!-- Module: Notifications -->
+      <section class="card wide">
+        <h2>Notifications</h2>
+        <ul id="notificationList"></ul>
+      </section>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
