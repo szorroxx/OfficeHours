@@ -10,7 +10,12 @@
 //
 //    input   { message:  string,                         // what the student typed
 //              history:  [{ role, content }],            // prior chat turns
-//              board:    { assignments, events, todos } } // current board, for context
+//              board:    { assignments, events, todos },  // current board, for context
+//              attachments: [{ name, type, size, dataUrl }] } // files sent in this chat message
+//
+//  `attachments` are files the student uploaded straight into the chat (the
+//  paperclip). `dataUrl` is base64 (data:<mime>;base64,<...>). Decode and run
+//  text extraction / OCR / image understanding to let the assistant read them.
 //
 //    return  { reply:    string,                          // shown as a chat bubble
 //              actions?: [{ type, items: [...] }] }       // optional writes to the board
@@ -107,6 +112,13 @@ function fill(type, data) {
     GET {CANVAS_BASE_URL}/api/v1/users/self/upcoming_events
   Map each result into the item shapes above, set `canvasId` to the Canvas id,
   and return them.
+
+  STUDENT ATTACHMENTS (notes, previous exams): files a student uploads are
+  reachable over HTTP on this same server:
+    GET /api/files       -> list of { id, name, type, size, itemKind, itemId, url }
+    GET /api/files/:id   -> the raw file bytes (correct Content-Type)
+  Fetch the bytes and run PDF text extraction / OCR / image understanding to let
+  the assistant read them. That extraction is your call; the files are here.
 */
 
 // Optional: expose the crawl on its own so a "refresh from Canvas" button can
@@ -130,9 +142,14 @@ const daysFromNow = (n) => {
 
 let crawlStage = 'idle';
 
-async function mockCrawlerReply({ message }) {
+async function mockCrawlerReply({ message, attachments }) {
   const text = String(message || '').toLowerCase();
   await new Promise((r) => setTimeout(r, 400));
+
+  if (attachments && attachments.length) {
+    const names = attachments.map((a) => a.name).join(', ');
+    return { reply: `Got your file${attachments.length > 1 ? 's' : ''}: ${names}. In this demo I can't read files yet, but once the AI is connected it'll pull the key details out and use them.` };
+  }
 
   if (crawlStage === 'idle') {
     if (/(canvas|assignment|homework|due|deadline|check|look|scan|sync|event|class|course)/.test(text)) {

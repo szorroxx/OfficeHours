@@ -33,7 +33,8 @@
       <h2>Board</h2>
       <div class="row">
         <button class="ghost" onclick="loadBoard()">GET /api/board</button>
-        <button class="ghost" onclick="reset()">POST /api/reset</button>
+        <button class="ghost" onclick="loadDemo()">POST /api/demo</button>
+        <button class="ghost" onclick="clearAll()">POST /api/clear</button>
       </div>
       <div class="row">
         <select id="kind">
@@ -60,15 +61,28 @@
 
 <script>
   const history = [];
+  let token = null;
+
+  // The tester signs in as a throwaway account so it can hit the protected API.
+  async function ensureAuth() {
+    if (token) return;
+    const creds = { username: 'tester', password: 'tester' };
+    let r = await fetch('/api/login', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(creds) });
+    if (!r.ok) r = await fetch('/api/register', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(creds) });
+    token = (await r.json()).token;
+  }
+  async function api(path, opts = {}) {
+    await ensureAuth();
+    const headers = Object.assign({ Authorization: 'Bearer ' + token }, opts.headers || {});
+    return fetch(path, Object.assign({}, opts, { headers }));
+  }
 
   async function loadBoard() {
-    const r = await fetch('/api/board');
+    const r = await api('/api/board');
     document.getElementById('board').textContent = JSON.stringify(await r.json(), null, 2);
   }
-  async function reset() {
-    await fetch('/api/reset', { method:'POST' });
-    loadBoard();
-  }
+  async function loadDemo() { await api('/api/demo', { method:'POST' }); loadBoard(); }
+  async function clearAll() { await api('/api/clear', { method:'POST' }); loadBoard(); }
   async function addItem() {
     const kind = document.getElementById('kind').value;
     const title = document.getElementById('title').value.trim();
@@ -80,7 +94,7 @@
         : kind === 'exams'
           ? { title, course: 'Manual', dueISO: new Date(Date.now() + 3*864e5).toISOString(), location: 'TBD' }
           : { title, course: 'Manual', dueISO: new Date(Date.now() + 2*864e5).toISOString() };
-    await fetch('/api/' + kind, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) });
+    await api('/api/' + kind, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) });
     document.getElementById('title').value = '';
     loadBoard();
   }
@@ -96,7 +110,7 @@
     if (!message) return;
     bubble('user', message);
     input.value = '';
-    const r = await fetch('/api/assistant', {
+    const r = await api('/api/assistant', {
       method:'POST', headers:{'content-type':'application/json'},
       body: JSON.stringify({ message, history }),
     });

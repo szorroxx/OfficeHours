@@ -1,23 +1,19 @@
-// Data store for the demo. No accounts: everything belongs to one implicit
-// user. State is a single board persisted to data.json so it survives restarts.
-// When you move to real accounts, swap this file for a Postgres layer keyed by
-// user_id. Nothing else in the backend needs to change if the exported function
-// signatures stay the same.
+// Data store for the demo. Now multi-user: each account has its own board.
+// Passwords are hashed with Node's built-in scrypt; login issues a session
+// token. State persists to data.json as { users, sessions, boards }.
+// When you outgrow the file store, store.pg.js implements the same interface
+// on Postgres/TigerData.
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const DATA_FILE = path.join(__dirname, 'data.json');
 const KINDS = ['assignments', 'exams', 'events', 'todos'];
 
-const daysFromNow = (n) => {
-  const d = new Date();
-  d.setHours(9, 0, 0, 0);
-  d.setDate(d.getDate() + n);
-  return d.toISOString();
-};
-
-function seed() {
+const daysFromNow = (n) => { const d = new Date(); d.setHours(9, 0, 0, 0); d.setDate(d.getDate() + n); return d.toISOString(); };
+const emptyBoard = () => ({ assignments: [], exams: [], events: [], todos: [] });
+function seedBoard() {
   return {
     assignments: [
       { id: 'a1', title: 'Problem Set 5: Hermitian operators', course: 'PHYS 1370 — Quantum', dueISO: daysFromNow(0), estimateMins: 120, source: 'canvas', completed: false },
@@ -36,83 +32,84 @@ function seed() {
   };
 }
 
-let board = load();
-
+let db = load();
 function load() {
-  try {
-    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-  } catch {
-    const s = seed();
-    try { fs.writeFileSync(DATA_FILE, JSON.stringify(s, null, 2)); } catch {}
-    return s;
-  }
+  try { const d = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); if (d && d.users && d.boards && d.sessions) return d; } catch {}
+  return { users: {}, sessions: {}, boards: {} };
 }
+function save() { try { fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2)); } catch (e) { console.error('store: save failed', e); } }
 
-function save() {
-  try { fs.writeFileSync(DATA_FILE, JSON.stringify(board, null, 2)); }
-  catch (e) { console.error('store: save failed', e); }
-}
-
-function genId(kind) {
-  return kind[0] + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-}
-
+function genId(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 function isKind(kind) { return KINDS.includes(kind); }
+async function init() { /* file loads eagerly at require time */ }
 
-async function init() { /* file store loads eagerly at require time; nothing to do */ }
-
-async function getBoard() { return board; }
-
-async function addItem(kind, item) {
-  const withId = { source: 'manual', completed: false, ...item, id: item.id || genId(kind) };
-  board[kind].push(withId);
-  save();
-  return withId;
+// ---- Auth ----
+function hashPassword(password, salt) {
+  salt = salt || crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(String(password), salt, 64).toString('hex');
+  return { salt, hash };
 }
+function verifyPassword(password, salt, hash) {
+  const h = crypto.scryptSync(String(password), salt, 64).toString('hex');
+  const a = Buffer.from(h), b = Buffer.from(hash);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+async function createUser(username, password) {
+  const key = String(username || '').trim().toLowerCase();
+  if (!key) throw Object.assign(new Error('username required'), { code: 'invalid' });
+  if (db.users[key]) throw Object.assign(new Error('username taken'), { code: 'exists' });
+  const { salt, hash } = hashPassword(password);
+  const id = genId('u');
+  db.users[key] = { id, username: String(username).trim(), salt, hash };
+  db.boards[id] = emptyBoard();
+  save();
+  return { id, username: db.users[key].username };
+}
+async function verifyUser(username, password) {
+  const u = db.users[String(username || '').trim().toLowerCase()];
+  if (!u || !verifyPassword(password, u.salt, u.hash)) return null;
+  return { id: u.id, username: u.username };
+}
+async function createSession(userId) { const token = crypto.randomBytes(24).toString('hex'); db.sessions[token] = userId; save(); return token; }
+async function userIdByToken(token) { return db.sessions[token] || null; }
+async function deleteSession(token) { if (db.sessions[token]) { delete db.sessions[token]; save(); } return true; }
 
-// Insert new items, or update existing ones matched on canvasId (preferred) or
-// id. This is what makes re-syncing safe: the crawler can run repeatedly and
-// will refresh existing rows instead of creating duplicates. Manual items
-// (source: 'manual') are never touched by a canvasId match, so a student's own
-// edits survive a sync. Returns only the newly-added items.
-async function upsertItems(kind, items = []) {
-  const added = [];
+// ---- Board (scoped to a user) ----
+function boardOf(userId) { if (!db.boards[userId]) db.boards[userId] = emptyBoard(); return db.boards[userId]; }
+
+async function getBoard(userId) { return boardOf(userId); }
+
+async function addItem(userId, kind, item) {
+  const b = boardOf(userId);
+  const withId = { source: 'manual', completed: false, ...item, id: item.id || genId(kind[0]) };
+  b[kind].push(withId); save(); return withId;
+}
+async function upsertItems(userId, kind, items = []) {
+  const b = boardOf(userId), added = [];
   for (const raw of items) {
     const it = { source: 'canvas', completed: false, ...raw };
     let idx = -1;
-    if (it.canvasId) idx = board[kind].findIndex((x) => x.canvasId && x.canvasId === it.canvasId);
-    if (idx < 0 && it.id) idx = board[kind].findIndex((x) => x.id === it.id);
-    if (idx >= 0) {
-      board[kind][idx] = { ...board[kind][idx], ...it, id: board[kind][idx].id };
-    } else {
-      const withId = { ...it, id: it.id || genId(kind) };
-      board[kind].push(withId);
-      added.push(withId);
-    }
+    if (it.canvasId) idx = b[kind].findIndex((x) => x.canvasId && x.canvasId === it.canvasId);
+    if (idx < 0 && it.id) idx = b[kind].findIndex((x) => x.id === it.id);
+    if (idx >= 0) b[kind][idx] = { ...b[kind][idx], ...it, id: b[kind][idx].id };
+    else { const wi = { ...it, id: it.id || genId(kind[0]) }; b[kind].push(wi); added.push(wi); }
   }
-  save();
-  return added;
+  save(); return added;
 }
-
-async function updateItem(kind, id, patch) {
-  const idx = board[kind].findIndex((x) => x.id === id);
-  if (idx < 0) return null;
-  board[kind][idx] = { ...board[kind][idx], ...patch, id };
-  save();
-  return board[kind][idx];
+async function updateItem(userId, kind, id, patch) {
+  const b = boardOf(userId), i = b[kind].findIndex((x) => x.id === id);
+  if (i < 0) return null;
+  b[kind][i] = { ...b[kind][i], ...patch, id }; save(); return b[kind][i];
 }
-
-async function removeItem(kind, id) {
-  const before = board[kind].length;
-  board[kind] = board[kind].filter((x) => x.id !== id);
-  save();
-  return board[kind].length < before;
+async function removeItem(userId, kind, id) {
+  const b = boardOf(userId), before = b[kind].length;
+  b[kind] = b[kind].filter((x) => x.id !== id); save(); return b[kind].length < before;
 }
+async function loadDemo(userId) { db.boards[userId] = seedBoard(); save(); return db.boards[userId]; }
+async function clear(userId) { db.boards[userId] = emptyBoard(); save(); return db.boards[userId]; }
 
-async function reset() {
-  board = seed();
-  save();
-  return board;
-}
-
-module.exports = { KINDS, isKind, init, getBoard, addItem, upsertItems, updateItem, removeItem, reset };
+module.exports = {
+  KINDS, isKind, init,
+  createUser, verifyUser, createSession, userIdByToken, deleteSession,
+  getBoard, addItem, upsertItems, updateItem, removeItem, loadDemo, clear,
+};
