@@ -7,7 +7,7 @@ const cors = require('cors');
 const path = require('path');
 
 const store = process.env.DATABASE_URL ? require('./store.pg') : require('./store');
-const assistant = require('./assistant');
+const assistant = require('./backend/assistant');
 const googleCalendar = require('./google-calendar');
 
 const app = express();
