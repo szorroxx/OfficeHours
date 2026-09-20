@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 8787;
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));  // attachments ride inline as base64
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'backend', 'public')));
 
 // ---- Auth ----
 async function auth(req, res, next) {
