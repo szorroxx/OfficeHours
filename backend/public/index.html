@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Office Hours backend tester</title>
+<style>
+  :root { --ink:#1B1F3B; --accent:#4F46E5; --line:#E6E7EB; --muted:#6B7280; --paper:#F4F5F7; }
+  * { box-sizing:border-box; }
+  body { font-family:system-ui,sans-serif; color:var(--ink); margin:0; background:var(--paper); }
+  header { background:var(--ink); color:#fff; padding:16px 22px; font-weight:700; }
+  header small { display:block; font-weight:400; color:#A9ADC9; font-size:12px; margin-top:2px; }
+  main { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:20px; max-width:980px; margin:0 auto; }
+  @media (max-width:760px){ main{ grid-template-columns:1fr; } }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px; }
+  h2 { font-size:15px; margin:0 0 10px; }
+  pre { background:var(--paper); border-radius:8px; padding:10px; font-size:12px; overflow:auto; max-height:340px; }
+  .row { display:flex; gap:8px; margin-bottom:10px; }
+  input, button, select { font:inherit; font-size:14px; padding:8px 10px; border:1px solid var(--line); border-radius:8px; }
+  input, select { flex:1; }
+  button { background:var(--accent); color:#fff; border:none; cursor:pointer; font-weight:600; }
+  button.ghost { background:#fff; color:var(--ink); border:1px solid var(--line); }
+  .log { display:flex; flex-direction:column; gap:8px; }
+  .bubble { padding:8px 11px; border-radius:12px; font-size:14px; max-width:85%; white-space:pre-wrap; }
+  .bubble.user { background:var(--accent); color:#fff; align-self:flex-end; }
+  .bubble.assistant { background:var(--paper); align-self:flex-start; }
+</style>
+</head>
+<body>
+  <header>Office Hours backend tester <small>exercises the same endpoints your teammates build against</small></header>
+  <main>
+    <section class="card">
+      <h2>Board</h2>
+      <div class="row">
+        <button class="ghost" onclick="loadBoard()">GET /api/board</button>
+        <button class="ghost" onclick="loadDemo()">POST /api/demo</button>
+        <button class="ghost" onclick="clearAll()">POST /api/clear</button>
+      </div>
+      <div class="row">
+        <select id="kind">
+          <option value="assignments">assignment</option>
+          <option value="exams">exam</option>
+          <option value="events">event</option>
+          <option value="todos">task</option>
+        </select>
+        <input id="title" placeholder="title / task text" />
+        <button onclick="addItem()">Add</button>
+      </div>
+      <pre id="board">click GET /api/board</pre>
+    </section>
+
+    <section class="card">
+      <h2>Assistant (POST /api/assistant)</h2>
+      <div class="log" id="log"></div>
+      <div class="row" style="margin-top:12px">
+        <input id="msg" placeholder='e.g. "look through my Canvas for assignments"' />
+        <button onclick="send()">Send</button>
+      </div>
+    </section>
+  </main>
+
+<script>
+  const history = [];
+  let token = null;
+
+  // The tester signs in as a throwaway account so it can hit the protected API.
+  async function ensureAuth() {
+    if (token) return;
+    const creds = { username: 'tester', password: 'tester' };
+    let r = await fetch('/api/login', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(creds) });
+    if (!r.ok) r = await fetch('/api/register', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(creds) });
+    token = (await r.json()).token;
+  }
+  async function api(path, opts = {}) {
+    await ensureAuth();
+    const headers = Object.assign({ Authorization: 'Bearer ' + token }, opts.headers || {});
+    return fetch(path, Object.assign({}, opts, { headers }));
+  }
+
+  async function loadBoard() {
+    const r = await api('/api/board');
+    document.getElementById('board').textContent = JSON.stringify(await r.json(), null, 2);
+  }
+  async function loadDemo() { await api('/api/demo', { method:'POST' }); loadBoard(); }
+  async function clearAll() { await api('/api/clear', { method:'POST' }); loadBoard(); }
+  async function addItem() {
+    const kind = document.getElementById('kind').value;
+    const title = document.getElementById('title').value.trim();
+    if (!title) return;
+    const body = kind === 'todos'
+      ? { text: title }
+      : kind === 'events'
+        ? { title, location: 'TBD', startISO: new Date(Date.now() + 2*864e5).toISOString() }
+        : kind === 'exams'
+          ? { title, course: 'Manual', dueISO: new Date(Date.now() + 3*864e5).toISOString(), location: 'TBD' }
+          : { title, course: 'Manual', dueISO: new Date(Date.now() + 2*864e5).toISOString() };
+    await api('/api/' + kind, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) });
+    document.getElementById('title').value = '';
+    loadBoard();
+  }
+  function bubble(role, text) {
+    const b = document.createElement('div');
+    b.className = 'bubble ' + role;
+    b.textContent = text;
+    document.getElementById('log').appendChild(b);
+  }
+  async function send() {
+    const input = document.getElementById('msg');
+    const message = input.value.trim();
+    if (!message) return;
+    bubble('user', message);
+    input.value = '';
+    const r = await api('/api/assistant', {
+      method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ message, history }),
+    });
+    const data = await r.json();
+    bubble('assistant', data.reply || '(no reply)');
+    history.push({ role:'user', content: message }, { role:'assistant', content: data.reply || '' });
+    if (data.board) document.getElementById('board').textContent = JSON.stringify(data.board, null, 2);
+  }
+  document.getElementById('msg').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+  loadBoard();
+</script>
+</body>
+</html>
