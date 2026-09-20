@@ -1,5 +1,12 @@
-flask[async]
-openai
-python-dotenv
-nvidia-nat[langchain]
-ask-sdk
+# app.py now imports orchestrator/'s modules directly and calls
+# orchestrator.run() in-process (see the note at the top of app.py), instead
+# of proxying HTTP to a separately-run server. So this needs the same
+# dependencies orchestrator/ needs -- pulled in via -r rather than duplicated
+# here, so the two lists can't quietly drift apart. flask is the one thing
+# orchestrator/requirements.txt doesn't already need (it's FastAPI there).
+#
+# MODE=mock (the default) doesn't actually touch most of these -- see
+# tools.py's MODE == "mock" branches -- but installing them up front means
+# switching to MODE=live later doesn't also mean a second pip install.
+flask
+-r orchestrator/requirements.txt
