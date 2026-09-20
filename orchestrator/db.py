@@ -34,6 +34,46 @@ from typing import Any
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 DEFAULT_STUDENT = os.getenv("STUDENT_ID", "demo-student")
 
+# --------------------------------------------------------------------------
+# The student's timezone, and why this line matters so much
+#
+# Postgres hands back TIMESTAMPTZ as tz-aware UTC. Every layer above then
+# formatted it as-is, which produced a specific and very confusing class of
+# wrong answer: a Canvas deadline of 11:59pm EDT is stored as 03:59 the NEXT
+# DAY in UTC, so "due Monday 11:59pm" was reported to the student as "due
+# Tuesday". Every late-evening deadline in the system was a day late, the
+# model then repeated that in prose, and campus events came out as things like
+# "Lunch-and-Learn at 04:00 UTC".
+#
+# Converting here, in jsonable(), fixes it once for everything: the JSON the
+# model reads, the cards the page renders, and the Alexa speech all get local
+# time. Set TIMEZONE in .env if the student isn't in Pittsburgh.
+# --------------------------------------------------------------------------
+TIMEZONE = os.getenv("TIMEZONE", os.getenv("STUDENT_TZ", "America/New_York"))
+
+
+def _tz():
+    """
+    The student's timezone. NEVER raises.
+
+    The previous version's fallback was ZoneInfo("America/New_York") inside an
+    except block -- which raises again on a host with no tzdata installed
+    (slim Python images have none), so the "safe" path was the one that
+    exploded. A fixed offset is always available.
+    """
+    from zoneinfo import ZoneInfo
+
+    for name in (TIMEZONE, "America/New_York"):
+        try:
+            return ZoneInfo(name)
+        except Exception:  # noqa: BLE001
+            continue
+    try:
+        offset = float(os.getenv("TZ_OFFSET_HOURS", "-4"))
+    except ValueError:
+        offset = -4.0
+    return timezone(timedelta(hours=offset))
+
 _pool = None
 
 
@@ -203,7 +243,14 @@ def jsonable(value: Any) -> Any:
     from datetime import date, datetime, timedelta
     from decimal import Decimal
 
-    if isinstance(value, (datetime, date)):
+    if isinstance(value, datetime):
+        # Aware timestamps become local time. Naive ones are left alone: we
+        # don't know what they meant, and guessing is how you get a second,
+        # subtler version of the same bug.
+        if value.tzinfo is not None:
+            value = value.astimezone(_tz())
+        return value.isoformat()
+    if isinstance(value, date):
         return value.isoformat()
     if isinstance(value, Decimal):
         # float, not str: the model and the frontend both want to do arithmetic
@@ -237,22 +284,47 @@ class ValidationError(ValueError):
 
 
 _KINDS = {"homework", "quiz", "exam", "lab", "project", "reading", "other"}
-_STATUSES = {"open", "submitted", "graded"}
+# 'dismissed' means "this is not mine to do" -- a group assignment someone
+# else submits, an optional extra-credit item, a duplicate Canvas row. It is
+# not the same as 'submitted', and conflating them would make the workload
+# history claim you did work you didn't. Dismissed items drop out of open
+# lists and out of overdue.
+_STATUSES = {"open", "submitted", "graded", "dismissed"}
 
 
 def _as_datetime(value: Any, field: str) -> datetime | None:
-    """Accept ISO strings, datetimes, or None. Reject anything else."""
+    """
+    Accept ISO strings, datetimes, or None. Reject anything else.
+
+    A NAIVE TIMESTAMP MEANS THE STUDENT'S LOCAL TIME.
+
+    This line used to read `.replace(tzinfo=timezone.utc)`, and it was the
+    cause of a genuinely baffling bug. Ask for a viola lesson at 2pm and the
+    model emits one of two things depending on its mood:
+
+        "2026-09-24T14:00:00-04:00"   explicit offset -> correct
+        "2026-09-24T14:00:00"         naive           -> stamped as 14:00 UTC
+
+    The second stored 2pm as 10am, and combined with a display layer that
+    wasn't converting either, the same schedule showed one lesson at 2pm and
+    another at 7pm -- neither of which was the time anyone asked for. Two
+    entries created minutes apart, disagreeing by five hours, because one
+    carried an offset and the other didn't.
+
+    Nobody writing "2pm" means 2pm UTC. Assume the student's timezone, which
+    is what every other layer now displays in.
+    """
     if value in (None, "", "null"):
         return None
     if isinstance(value, datetime):
-        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        return value if value.tzinfo else value.replace(tzinfo=_tz())
     if isinstance(value, str):
         text = value.strip().replace("Z", "+00:00")
         try:
             parsed = datetime.fromisoformat(text)
         except ValueError:
             raise ValidationError(f"{field}: could not read '{value}' as a date")
-        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=_tz())
     raise ValidationError(f"{field}: expected a date, got {type(value).__name__}")
 
 
@@ -322,8 +394,16 @@ def get_assignments(
         sql.append("AND status = %s")
         params.append(status)
     if course:
-        # ILIKE is case-insensitive matching, so 'phys 1361' finds 'PHYS 1361'.
-        sql.append("AND course_code ILIKE %s")
+        # Match on the code with spaces, dashes and punctuation stripped from
+        # BOTH sides, so "CS1684", "cs 1684" and "CS-1684" all find "CS 1684".
+        #
+        # The old version was a plain ILIKE '%CS1684%', which does not match
+        # 'CS 1684' -- and the failure was worse than a missing filter,
+        # because an empty result reads as "you have no assignments for that
+        # course". A student asked to drop CS 1684, was told the course had
+        # nothing in it, and then saw three CS 1684 rows in the next message.
+        sql.append("AND regexp_replace(course_code, '[^a-zA-Z0-9]', '', 'g') "
+                   "ILIKE regexp_replace(%s, '[^a-zA-Z0-9]', '', 'g')")
         params.append(f"%{course}%")
     if due_within_days is not None:
         sql.append("AND due_at IS NOT NULL AND due_at <= now() + %s * interval '1 day'")
@@ -373,7 +453,8 @@ def get_schedule(student_id: str = DEFAULT_STUDENT) -> dict:
     if not newest:
         return {"blocks": [], "generated_at": None}
     blocks = query(
-        """SELECT assignment_id, task, starts_at, ends_at, est_minutes, priority
+        """SELECT id, assignment_id, task, starts_at, ends_at, est_minutes,
+                  priority
            FROM schedule_blocks WHERE generation_id = %s ORDER BY starts_at""",
         (newest["generation_id"],),
     )
@@ -389,7 +470,8 @@ def get_study_sets(student_id: str = DEFAULT_STUDENT, course: str | None = None)
              FROM study_sets WHERE student_id = %s"""
     params: list[Any] = [student_id]
     if course:
-        sql += " AND course_code ILIKE %s"
+        sql += (" AND regexp_replace(course_code, '[^a-zA-Z0-9]', '', 'g') "
+                "ILIKE regexp_replace(%s, '[^a-zA-Z0-9]', '', 'g')")
         params.append(f"%{course}%")
     sql += " ORDER BY created_at DESC LIMIT 20"
     return [
@@ -512,7 +594,14 @@ def upsert_assignments(student_id: str, items: list[dict]) -> dict:
     because the id is derived from course + title. That is how "update
     outdated information" works in practice.
     """
-    written, skipped, errors = 0, 0, []
+    written, skipped, errors, suppressed = 0, 0, [], 0
+
+    # Ids the student has deleted. Without this check, deleting an assignment
+    # was pointless: the next refresh_from_canvas re-crawled the same Canvas
+    # row, rebuilt the same deterministic id, and put it straight back.
+    blocked = {r["assignment_id"] for r in query(
+        "SELECT assignment_id FROM suppressed_assignments WHERE student_id = %s",
+        (student_id,))}
 
     for raw in items or []:
         try:
@@ -527,6 +616,9 @@ def upsert_assignments(student_id: str, items: list[dict]) -> dict:
                 status = "open"
 
             aid = make_id(student_id, course, title)
+            if aid in blocked:
+                suppressed += 1
+                continue
             query(
                 """INSERT INTO assignments
                        (id, student_id, course_code, title, kind, due_at, points,
@@ -540,7 +632,18 @@ def upsert_assignments(student_id: str, items: list[dict]) -> dict:
                        est_hours   = COALESCE(EXCLUDED.est_hours, assignments.est_hours),
                        est_source  = COALESCE(EXCLUDED.est_source, assignments.est_source),
                        priority    = COALESCE(EXCLUDED.priority, assignments.priority),
-                       status      = EXCLUDED.status,
+                       -- Keep a status the STUDENT set. A crawl reports that
+                       -- an assignment exists; it does not know that a
+                       -- teammate submitted it. Blindly taking EXCLUDED.status
+                       -- meant every dismissed item came back as 'open' on the
+                       -- next sync, so dismissing it looked like it hadn't
+                       -- worked.
+                       status      = CASE
+                                       WHEN assignments.status IN
+                                            ('dismissed','submitted','graded')
+                                       THEN assignments.status
+                                       ELSE EXCLUDED.status
+                                     END,
                        description = COALESCE(EXCLUDED.description, assignments.description),
                        source_url  = COALESCE(EXCLUDED.source_url, assignments.source_url),
                        updated_at  = now()""",
@@ -564,6 +667,10 @@ def upsert_assignments(student_id: str, items: list[dict]) -> dict:
                 errors.append(str(exc))
 
     out = {"assignments_written": written, "skipped": skipped}
+    if suppressed:
+        out["suppressed"] = suppressed
+        out["note"] = (f"{suppressed} assignment(s) were skipped because you "
+                       f"deleted them earlier.")
     if errors:
         out["validation_errors"] = errors
     return out
@@ -610,6 +717,44 @@ def save_schedule(student_id: str, blocks: list[dict], rationale: str = "") -> d
     return out
 
 
+def _normalize_block(block: dict) -> dict:
+    """
+    Make a schedule block internally consistent before it is stored.
+
+    Three facts -- start, end, duration -- arrive from a model that does not
+    always make them agree. A real example: asked for a lesson from 2 to 4pm,
+    it sent starts_at 2pm, ends_at 4pm, and est_minutes 60. The card then said
+    "2:00pm-4:00pm / 60 min", which is wrong however you read it.
+
+    The rule: if both ends are known, the clock decides the duration. If only
+    a duration is known, it decides the end. A stored block can then never
+    contradict itself, no matter what the model said.
+    """
+    out = dict(block)
+    starts = _as_datetime(out.get("starts_at") or out.get("start"), "starts_at")
+    ends = _as_datetime(out.get("ends_at") or out.get("end"), "ends_at")
+    minutes = _as_int(out.get("est_minutes"), "est_minutes")
+
+    if starts and ends:
+        if ends <= starts:
+            # An end before its start is a model slip, usually a missed pm.
+            # Trust the duration if there is one, otherwise an hour.
+            ends = starts + timedelta(minutes=minutes or 60)
+        measured = int((ends - starts).total_seconds() // 60)
+        if measured > 0:
+            minutes = measured
+    elif starts and minutes:
+        ends = starts + timedelta(minutes=minutes)
+    elif starts and not ends:
+        minutes = minutes or 60
+        ends = starts + timedelta(minutes=minutes)
+
+    out["starts_at"] = starts
+    out["ends_at"] = ends
+    out["est_minutes"] = minutes
+    return out
+
+
 def add_schedule_blocks(student_id: str, blocks: list[dict],
                         note: str = "") -> dict:
     """
@@ -628,36 +773,42 @@ def add_schedule_blocks(student_id: str, blocks: list[dict],
     )
     gen = newest["generation_id"] if newest else uuid.uuid4().hex[:12]
 
-    written, errors = 0, []
-    for b in blocks or []:
+    written, errors, saved = 0, [], []
+    for raw in blocks or []:
         try:
-            starts = _as_datetime(b.get("starts_at") or b.get("start"), "starts_at")
+            b = _normalize_block(raw)
+            starts = b["starts_at"]
             if starts is None:
                 raise ValidationError("starts_at is required")
-            query(
+            row = query(
                 """INSERT INTO schedule_blocks
                        (student_id, assignment_id, task, starts_at, ends_at,
                         est_minutes, priority, generation_id, rationale)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                   RETURNING id, task, starts_at, ends_at, est_minutes""",
                 (
                     student_id,
                     _text(b.get("assignment_id"), "assignment_id", limit=40),
                     _text(b.get("task"), "task", required=True, limit=300),
                     starts,
-                    _as_datetime(b.get("ends_at") or b.get("end"), "ends_at"),
-                    _as_int(b.get("est_minutes"), "est_minutes"),
+                    b["ends_at"],
+                    b["est_minutes"],
                     _as_int(b.get("priority"), "priority"),
                     gen,
                     _text(note, "note", limit=2000),
                 ),
-                fetch="none",
+                fetch="one",
             )
+            saved.append(row)
             written += 1
         except ValidationError as exc:
             if len(errors) < 5:
                 errors.append(str(exc))
 
-    out = {"blocks_added": written, "generation_id": gen}
+    # Return the rows themselves, with ids. The caller needs the ids to be
+    # able to delete a block later, and needs the stored times so the reply
+    # quotes what was actually saved rather than what was requested.
+    out = {"blocks_added": written, "generation_id": gen, "blocks": saved}
     if errors:
         out["validation_errors"] = errors
     return out
@@ -709,6 +860,27 @@ def upsert_events(items: list[dict], source: str = "manual") -> dict:
     return {"events_written": written}
 
 
+def ensure_student(student_id: str, display_name: str = "") -> dict:
+    """
+    Make sure a students row exists for this id.
+
+    Called when someone registers on the website. Every other table here has
+    a foreign key to students(id), so without this row the first write for a
+    new account fails with a constraint violation rather than anything that
+    points at the cause.
+    """
+    query(
+        """INSERT INTO students (id, display_name, canvas_base)
+           VALUES (%s, %s, %s)
+           ON CONFLICT (id) DO NOTHING""",
+        (_text(student_id, "student_id", required=True, limit=80),
+         _text(display_name, "display_name", limit=120) or "Student",
+         os.getenv("CANVAS_DIR", "canvas_pages")),
+        fetch="none",
+    )
+    return {"student_id": student_id, "ready": True}
+
+
 def update_profile(student_id: str, patch: dict) -> dict:
     """
     Updates the student record. Only these fields can be changed, and
@@ -747,6 +919,207 @@ def update_profile(student_id: str, patch: dict) -> dict:
         out["rejected_fields"] = rejected
         out["note"] = "Credentials are never stored. Use a scoped Canvas token instead."
     return out
+
+
+def find_assignments(student_id: str, query_text: str,
+                     course: str | None = None) -> list[dict]:
+    """
+    Fuzzy-find assignments by title, for tools that act on one the student
+    named in prose ("the preproposal", "CS1684 topic 1").
+
+    Matches on the title with punctuation and spacing stripped, same as the
+    course filter, so "pre-proposal" finds "Preproposal".
+    """
+    sql = ["""SELECT id, course_code, title, kind, due_at, status, est_hours
+              FROM assignments
+              WHERE student_id = %s
+                AND regexp_replace(lower(title), '[^a-z0-9]', '', 'g')
+                    LIKE regexp_replace(lower(%s), '[^a-z0-9]', '', 'g')"""]
+    params: list[Any] = [student_id, f"%{query_text}%"]
+    if course:
+        sql.append("AND regexp_replace(course_code, '[^a-zA-Z0-9]', '', 'g') "
+                   "ILIKE regexp_replace(%s, '[^a-zA-Z0-9]', '', 'g')")
+        params.append(f"%{course}%")
+    sql.append("ORDER BY due_at NULLS LAST LIMIT 20")
+    return list(query(" ".join(sql), tuple(params)))
+
+
+def set_assignment_status(student_id: str, assignment_ids: list[str],
+                          status: str) -> dict:
+    """
+    Change the status of specific assignments.
+
+    This is the write that was missing, and its absence caused the worst
+    failure in the project so far. A student explained twice that a group
+    preproposal was submitted by a teammate and asked for it to come off the
+    overdue list. With no tool for it, the model answered that the item "has
+    already been submitted by your groupmate, so it isn't considered overdue"
+    -- which was not true, contradicted the rows it had just read, and left
+    the list unchanged. It had no way to comply and no way to say so, so it
+    described a change it hadn't made.
+
+    Ids, not titles, so the caller has to look the assignment up first and
+    can't blanket-update a whole course by accident.
+    """
+    if status not in _STATUSES:
+        return {"error": f"status must be one of {sorted(_STATUSES)}"}
+    ids = [str(i) for i in (assignment_ids or []) if i][:50]
+    if not ids:
+        return {"error": "no assignment ids given"}
+
+    rows = query(
+        """UPDATE assignments SET status = %s, updated_at = now()
+           WHERE student_id = %s AND id = ANY(%s)
+           RETURNING id, course_code, title, status""",
+        (status, student_id, ids),
+    )
+    return {"updated": len(rows), "status": status, "items": list(rows),
+            "not_found": sorted(set(ids) - {r["id"] for r in rows})}
+
+
+def delete_assignments(student_id: str, assignment_ids: list[str],
+                       permanent: bool = True) -> dict:
+    """
+    Really delete assignments, not just mark them.
+
+    This is what was missing, and the model was right to say so: "The system
+    does not have a tool to erase assignments entirely from the database."
+    It then insisted that dismissing them removed them from the dashboard,
+    which was not true -- the rows stayed on screen with a line through them,
+    and a student who had asked three times was told to clear their browser
+    cache.
+
+    `permanent` records the id in suppressed_assignments so the next Canvas
+    crawl doesn't bring it back. Without that, deleting is a no-op with extra
+    steps: the crawler rebuilds the same deterministic id from the same page
+    and re-inserts the row.
+
+    The suppression list is also the undo: clear a row from it and the next
+    refresh restores the assignment.
+    """
+    ids = [str(i) for i in (assignment_ids or []) if i][:200]
+    if not ids:
+        return {"error": "no assignment ids given"}
+
+    rows = query(
+        """DELETE FROM assignments
+           WHERE student_id = %s AND id = ANY(%s)
+           RETURNING id, course_code, title""",
+        (student_id, ids),
+    )
+
+    if permanent:
+        for row in rows:
+            query(
+                """INSERT INTO suppressed_assignments
+                       (student_id, assignment_id, title, reason)
+                   VALUES (%s, %s, %s, 'deleted by the student')
+                   ON CONFLICT (student_id, assignment_id) DO NOTHING""",
+                (student_id, row["id"], row["title"]), fetch="none",
+            )
+
+    # Schedule blocks pointing at a deleted assignment would otherwise linger
+    # as orphans on the calendar.
+    orphans = query(
+        """DELETE FROM schedule_blocks
+           WHERE student_id = %s AND assignment_id = ANY(%s)
+           RETURNING id""",
+        (student_id, ids),
+    )
+
+    return {"deleted": len(rows), "items": list(rows),
+            "schedule_blocks_removed": len(orphans),
+            "permanent": permanent,
+            "not_found": sorted(set(ids) - {r["id"] for r in rows})}
+
+
+def restore_assignments(student_id: str, titles: list[str] | None = None) -> dict:
+    """Undo a delete: stop suppressing, so the next crawl brings it back."""
+    if titles:
+        rows = query(
+            """DELETE FROM suppressed_assignments
+               WHERE student_id = %s AND title = ANY(%s) RETURNING title""",
+            (student_id, [str(t) for t in titles][:100]),
+        )
+    else:
+        rows = query(
+            "DELETE FROM suppressed_assignments WHERE student_id = %s RETURNING title",
+            (student_id,),
+        )
+    return {"restored": len(rows), "titles": [r["title"] for r in rows],
+            "note": "Run refresh_from_canvas to pull them back in."}
+
+
+def remove_schedule_blocks(student_id: str, block_ids: list[str] | None = None,
+                           task_match: str | None = None,
+                           on_day: str | None = None) -> dict:
+    """
+    Delete schedule blocks. By id, by title, or by day.
+
+    There was no way to do this at all, and the gap was visible: asked to
+    remove a wrongly-timed viola lesson, the assistant had to answer "I don't
+    have a tool that can delete or modify existing schedule entries". Adding
+    an entry you can't remove means the first mistake is permanent.
+
+    Returns the rows it deleted, so the reply can name them instead of
+    claiming a vague success.
+    """
+    where, params = ["student_id = %s"], [student_id]
+
+    if block_ids:
+        where.append("id = ANY(%s)")
+        params.append([int(i) for i in block_ids if str(i).isdigit()][:100])
+    if task_match:
+        where.append("regexp_replace(lower(task), '[^a-z0-9]', '', 'g') "
+                     "LIKE regexp_replace(lower(%s), '[^a-z0-9]', '', 'g')")
+        params.append(f"%{task_match}%")
+    if on_day:
+        # Compared in the student's timezone, so "Thursday" means their
+        # Thursday and not a UTC day that starts at 8pm the night before.
+        where.append("(starts_at AT TIME ZONE %s)::date = %s::date")
+        params.extend([TIMEZONE, on_day])
+
+    if len(where) == 1:
+        return {"error": "give block_ids, task_match, or on_day -- "
+                         "refusing to delete the whole schedule"}
+
+    rows = query(
+        f"""DELETE FROM schedule_blocks WHERE {' AND '.join(where)}
+            RETURNING id, task, starts_at, ends_at, est_minutes""",
+        tuple(params),
+    )
+    return {"removed": len(rows), "blocks": list(rows)}
+
+
+def remove_events(event_ids: list[str] | None = None,
+                  keyword: str | None = None,
+                  source: str | None = None) -> dict:
+    """
+    Delete stored campus events.
+
+    campus_events is shared rather than per-student, so this is scoped by id,
+    keyword or source and never takes an "everything" argument.
+    """
+    where, params = [], []
+    if event_ids:
+        where.append("id = ANY(%s)")
+        params.append([str(i) for i in event_ids][:200])
+    if keyword:
+        where.append("title ILIKE %s")
+        params.append(f"%{keyword}%")
+    if source:
+        where.append("source = %s")
+        params.append(source)
+
+    if not where:
+        return {"error": "give event_ids, keyword, or source"}
+
+    rows = query(
+        f"""DELETE FROM campus_events WHERE {' AND '.join(where)}
+            RETURNING id, title, starts_at""",
+        tuple(params),
+    )
+    return {"removed": len(rows), "events": list(rows)}
 
 
 def log_study_session(student_id: str, assignment_id: str | None,

@@ -1,0 +1,14 @@
+# One backend, one requirements file. app.py imports orchestrator/'s modules
+# directly and runs the agent loop in-process, so it needs everything the
+# orchestrator needs -- pulled in with -r rather than duplicated here, so the
+# two lists can't quietly drift apart.
+#
+# MODE=mock (the default) doesn't touch most of these: see the MODE == "mock"
+# branches in orchestrator/tools.py. They're installed up front so switching
+# to MODE=live later isn't also a second pip install.
+
+# The website
+flask>=3.0.0
+
+# Everything the agent needs
+-r orchestrator/requirements.txt

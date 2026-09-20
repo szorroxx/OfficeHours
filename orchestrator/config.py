@@ -26,11 +26,56 @@ import os
 from pathlib import Path
 
 ENV_PATH = Path(__file__).parent / ".env"
+# The repo root's .env. This is now the canonical one: one file, one set of
+# values, regardless of whether you're running app.py from the root or ask.py
+# from inside orchestrator/.
+ROOT_ENV_PATH = Path(__file__).parent.parent / ".env"
 _loaded = False
+_conflicts: dict[str, tuple[str, str]] = {}
+
+
+def load_all() -> dict[str, str]:
+    """
+    Read the project's .env file(s).
+
+    THE BUG THIS FIXES
+    There used to be two .env files -- one at the repo root, one in
+    orchestrator/ -- holding DIFFERENT values for some of the same keys (a
+    different NVIDIA_API_KEY in each; only the root one set MODE and
+    ANTHROPIC_API_KEY). Nothing read both, so which value applied depended on
+    which script you happened to run: ask.py got one, the website got the
+    other, and a key that "definitely works" would fail in one place and not
+    the other.
+
+    Now the root file is canonical and orchestrator/.env is read afterwards
+    only to fill in keys the root file doesn't define -- so an existing local
+    setup keeps working, but it can never silently override the root. Any key
+    the two files disagree on is recorded and reported by status(), because a
+    conflict you can't see is the whole problem.
+
+    A real environment variable still wins over both, so
+        MODE=live python3 app.py
+    behaves as expected.
+    """
+    global _loaded
+    found: dict[str, str] = {}
+
+    root_values = load(ROOT_ENV_PATH) if ROOT_ENV_PATH.exists() else {}
+    found.update(root_values)
+
+    if ENV_PATH.exists():
+        local_values = load(ENV_PATH)
+        for key, value in local_values.items():
+            if key in root_values and root_values[key] != value:
+                _conflicts[key] = (root_values[key], value)
+            found.setdefault(key, value)
+
+    _loaded = True
+    return found
 
 
 def load(path: Path | None = None, override: bool = False) -> dict[str, str]:
-    """Read a .env file and add its values to os.environ."""
+    """Read one .env file and add its values to os.environ."""
     global _loaded
     path = path or ENV_PATH
     found: dict[str, str] = {}
@@ -96,14 +141,23 @@ def status() -> dict:
     nvidia = os.getenv("NVIDIA_API_KEY", "")
     anthropic = os.getenv("ANTHROPIC_API_KEY", "")
     database = os.getenv("DATABASE_URL", "")
-    return {
-        "env_file": str(ENV_PATH),
-        "env_file_exists": ENV_PATH.exists(),
+    out = {
+        "env_file": str(ROOT_ENV_PATH),
+        "env_file_exists": ROOT_ENV_PATH.exists(),
+        "also_read": str(ENV_PATH) if ENV_PATH.exists() else None,
         "mode": os.getenv("MODE", "mock"),
         "nvidia_key": _describe(nvidia, "nvapi-"),
         "anthropic_key": _describe(anthropic, "sk-ant"),
         "database_url": _describe(database, "postgres"),
     }
+    if _conflicts:
+        # Named, not swallowed: these are the keys where the two .env files
+        # disagree. The root file's value is the one in effect.
+        out["env_conflicts"] = {
+            key: "root .env wins; orchestrator/.env has a different value"
+            for key in sorted(_conflicts)
+        }
+    return out
 
 
 def _describe(value: str, prefix: str) -> str:
@@ -116,15 +170,15 @@ def _describe(value: str, prefix: str) -> str:
 
 # Runs the moment anything imports this module.
 if not _loaded:
-    load()
+    load_all()
 
 
 if __name__ == "__main__":
     import json
 
-    values = load()
+    values = load_all()
     print(json.dumps(status(), indent=2))
     print(f"\nkeys found in .env: {sorted(values) or '(none — does .env exist?)'}")
-    if not ENV_PATH.exists():
-        print(f"\nNo .env file at {ENV_PATH}")
+    if not ROOT_ENV_PATH.exists() and not ENV_PATH.exists():
+        print(f"\nNo .env file at {ROOT_ENV_PATH}")
         print("Create one with:  cp .env.example .env")

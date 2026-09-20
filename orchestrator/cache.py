@@ -46,6 +46,28 @@ CACHE_DIR = Path(os.getenv("CACHE_DIR", "cache"))
 RUN_DIR = CACHE_DIR / "runs"
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-5")
 
+# --------------------------------------------------------------------------
+# Committed recordings, so replay works on a deployed URL
+#
+# CACHE_DIR is written at runtime, which on Vercel means /tmp -- wiped between
+# invocations. So a MODE=replay deploy would start with an empty cache and
+# every prompt would raise ReplayMiss, which is the one failure this whole
+# mechanism exists to prevent.
+#
+# RECORDED_DIR is the fix: a read-only folder that IS committed to the repo.
+# Reads check the live cache first, then fall back to it; writes never touch
+# it. `python3 cache.py --export` copies what a live run recorded into it.
+#
+#   MODE=live python3 ask.py "give me the latest from canvas"   # records
+#   python3 cache.py --export                                   # commit-ready
+#   git add orchestrator/recorded && git commit
+#
+# Now the deployed site can serve that exact run with no network and no keys.
+# --------------------------------------------------------------------------
+RECORDED_DIR = Path(os.getenv("RECORDED_DIR",
+                              str(Path(__file__).parent / "recorded")))
+RECORDED_RUN_DIR = RECORDED_DIR / "runs"
+
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 RUN_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -76,10 +98,11 @@ def _path(key: str) -> Path:
 
 
 def load(key: str) -> Any | None:
-    path = _path(key)
-    if not path.exists():
-        return None
-    return json.loads(path.read_text())["response"]
+    """Live cache first, then the committed recordings."""
+    for path in (_path(key), RECORDED_DIR / f"{key}.json"):
+        if path.exists():
+            return json.loads(path.read_text())["response"]
+    return None
 
 
 def store(key: str, label: str, request: dict, response: Any) -> None:
@@ -122,7 +145,8 @@ def wrap(label: str, request: dict, call, mock_value: Any):
                 f"No recorded response for '{label}' (key {key}).\n"
                 f"Run this exact prompt once with MODE=live to record it, then "
                 f"switch back to replay. `python3 cache.py --list` shows what's "
-                f"already recorded."
+                f"already recorded, and `--export` copies it into "
+                f"{RECORDED_DIR.name}/ so a deployed instance can serve it too."
             )
         return hit
 
@@ -189,10 +213,42 @@ def save_run(prompt: str, run_json: dict) -> None:
 
 
 def load_run(prompt: str) -> dict | None:
-    path = RUN_DIR / f"{_run_key(prompt)}.json"
-    if not path.exists():
-        return None
-    return json.loads(path.read_text())["run"]
+    name = f"{_run_key(prompt)}.json"
+    for path in (RUN_DIR / name, RECORDED_RUN_DIR / name):
+        if path.exists():
+            return json.loads(path.read_text())["run"]
+    return None
+
+
+def recorded_count() -> dict:
+    """What replay can serve right now. Shown in /api/health."""
+    live = len(list(RUN_DIR.glob("*.json"))) if RUN_DIR.exists() else 0
+    committed = (len(list(RECORDED_RUN_DIR.glob("*.json")))
+                 if RECORDED_RUN_DIR.exists() else 0)
+    return {"live_cache": live, "committed": committed,
+            "recorded_dir": str(RECORDED_DIR)}
+
+
+def export() -> dict:
+    """
+    Copy the live cache into the committed recordings folder.
+
+    Deliberately a copy rather than a move: a live run stays replayable
+    locally even if you never commit it, and re-running --export is
+    idempotent.
+    """
+    import shutil
+
+    RECORDED_DIR.mkdir(parents=True, exist_ok=True)
+    RECORDED_RUN_DIR.mkdir(parents=True, exist_ok=True)
+    copied = {"responses": 0, "runs": 0}
+    for src in CACHE_DIR.glob("*.json"):
+        shutil.copy2(src, RECORDED_DIR / src.name)
+        copied["responses"] += 1
+    for src in RUN_DIR.glob("*.json"):
+        shutil.copy2(src, RECORDED_RUN_DIR / src.name)
+        copied["runs"] += 1
+    return copied
 
 
 # --------------------------------------------------------------------------
@@ -234,7 +290,97 @@ def _mock_claude(label: str) -> dict:
         return {"sections": [{"topic": "[MOCK] Gauss's Law",
                               "summary": "Flux through a closed surface is proportional to enclosed charge.",
                               "questions": ["State Gauss's law in integral form."]}]}
+    if label.startswith("triage"):
+        # Ordering advice for the scheduler. Titles must match real ones or
+        # the planner ignores them, which is the correct behaviour and is
+        # what this fixture deliberately exercises.
+        return {"order": ["Quiz 3 (Chapter 2)", "Problem Set 4 – Gauss's Law",
+                          "Lab 3: cross-validation", "Midterm Project proposal"],
+                "rationale": "[MOCK] soonest deadlines first, project last."}
+    if label.startswith("surface"):
+        # label is "surface:<primary card type>" -- see the note in
+        # surface.plan_ops. Keying the fixture off it means mock mode shows
+        # the panel the prompt actually called for.
+        kind = label.split(":", 1)[1] if ":" in label else "text"
+        # The layout plan (see surface.py). Exercises the real path in mock
+        # mode: one premade chunk keyed off card 0, one custom chunk written
+        # in app.html's class vocabulary, and no removals -- which is what a
+        # well-behaved plan looks like.
+        #
+        # The custom chunk deliberately includes an <img onerror=...> so that
+        # running anything in mock mode also proves the sanitizer strips it.
+        # A safety net you never see fire is one you don't know is connected.
+        return {
+            "upsert": [{"id": kind.replace("_", "-"), "card_index": 0,
+                        "title": f"[MOCK] {kind.replace('_', ' ').title()}"}],
+            "custom": [{
+                "id": "mock-note",
+                "title": "[MOCK] Heads up",
+                "html": '<section class="panel"><div class="panel-head">'
+                        '<div class="panel-title">[MOCK] Heads up</div></div>'
+                        '<div class="list"><div class="item">'
+                        '<div class="rail" style="background: var(--amber)"></div>'
+                        '<div class="item-body"><div class="item-meta">'
+                        'Written by the mock layout agent.</div></div>'
+                        '</div></div></section>'
+                        '<img src=x onerror="alert(1)">',
+            }],
+            "remove": [],
+            "note": "[MOCK] refreshed the assignment panel, added a note",
+        }
     if label.startswith("display"):
+        # label is "display:<channel>:<tool>+<tool>" -- see the note in
+        # display.render_spec. The card the fixture returns follows from which
+        # tools ran, so mock mode exercises every card type and every premade
+        # template rather than only the assignment list.
+        if "make_schedule" in label or "get_schedule" in label:
+            return {
+                "speech": "Your plan starts tonight with an hour of review.",
+                "headline": "2 study blocks this week",
+                "cards": [{"type": "schedule", "title": "Your plan", "blocks": [
+                    {"day": "Sun", "start": "7:00pm", "end": "8:00pm",
+                     "task": "[MOCK] Review Ch. 2 for Quiz 3", "est_minutes": 60},
+                    {"day": "Mon", "start": "6:00pm", "end": "9:00pm",
+                     "task": "[MOCK] Problem Set 4", "est_minutes": 180},
+                ]}],
+            }
+        if "workload" in label:
+            return {
+                "speech": "Your estimated hours are up from four to six and a half.",
+                "headline": "Workload trending up",
+                "cards": [{"type": "workload_chart",
+                           "title": "Estimated hours over time", "series": [
+                               {"label": "PHYS 1361", "points": [
+                                   {"x": "2026-09-15", "y": 4.0},
+                                   {"x": "2026-09-19", "y": 6.5}]}]}],
+            }
+        if "study_guide" in label:
+            return {
+                "speech": "I put together a set on Gauss's law.",
+                "headline": "Study set ready",
+                "cards": [{"type": "study_set", "title": "Study set: PHYS 1361",
+                           "sections": [{"topic": "[MOCK] Gauss's Law",
+                                         "summary": "Flux through a closed surface "
+                                                    "is proportional to enclosed charge.",
+                                         "questions": ["State Gauss's law in integral form.",
+                                                       "When is it easier than Coulomb's law?"]}]}],
+            }
+        if "events" in label:
+            return {
+                "speech": "There's a career fair Thursday afternoon.",
+                "headline": "1 event this week",
+                "cards": [{"type": "event_list", "title": "On campus", "items": [
+                    {"title": "[MOCK] SCI Career Fair", "when": "Thu 4:00pm",
+                     "where": "Alumni Hall"}]}],
+            }
+        if "overdue" in label:
+            return {
+                "speech": "Two things are past due.",
+                "headline": "2 overdue",
+                "cards": [{"type": "alert", "title": "2 overdue",
+                           "body": "[MOCK] Quiz 3 is 3 days late and Lab 3 is "
+                                   "half a day late."}],
+            }
         return {
             "speech": "You have a quiz Monday and a problem set Tuesday.",
             "headline": "3 things due this week",
@@ -256,7 +402,9 @@ if __name__ == "__main__":
     args = set(sys.argv[1:])
     print(f"MODE={MODE}  CACHE_DIR={CACHE_DIR.resolve()}\n")
 
-    if "--clear" in args:
+    if "--export" in args:
+        print(f"exported {export()} into {RECORDED_DIR}")
+    elif "--clear" in args:
         n = 0
         for f in CACHE_DIR.glob("*.json"):
             f.unlink()
@@ -269,7 +417,17 @@ if __name__ == "__main__":
         for f in entries:
             data = json.loads(f.read_text())
             print(f"  {f.stem}  {data['label']:<28} {data['saved_at']}")
-        runs = sorted(RUN_DIR.glob("*.json"))
-        print(f"\nrecorded full runs: {len(runs)}")
-        for f in runs:
-            print(f"  {json.loads(f.read_text())['prompt'][:70]}")
+        counts = recorded_count()
+        print(f"\nrecorded full runs: {counts['live_cache']} in the live cache, "
+              f"{counts['committed']} committed")
+        seen = set()
+        for directory in (RUN_DIR, RECORDED_RUN_DIR):
+            if not directory.exists():
+                continue
+            for f in sorted(directory.glob("*.json")):
+                prompt = json.loads(f.read_text())["prompt"]
+                if prompt in seen:
+                    continue
+                seen.add(prompt)
+                where = "committed" if directory == RECORDED_RUN_DIR else "cache"
+                print(f"  [{where}] {prompt[:66]}")

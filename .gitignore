@@ -12,4 +12,37 @@ data.json
 *.log
 npm-debug.log*
 .DS_Store
-canvas_pages/canvas_export.json
+# The Canvas API export: a real student's full coursework history.
+#
+# NOTE: this pattern was previously written as "canvas_pages/canvas_export.json"
+# in this root .gitignore, which git anchors to the directory the .gitignore
+# lives in -- so it only ever matched <repo>/canvas_pages/, a path that does
+# not exist. The real file is under orchestrator/, so the rule never matched
+# anything, and the file is tracked. Fixing the pattern does NOT untrack it:
+# git ignores only files it isn't already following. See HANDOFF.md.
+orchestrator/canvas_pages/canvas_export.json
+
+.vercel
+.env
+
+./.venv/*
+
+rowanCanvas_files/
+
+uv.lock
+
+# Build artifacts and caches
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+
+# Orchestrator's on-disk model cache (orchestrator/recorded/ is committed instead)
+orchestrator/cache/
+
+# The file store, when not using Postgres
+data.json
+
+# Editor/OS cruft that has snuck in before
+.Rhistory
+*.swp

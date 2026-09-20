@@ -31,6 +31,45 @@ import db
 STUDENT_ID = os.getenv("STUDENT_ID", "demo-student")
 MODE = os.getenv("MODE", "mock").lower()
 
+# --------------------------------------------------------------------------
+# Which student's data are we reading?
+#
+# A module-level STUDENT_ID is right for ask.py (one person, one terminal) and
+# wrong for the website, where every request belongs to a different account.
+# A ContextVar is the fix: it holds a value for the duration of one request
+# and is not shared between concurrent ones, unlike reassigning the global --
+# which under a threaded server would mean request A's student id leaking into
+# request B's queries, i.e. showing someone else's coursework.
+#
+# Everything below calls student() rather than reading STUDENT_ID, so the
+# CLI keeps its old behaviour (the ContextVar is unset, so it falls back to
+# the environment) and the website gets per-account scoping for free.
+# --------------------------------------------------------------------------
+
+from contextlib import contextmanager  # noqa: E402
+from contextvars import ContextVar  # noqa: E402
+
+_current_student: ContextVar[str | None] = ContextVar("current_student", default=None)
+
+
+def student() -> str:
+    return _current_student.get() or STUDENT_ID
+
+
+@contextmanager
+def use_student(student_id: str):
+    """
+    Scope every tool call in this block to one student.
+
+        with tools.use_student("acct-u123"):
+            run = orchestrator.run(prompt)
+    """
+    token = _current_student.set(str(student_id) if student_id else None)
+    try:
+        yield student_id
+    finally:
+        _current_student.reset(token)
+
 # Words we refuse to store, no matter who asks. Matched as SUBSTRINGS, so
 # 'canvas_token' and 'user_password' get caught too, not just exact names.
 # Checked in both tools.py and db.py.
@@ -49,6 +88,41 @@ def is_banned(field: str) -> bool:
 # --------------------------------------------------------------------------
 
 TOOL_SCHEMAS: list[dict] = [
+    {
+        "type": "function",
+        "function": {
+            "name": "save_to_files",
+            "description": (
+                "Write a document into the student's Files tab, where their "
+                "generated files live. USE THIS whenever they ask you to "
+                "save, file, add, or put something in files, or to make them "
+                "a document, module, summary, handout or checklist they can "
+                "keep. Two ways to call it: pass `content` with the text of "
+                "the document, or pass `course` to file that course's most "
+                "recent study guide. Study guides made with make_study_guide "
+                "are filed automatically, so use this to re-file one or to "
+                "save anything else."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string",
+                              "description": "What to call the file, e.g. "
+                                             "'PHYS 1351 exam checklist'."},
+                    "content": {"type": "string",
+                                "description": "The document text. Headings "
+                                               "(# ##), bullets (-) and "
+                                               "numbered lists are formatted."},
+                    "course": {"type": "string",
+                               "description": "File this course's latest study "
+                                              "guide instead of writing new content."},
+                    "collection": {"type": "string",
+                                   "description": "Folder name. Defaults to "
+                                                  "'Documents'."},
+                },
+            },
+        },
+    },
     {
         "type": "function",
         "function": {
@@ -126,18 +200,60 @@ TOOL_SCHEMAS: list[dict] = [
             "name": "make_schedule",
             "description": (
                 "Build a time-blocked study plan from the student's open "
-                "assignments and save it. Call get_assignments first -- this "
-                "tool needs real assignment data, not guesses."
+                "assignments and save it. Use this for anything like 'plan my "
+                "week', 'budget time for each assignment', 'block out study "
+                "time', or 'how long will this take and when should I do it'. "
+                "It reads the assignments itself and works around anything "
+                "already on the schedule, so it never double-books and never "
+                "plans in the past. Returns the blocks it made and anything "
+                "it could not fit, with the reason."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "horizon_days": {"type": "integer", "description": "Default 7."},
+                    "horizon_days": {"type": "integer",
+                                     "description": "How many days ahead to plan. Default 7."},
                     "constraints": {
                         "type": "string",
-                        "description": "Free text from the student, e.g. 'class 9-11am "
-                                       "weekdays, no work Friday night, orchestra Tuesday'.",
+                        "description": "The student's own words, passed through "
+                                       "verbatim: 'class 9-11am weekdays', 'no work "
+                                       "Friday nights', 'nothing after 9pm', 'at most "
+                                       "3 hours a day', 'one hour blocks'.",
                     },
+                    "strategy": {
+                        "type": "string",
+                        "enum": ["spread", "asap", "day_before"],
+                        "description": "spread (default) distributes sessions before "
+                                       "each due date; asap front-loads everything; "
+                                       "day_before puts one session the day before "
+                                       "each due date -- use that for 'block out an "
+                                       "hour for each assignment'.",
+                    },
+                    "session_minutes": {
+                        "type": "integer",
+                        "description": "Length of one sitting, e.g. 60 for 'an hour each'.",
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "schedule_events",
+            "description": (
+                "Put stored events onto the schedule at their real start "
+                "times. Use this for 'add my events to my schedule' instead "
+                "of add_to_schedule -- it copies the stored time, so you "
+                "cannot get the time wrong. Call get_events or "
+                "find_campus_events first if nothing is stored yet."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "within_days": {"type": "integer", "description": "Default 7."},
+                    "keyword": {"type": "string",
+                                "description": "Optional title filter, e.g. 'career fair'."},
                 },
             },
         },
@@ -206,6 +322,26 @@ TOOL_SCHEMAS: list[dict] = [
                                "enum": ["flashcards", "outline", "practice_problems"]},
                 },
                 "required": ["course", "topics"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_study_sets",
+            "description": (
+                "List study guides already made for this student, with their "
+                "full contents. Call this BEFORE make_study_guide when they "
+                "ask to see, re-open, or continue a guide -- regenerating it "
+                "costs a model call and produces different content. Also "
+                "re-files the guide in the Files tab."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "course": {"type": "string",
+                               "description": "Optional course filter, e.g. 'PHYS 1351'."},
+                },
             },
         },
     },
@@ -310,6 +446,190 @@ TOOL_SCHEMAS: list[dict] = [
     {
         "type": "function",
         "function": {
+            "name": "delete_assignments",
+            "description": (
+                "PERMANENTLY delete assignments, so they disappear from the "
+                "dashboard entirely instead of showing as done. Use this when "
+                "the student says remove, delete, get rid of, clear, or says "
+                "they can still see items you already marked. Deleting also "
+                "stops the next Canvas crawl from re-adding them. Call "
+                "get_assignments or find_assignment first to get the ids. "
+                "Prefer update_assignment with 'submitted' when the student "
+                "actually did the work and might want a record of it; use "
+                "this when they want it GONE."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "assignment_ids": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Ids from get_assignments or find_assignment.",
+                    },
+                    "permanent": {
+                        "type": "boolean",
+                        "description": "Default true: also stop future crawls "
+                                       "re-adding them. Pass false to delete "
+                                       "only what's stored now.",
+                    },
+                },
+                "required": ["assignment_ids"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "restore_assignments",
+            "description": (
+                "Undo a delete. Stops suppressing the named assignments so "
+                "the next refresh_from_canvas brings them back. Omit titles "
+                "to un-suppress everything."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "titles": {"type": "array", "items": {"type": "string"}},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remove_from_schedule",
+            "description": (
+                "Delete blocks from the student's schedule. Use when they say "
+                "a scheduled item is wrong, cancelled, or at the wrong time. "
+                "Target it by task_match (part of the title), by on_day "
+                "(YYYY-MM-DD), or by block_ids from get_schedule. To FIX a "
+                "time, remove the wrong block and add the right one. At least "
+                "one argument is required -- there is no 'delete everything'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task_match": {"type": "string",
+                                   "description": "Part of the block title, e.g. 'viola'."},
+                    "on_day": {"type": "string",
+                               "description": "YYYY-MM-DD, in the student's timezone."},
+                    "block_ids": {"type": "array", "items": {"type": "string"},
+                                  "description": "Ids from get_schedule."},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remove_events",
+            "description": (
+                "Delete stored campus events the student doesn't care about. "
+                "Target by keyword (matches the title), by source, or by ids. "
+                "Use when they say the event list is noisy or ask you to "
+                "clear it. Removing events does not affect assignments, "
+                "exams, or the schedule."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "keyword": {"type": "string",
+                                "description": "Title match, e.g. 'lunch-and-learn'."},
+                    "source": {"type": "string",
+                               "description": "e.g. 'calendar.pitt.edu' for everything "
+                                              "pulled from the university calendar."},
+                    "event_ids": {"type": "array", "items": {"type": "string"}},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "find_assignment",
+            "description": (
+                "Look up assignments by name when the student refers to one "
+                "in prose ('the preproposal', 'topic 1', 'the physics HW'). "
+                "Returns matching rows WITH THEIR IDS. Call this before "
+                "update_assignment, which needs an id. Fast and free."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string",
+                             "description": "Part of the assignment title."},
+                    "course": {"type": "string",
+                               "description": "Optional course filter, e.g. 'CS 1684'."},
+                },
+                "required": ["name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_assignment",
+            "description": (
+                "Change the status of assignments the student has dealt with. "
+                "Use 'submitted' when they say they turned it in, 'graded' "
+                "when it's been marked, and 'dismissed' when it is not theirs "
+                "to do -- a group item a teammate submits, optional extra "
+                "credit they're skipping, or a duplicate Canvas row. "
+                "Dismissed and submitted items drop off the open and overdue "
+                "lists. Call find_assignment first to get the ids. This is "
+                "how you honour 'remove that from my list'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "assignment_ids": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Ids from find_assignment or get_assignments.",
+                    },
+                    "status": {"type": "string",
+                               "enum": ["open", "submitted", "graded", "dismissed"]},
+                },
+                "required": ["assignment_ids", "status"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "add_tasks",
+            "description": (
+                "Add to-do items to the student's board. Use for anything "
+                "they ask you to remember or track that isn't a Canvas "
+                "assignment: steps pulled out of a document, errands, "
+                "'remind me to email the professor'. One task per distinct "
+                "action, phrased as something you can finish."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tasks": {
+                        "type": "array",
+                        "description": "The to-dos to add.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "text": {"type": "string",
+                                         "description": "What to do, e.g. "
+                                                        "'Email Dr. Reyes about the extension'."},
+                                "est_minutes": {"type": "integer"},
+                                "due_at": {"type": "string",
+                                           "description": "Optional ISO 8601 date."},
+                            },
+                            "required": ["text"],
+                        },
+                    }
+                },
+                "required": ["tasks"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "log_time",
             "description": (
                 "Record that the student actually spent time on something, so "
@@ -329,7 +649,8 @@ TOOL_SCHEMAS: list[dict] = [
 
 # Trimmed read-only set for the voice path (Alexa, later). Fast tools only.
 FAST_TOOL_NAMES = {"check_freshness", "get_assignments", "get_overdue",
-                   "get_schedule", "get_events"}
+                   "get_schedule", "get_events", "get_workload_history",
+                   "find_assignment"}
 FAST_TOOL_SCHEMAS = [t for t in TOOL_SCHEMAS if t["function"]["name"] in FAST_TOOL_NAMES]
 
 
@@ -343,7 +664,7 @@ def check_freshness() -> dict:
         return {"courses": [
             {"course": "PHYS 1361", "last_crawled_at": None, "age_hours": None, "stale": True},
         ], "any_stale": True, "never_crawled": False}
-    return db.check_freshness(STUDENT_ID)
+    return db.check_freshness(student())
 
 
 def get_assignments(course: str | None = None, due_within_days: int | None = None,
@@ -353,7 +674,7 @@ def get_assignments(course: str | None = None, due_within_days: int | None = Non
         if course:
             items = [a for a in items if course.lower() in a["course_code"].lower()]
         return {"items": items, "count": len(items)}
-    items = db.get_assignments(STUDENT_ID, course, due_within_days, status)
+    items = db.get_assignments(student(), course, due_within_days, status)
     return {"items": items, "count": len(items)}
 
 
@@ -362,7 +683,7 @@ def get_overdue() -> dict:
         items = [dict(_MOCK_ASSIGNMENTS[0], days_late=3.2),
                  dict(_MOCK_ASSIGNMENTS[2], days_late=0.4)]
         return {"items": items, "count": len(items)}
-    items = db.get_overdue(STUDENT_ID)
+    items = db.get_overdue(student())
     for a in items:
         if a.get("days_late") is not None:
             a["days_late"] = round(float(a["days_late"]), 1)
@@ -373,52 +694,166 @@ def refresh_from_canvas(pages: list[str] | None = None) -> dict:
     if MODE == "mock":
         return {"synced": 3, "courses": ["PHYS 1361"],
                 "note": "[MOCK] wrote 3 assignments to Tiger Data"}
-    return canvas.crawl(STUDENT_ID, pages)
+    return canvas.crawl(student(), pages)
 
 
-def make_schedule(horizon_days: int = 7, constraints: str = "") -> dict:
-    """Read assignments, ask Claude to plan, save the plan, return it."""
-    assignments = get_assignments(due_within_days=horizon_days * 2)["items"]
+def make_schedule(horizon_days: int = 7, constraints: str = "",
+                  strategy: str = "spread", session_minutes: int | None = None,
+                  include_undated: bool = True) -> dict:
+    """
+    Build a time-blocked study plan and save it.
+
+    THIS NO LONGER DEPENDS ON A MODEL BEING REACHABLE.
+
+    It used to be one Claude call. On a deployment without the anthropic
+    package installed it raised ModuleNotFoundError, which surfaced to the
+    student four times in one conversation as "the scheduling tool
+    encountered an internal error (missing dependency)" -- and then, when
+    asked which dependency, got explained away as missing assignment data.
+    Scheduling was the only feature in the project with a hard model
+    dependency and no fallback.
+
+    Now scheduler.py places the blocks in plain Python, which is also simply
+    better at it: it cannot schedule a block in the past, after its own due
+    date, on top of an existing commitment, or beyond a daily limit -- all of
+    which the model did. Claude is asked for the ORDERING and a sentence of
+    rationale when it's available, and skipped without ceremony when it
+    isn't. So the model can shape the plan and cannot produce an invalid one.
+    """
+    from datetime import datetime
+
+    import scheduler
+
+    assignments = get_assignments(due_within_days=None, status="open")["items"]
+    if not include_undated:
+        assignments = [a for a in assignments if a.get("due_at")]
     if not assignments:
-        return {"error": "no open assignments stored — refresh_from_canvas first",
+        return {"error": "no open assignments stored — run refresh_from_canvas "
+                         "first, or everything is already done",
                 "blocks": []}
 
-    profile = {} if MODE == "mock" else db.get_profile(STUDENT_ID)
-    plan = cache.claude(
-        system=(
-            "You are a study scheduler. Given assignments with due dates and "
-            "estimated hours, produce a time-blocked plan.\n\n"
-            "Return ONLY JSON: {\"blocks\": [{\"task\": str, \"assignment_title\": str, "
-            "\"starts_at\": ISO8601 with offset, \"ends_at\": ISO8601, "
-            "\"est_minutes\": int, \"priority\": int}], \"rationale\": str}\n\n"
-            "Rules: exams and projects outrank labs and readings. Break anything "
-            "over 2 hours into separate blocks on different days. Respect the "
-            "stated constraints. Never schedule a block after its due date. "
-            "priority 1 = do first."
-        ),
-        user=json.dumps({
-            "today": _today(),
-            "horizon_days": horizon_days,
-            "constraints": constraints,
-            "timezone": profile.get("timezone", "America/New_York"),
-            "preferences": profile.get("prefs", {}),
-            "assignments": assignments,
-        }, default=str),
-        max_tokens=3000,
-        label=f"schedule:{horizon_days}d",
-    )
-    if "error" in plan:
-        return plan
+    parsed = scheduler.parse_constraints(constraints)
+    if session_minutes:
+        try:
+            parsed.session_minutes = max(15, min(int(session_minutes), 480))
+            parsed.understood.append(f"{parsed.session_minutes}-minute sessions")
+        except (TypeError, ValueError):
+            pass
 
-    blocks = plan.get("blocks") or []
-    # Attach assignment ids so the schedule links back to real rows.
-    if MODE != "mock":
-        by_title = {a["title"]: a["id"] for a in assignments}
-        for b in blocks:
-            b["assignment_id"] = by_title.get(b.get("assignment_title"))
-        saved = db.save_schedule(STUDENT_ID, blocks, plan.get("rationale", ""))
-        plan.update(saved)
-    return plan
+    # Existing commitments are time that can't be booked twice: the rehearsal
+    # at 7:30 on Wednesday, and any blocks from an earlier plan.
+    existing = get_schedule()
+    busy = scheduler.busy_from_blocks(existing.get("blocks") or [])
+
+    # Optional: ask Claude which order to work in. Advisory only.
+    order, model_note = _ask_for_priority_order(assignments, constraints)
+
+    tz = db._tz() if MODE != "mock" else _mock_tz()
+    now = datetime.now(tz)
+    result = scheduler.plan(
+        scheduler.tasks_from_assignments(assignments, order=order),
+        now=now, tz=tz, horizon_days=horizon_days,
+        constraints=parsed, busy=busy,
+        strategy=strategy if strategy in ("spread", "asap", "day_before") else "spread",
+    )
+    result["planner"] = "deterministic" + (" + claude ordering" if order else "")
+
+    import documents
+
+    document = documents.schedule_document(
+        result.get("blocks") or [], title="Study plan",
+        rationale=result.get("rationale", ""))
+    if document:
+        result["files"] = [document]
+        result["saved_to_files"] = document["name"]
+    if model_note:
+        result["note"] = model_note
+
+    blocks = result.get("blocks") or []
+    if blocks and MODE != "mock":
+        saved = db.save_schedule(student(), blocks, result.get("rationale", ""))
+        result.update(saved)
+        # Re-read so the returned blocks carry their database ids, which is
+        # what remove_from_schedule needs to be able to target them.
+        result["blocks"] = (db.get_schedule(student()).get("blocks")
+                            or blocks)
+    elif blocks:
+        _MOCK_SCHEDULE.extend(blocks)
+    return result
+
+
+def _mock_tz():
+    from zoneinfo import ZoneInfo
+
+    try:
+        return ZoneInfo(os.getenv("TIMEZONE", "America/New_York"))
+    except Exception:  # noqa: BLE001
+        from datetime import timedelta, timezone
+
+        return timezone(timedelta(hours=-4))
+
+
+def _ask_for_priority_order(assignments: list[dict],
+                            constraints: str) -> tuple[list[str] | None, str | None]:
+    """
+    Ask Claude what to work on first. Returns (titles_in_order, note).
+
+    Never raises and never blocks the plan. A missing key, a missing package,
+    a rate limit or a malformed answer all end the same way: no ordering, and
+    a note saying the plan was built without it. That note matters -- the old
+    behaviour was to fail the whole tool and let the model improvise an
+    explanation for the failure.
+    """
+    if len(assignments) < 2:
+        return None, None
+    try:
+        answer = cache.claude(
+            system=(
+                "You triage a student's coursework. Given assignments with "
+                "due dates, estimated hours and type, decide the order to "
+                "work on them.\n\n"
+                "Return ONLY JSON: {\"order\": [\"exact title\", ...], "
+                "\"rationale\": \"one sentence\"}\n\n"
+                "Use the exact titles you were given. Soonest and heaviest "
+                "first, exams and projects ahead of readings, and put "
+                "anything already overdue at the front."
+            ),
+            user=json.dumps([
+                {"title": a.get("title"), "course": a.get("course_code"),
+                 "due_at": a.get("due_at"), "est_hours": a.get("est_hours"),
+                 "kind": a.get("kind")}
+                for a in assignments[:40]
+            ], default=str),
+            max_tokens=2000,
+            label=f"triage:{len(assignments)}",
+        )
+    except Exception as exc:  # noqa: BLE001
+        return None, _explain_model_gap(exc)
+
+    if not isinstance(answer, dict) or "error" in answer:
+        return None, "Ordered by due date; the triage model returned no usable answer."
+
+    titles = [str(t) for t in (answer.get("order") or []) if t][:60]
+    known = {str(a.get("title")) for a in assignments}
+    titles = [t for t in titles if t in known]
+    if not titles:
+        return None, "Ordered by due date; the triage model named no known assignments."
+    return titles, str(answer.get("rationale") or "")[:200] or None
+
+
+def _explain_model_gap(exc: Exception) -> str:
+    """Turn a model-call failure into something a student and a developer can both act on."""
+    text = f"{type(exc).__name__}: {exc}"
+    if isinstance(exc, ModuleNotFoundError) or "No module named 'anthropic'" in text:
+        return ("Planned without the triage model: the anthropic package "
+                "isn't installed on the server (pip install -r "
+                "requirements.txt). The schedule itself is unaffected.")
+    if isinstance(exc, KeyError) and "ANTHROPIC_API_KEY" in text:
+        return ("Planned without the triage model: ANTHROPIC_API_KEY isn't "
+                "set. The schedule itself is unaffected.")
+    if "rate" in text.lower() or "429" in text:
+        return "Planned without the triage model: it was rate limited."
+    return f"Planned without the triage model ({text[:90]}). Schedule unaffected."
 
 
 def add_to_schedule(items: list[dict]) -> dict:
@@ -445,23 +880,126 @@ def add_to_schedule(items: list[dict]) -> dict:
         })
 
     if MODE == "mock":
+        # Normalise here too, so mock and live agree on what a stored block
+        # looks like. db._normalize_block is pure -- no database needed -- and
+        # without it the mock returned blocks with no end time, which is a
+        # difference you'd only find out about in production.
+        blocks = [{**b, **{k: (v.isoformat() if hasattr(v, "isoformat") else v)
+                           for k, v in db._normalize_block(b).items()
+                           if k in ("starts_at", "ends_at", "est_minutes")}}
+                  for b in blocks]
+        # Remember it for this process, so a mock get_schedule afterwards
+        # shows what was just added. Without this, "add a viola lesson" then
+        # "what's on my schedule" returned the canned study plan and the
+        # lesson was nowhere -- which is exactly the bug this flow exists to
+        # demonstrate a fix for, so the fixture shouldn't reproduce it.
+        _MOCK_SCHEDULE.extend(blocks)
         return {"blocks_added": len(blocks),
-                "added": [b["task"] for b in blocks]}
+                "added": [b["task"] for b in blocks],
+                "blocks": list(blocks)}
 
-    result = db.add_schedule_blocks(STUDENT_ID, blocks, note="added on request")
+    result = db.add_schedule_blocks(student(), blocks, note="added on request")
     result["added"] = [b["task"] for b in blocks][:20]
     return result
 
 
+def schedule_events(within_days: int = 7, keyword: str = "") -> dict:
+    """
+    Put stored events onto the schedule using THEIR OWN start times.
+
+    Asked to add this week's events to the schedule, the model called
+    add_to_schedule and supplied a start time it made up -- a career fair at
+    4pm went onto the calendar at 23:16. It had the real time in a tool
+    result two steps earlier and retyped it wrong.
+
+    So this tool doesn't take a time. It reads the events and copies their
+    stored start and end, which removes the opportunity to get it wrong.
+    """
+    events = get_events(within_days=within_days).get("items") or []
+    if keyword:
+        needle = keyword.lower()
+        events = [e for e in events if needle in str(e.get("title", "")).lower()]
+    if not events:
+        return {"blocks_added": 0, "added": [],
+                "note": f"no stored events in the next {within_days} days -- "
+                        f"run find_campus_events first"}
+
+    items = []
+    for event in events[:40]:
+        starts = event.get("starts_at") or event.get("when")
+        if not starts:
+            continue
+        items.append({
+            "task": str(event.get("title") or "Event")[:200],
+            "starts_at": starts,
+            "ends_at": event.get("ends_at"),
+            # An event with no stated end gets an hour, rather than a guess
+            # that could swallow the evening.
+            "est_minutes": event.get("est_minutes") or 60,
+            "priority": 5,
+        })
+    if not items:
+        return {"blocks_added": 0, "added": [],
+                "note": "the stored events have no start times, so they can't "
+                        "be placed on a calendar"}
+    return add_to_schedule(items)
+
+
 def get_schedule() -> dict:
     if MODE == "mock":
-        return cache._mock_claude("schedule")
-    return db.get_schedule(STUDENT_ID)
+        plan = dict(cache._mock_claude("schedule"))
+        if _MOCK_SCHEDULE:
+            plan["blocks"] = list(plan.get("blocks") or []) + list(_MOCK_SCHEDULE)
+        return plan
+    return db.get_schedule(student())
 
 
 def make_study_guide(course: str, topics: list[str], format: str = "outline") -> dict:  # noqa: A002
     context = get_assignments(course=course, status="any")["items"][:10]
-    guide = cache.claude(
+    try:
+        guide = _write_study_guide(course, topics, format, context)
+    except Exception as exc:  # noqa: BLE001
+        # cache.claude RAISES when the SDK is missing or the key is absent --
+        # it does not return {"error": ...}. Checking for an error key alone
+        # let the exception escape to tools.execute, which wrapped it as
+        # "make_study_guide failed: ModuleNotFoundError", i.e. exactly the
+        # unreadable failure this was meant to replace.
+        return {"error": f"could not write the study guide: "
+                         f"{type(exc).__name__}: {str(exc)[:160]}",
+                "hint": _study_guide_hint(), "sections": []}
+
+    if "error" in guide:
+        # A study guide genuinely needs a model -- there is no honest
+        # deterministic fallback for "explain Gauss's law". But the error can
+        # at least name the fix instead of arriving as "internal error".
+        return {"error": f"could not write the study guide: "
+                         f"{str(guide.get('error'))[:200]}",
+                "hint": _study_guide_hint(),
+                "sections": []}
+    if MODE != "mock":
+        saved = db.save_study_set(student(), course, ", ".join(topics), format, guide)
+        guide.update(saved)
+    guide["course"] = course
+    guide["topic"] = ", ".join(topics)
+    guide["format"] = format
+
+    # Build the file HERE and return it, rather than having the agent notice
+    # the result later and file it quietly. The tool result now says a file
+    # was created and what it's called, so the model can tell the student
+    # truthfully instead of denying it can make files.
+    import documents
+
+    document = documents.study_guide(guide)
+    if document:
+        guide["files"] = [document]
+        guide["saved_to_files"] = document["name"]
+        guide["collection"] = document["collectionName"]
+    return guide
+
+
+def _write_study_guide(course: str, topics: list[str], format: str,  # noqa: A002
+                       context: list[dict]) -> dict:
+    return cache.claude(
         system=(
             "You build study sets for university students.\n\n"
             "Return ONLY JSON: {\"sections\": [{\"topic\": str, \"summary\": str, "
@@ -475,14 +1013,96 @@ def make_study_guide(course: str, topics: list[str], format: str = "outline") ->
         max_tokens=4000,
         label=f"study:{course}:{','.join(topics)[:40]}",
     )
-    if "error" in guide:
-        return guide
-    if MODE != "mock":
-        saved = db.save_study_set(STUDENT_ID, course, ", ".join(topics), format, guide)
-        guide.update(saved)
-    guide["course"] = course
-    guide["format"] = format
-    return guide
+
+
+def _study_guide_hint() -> str:
+    import importlib.util
+
+    if importlib.util.find_spec("anthropic") is None:
+        return ("The anthropic package isn't installed on the server: "
+                "pip install -r requirements.txt. Scheduling and the "
+                "dashboard work without it; writing study guides does not.")
+    if not os.getenv("ANTHROPIC_API_KEY", "").strip():
+        return "ANTHROPIC_API_KEY isn't set on the server."
+    return "Check /api/health -> model_paths for which model path is failing."
+
+
+def save_to_files(title: str = "", content: str = "", course: str = "",
+                  collection: str = "") -> dict:
+    """
+    Write a document into the student's Files tab.
+
+    This tool exists because filing used to be a side effect of other tools,
+    invisible to the model. Asked to "add the module to the files section",
+    Nemotron replied that it had no way to write files -- an accurate
+    description of its tool list, and a capability the student therefore
+    could not ask for. Now it is a named tool that does one thing.
+
+    Either pass `content` (the text of the document), or pass `course` to
+    file that course's most recent study guide.
+    """
+    import documents
+
+    title = str(title or "").strip()
+    content = str(content or "").strip()
+    course = str(course or "").strip()
+
+    # Filing an existing study guide: fetch it rather than asking the model to
+    # retype it, which is how content drifts between the panel and the file.
+    #
+    # With NO arguments at all, file the most recent study guide. "add the
+    # module to the files section" names no course and supplies no content,
+    # and erroring on that sent the model looking for a different tool -- and
+    # then telling the student it had none.
+    if not content:
+        guides = get_study_sets(course=course or None).get("items") or []
+        if not guides:
+            return {"error": f"no study guide stored"
+                             + (f" for {course}" if course else ""),
+                    "hint": "call make_study_guide first, which files one "
+                            "automatically"}
+        newest = guides[0]
+        body = newest.get("content") if isinstance(newest.get("content"), dict) else newest
+        document = documents.study_guide({
+            **body,
+            "course": newest.get("course_code") or course,
+            "topic": newest.get("topic"),
+        })
+        if document is None:
+            return {"error": "that study guide has no content to file"}
+        return {"filed": 1, "files": [document],
+                "saved_to_files": document["name"],
+                "collection": document["collectionName"]}
+
+    document = documents.text_document(
+        title, content, collection=collection or "Documents")
+    if document is None:
+        return {"error": "nothing to write once the content was cleaned up"}
+    return {"filed": 1, "files": [document],
+            "saved_to_files": document["name"],
+            "collection": document["collectionName"]}
+
+
+def get_study_sets(course: str | None = None) -> dict:
+    """
+    Read study guides made earlier.
+
+    make_study_guide saved to study_sets and nothing could read it back, so
+    every "show me that guide again" meant regenerating it -- a model call,
+    new content, and a second file. db.get_study_sets existed the whole time;
+    it just wasn't wired to a tool.
+    """
+    if MODE == "mock":
+        return {"items": [{
+            "id": 1, "course_code": course or "PHYS 1361",
+            "topic": "[MOCK] Gauss's Law", "format": "outline",
+            "created_at": "2026-09-19T20:00:00-04:00",
+            "content": cache._mock_claude("study"),
+        }], "count": 1}
+    items = db.get_study_sets(student(), course)
+    return {"items": items, "count": len(items),
+            "note": "Use save_to_files with a course to put one of these in "
+                    "the Files tab."}
 
 
 def get_events(within_days: int = 14) -> dict:
@@ -586,7 +1206,7 @@ def get_workload_history(days: int = 30) -> dict:
             {"day": "2026-09-15", "course_code": "PHYS 1361", "est_hours": 4.0, "open_count": 2},
             {"day": "2026-09-19", "course_code": "PHYS 1361", "est_hours": 6.5, "open_count": 3},
         ]}
-    points = db.get_workload_history(STUDENT_ID, days)
+    points = db.get_workload_history(student(), days)
     return {"points": points, "count": len(points)}
 
 
@@ -603,7 +1223,7 @@ def update_preferences(updates: dict) -> dict:
     if MODE == "mock":
         result = {"updated": bool(clean), "prefs_keys": sorted(clean)}
     else:
-        result = db.update_profile(STUDENT_ID, clean)
+        result = db.update_profile(student(), clean)
 
     if rejected:
         result["rejected_fields"] = rejected
@@ -614,17 +1234,154 @@ def update_preferences(updates: dict) -> dict:
     return result
 
 
+def delete_assignments(assignment_ids: list[str], permanent: bool = True) -> dict:
+    """Really delete assignments. See db.delete_assignments."""
+    if isinstance(assignment_ids, str):
+        assignment_ids = [assignment_ids]
+    ids = [str(i) for i in (assignment_ids or []) if i]
+    if not ids:
+        return {"error": "no assignment ids given -- call get_assignments or "
+                         "find_assignment first"}
+    if MODE == "mock":
+        return {"deleted": len(ids), "permanent": permanent,
+                "items": [{"id": i, "title": f"[MOCK] {i}",
+                           "course_code": "MOCK 101"} for i in ids],
+                "schedule_blocks_removed": 0, "not_found": []}
+    return db.delete_assignments(student(), ids, permanent)
+
+
+def restore_assignments(titles: list[str] | None = None) -> dict:
+    """Undo a delete, so the next Canvas crawl brings the work back."""
+    if MODE == "mock":
+        return {"restored": len(titles or []), "titles": titles or [],
+                "note": "Run refresh_from_canvas to pull them back in."}
+    return db.restore_assignments(student(), titles)
+
+
+def remove_from_schedule(block_ids: list[str] | None = None,
+                         task_match: str | None = None,
+                         on_day: str | None = None) -> dict:
+    """Delete schedule blocks. See db.remove_schedule_blocks."""
+    if not (block_ids or task_match or on_day):
+        return {"error": "give block_ids, task_match, or on_day -- refusing "
+                         "to delete the whole schedule"}
+    if MODE == "mock":
+        before = len(_MOCK_SCHEDULE)
+        keep, removed = [], []
+        for block in _MOCK_SCHEDULE:
+            title = str(block.get("task", "")).lower()
+            hit = ((task_match and task_match.lower().strip() in title)
+                   or (on_day and str(block.get("starts_at", "")).startswith(on_day)))
+            (removed if hit else keep).append(block)
+        _MOCK_SCHEDULE[:] = keep
+        return {"removed": before - len(keep), "blocks": removed}
+    return db.remove_schedule_blocks(student(), block_ids, task_match, on_day)
+
+
+def remove_events(event_ids: list[str] | None = None,
+                  keyword: str | None = None,
+                  source: str | None = None) -> dict:
+    """
+    Delete stored events, and tell the website to drop them from the board.
+
+    Needed because a single "what's on campus" pulls in dozens of events the
+    student has no interest in, and there was no way to clear them: the
+    assistant had to answer "I don't have a tool to delete or remove existing
+    calendar events". A tool that can only add is a tool that makes a mess.
+    """
+    # Checked BEFORE the mock branch, deliberately. The same mistake as the
+    # credential filter: a guard that only exists in the live path is one that
+    # tests can't see working, so it quietly stops working.
+    if not (event_ids or keyword or source):
+        return {"error": "give event_ids, keyword, or source -- refusing to "
+                         "delete every stored event"}
+    if MODE == "mock":
+        return {"removed": 2, "events": [
+            {"id": "mock-ev-1", "title": "[MOCK] On-Demand Lunch-and-Learn"},
+            {"id": "mock-ev-2", "title": "[MOCK] Info session"},
+        ]}
+    return db.remove_events(event_ids, keyword, source)
+
+
+def find_assignment(name: str, course: str | None = None) -> dict:
+    if MODE == "mock":
+        needle = str(name or "").lower().replace(" ", "")
+        items = [a for a in _MOCK_ASSIGNMENTS
+                 if needle in a["title"].lower().replace(" ", "")]
+        return {"items": items, "count": len(items)}
+    items = db.find_assignments(student(), str(name or ""), course)
+    return {"items": items, "count": len(items)}
+
+
+def update_assignment(assignment_ids: list[str], status: str) -> dict:
+    """
+    Change assignment status. The write that lets "take that off my list"
+    actually work.
+    """
+    if isinstance(assignment_ids, str):          # a model passing one id bare
+        assignment_ids = [assignment_ids]
+    if MODE == "mock":
+        ids = [i for i in (assignment_ids or []) if i]
+        if not ids:
+            return {"error": "no assignment ids given"}
+        if status not in ("open", "submitted", "graded", "dismissed"):
+            return {"error": "status must be open, submitted, graded or dismissed"}
+        return {"updated": len(ids), "status": status,
+                "items": [{"id": i, "title": f"[MOCK] {i}", "status": status}
+                          for i in ids],
+                "not_found": []}
+    return db.set_assignment_status(student(), assignment_ids, status)
+
+
+def add_tasks(tasks: list[dict]) -> dict:
+    """
+    Validate to-dos and hand them back for the website to store.
+
+    These live on the board (app_items), not in the coursework tables: a
+    to-do is website state the student owns, not something crawled out of
+    Canvas. agent.board_actions turns this result into an addTodos action and
+    app.py persists it, which is the same route Canvas rows take.
+    """
+    if not isinstance(tasks, list) or not tasks:
+        return {"error": "tasks must be a non-empty list"}
+
+    clean, rejected = [], []
+    for task in tasks[:30]:
+        if isinstance(task, str):
+            task = {"text": task}
+        if not isinstance(task, dict):
+            continue
+        text = str(task.get("text") or task.get("task") or "").strip()
+        if not text:
+            rejected.append("a task with no text")
+            continue
+        row = {"text": text[:300]}
+        try:
+            if task.get("est_minutes"):
+                row["est_minutes"] = max(0, min(int(task["est_minutes"]), 60 * 24))
+        except (TypeError, ValueError):
+            pass
+        if task.get("due_at"):
+            row["due_at"] = str(task["due_at"])[:40]
+        clean.append(row)
+
+    out = {"added": len(clean), "tasks": clean}
+    if rejected:
+        out["rejected"] = rejected
+    return out
+
+
 def log_time(minutes: int, assignment_title: str | None = None) -> dict:
     if MODE == "mock":
         return {"logged": True}
     assignment_id = None
     if assignment_title:
-        matches = db.get_assignments(STUDENT_ID, status="any")
+        matches = db.get_assignments(student(), status="any")
         for a in matches:
             if assignment_title.lower() in a["title"].lower():
                 assignment_id = a["id"]
                 break
-    return db.log_study_session(STUDENT_ID, assignment_id, minutes)
+    return db.log_study_session(student(), assignment_id, minutes)
 
 
 DISPATCH: dict[str, Callable[..., dict]] = {
@@ -642,6 +1399,16 @@ DISPATCH: dict[str, Callable[..., dict]] = {
     "get_workload_history": get_workload_history,
     "update_preferences": update_preferences,
     "log_time": log_time,
+    "find_assignment": find_assignment,
+    "update_assignment": update_assignment,
+    "add_tasks": add_tasks,
+    "remove_from_schedule": remove_from_schedule,
+    "remove_events": remove_events,
+    "delete_assignments": delete_assignments,
+    "restore_assignments": restore_assignments,
+    "schedule_events": schedule_events,
+    "get_study_sets": get_study_sets,
+    "save_to_files": save_to_files,
 }
 
 # Sanity check: every advertised tool must actually exist.
@@ -692,6 +1459,10 @@ def _today() -> str:
 
     return datetime.now().astimezone().isoformat(timespec="minutes")
 
+
+# Blocks added during this process in mock mode. Not persistence -- it resets
+# with the process -- just enough state that add-then-read behaves honestly.
+_MOCK_SCHEDULE: list[dict] = []
 
 _MOCK_ASSIGNMENTS = [
     {"id": "m1", "course_code": "PHYS 1361", "title": "Quiz 3 (Chapter 2)", "kind": "quiz",

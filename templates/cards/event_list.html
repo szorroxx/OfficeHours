@@ -1,0 +1,23 @@
+{# Premade chunk: campus events. #}
+<section class="panel">
+  <div class="panel-head">
+    <div class="panel-title">{{ title or "On campus" }}
+      <span class="count">{{ (items or []) | length }}</span>
+    </div>
+    <div class="source">From the assistant</div>
+  </div>
+  <div class="list">
+    {% for row in items or [] %}
+    <div class="item">
+      <div class="rail" style="background: var(--green)"></div>
+      <div class="item-body">
+        <div class="title-row"><div class="item-title">{{ row.title }}</div></div>
+        {% if row.where %}<div class="item-meta">{{ row.where }}</div>{% endif %}
+        {% if row.when %}<div class="item-when">{{ row.when }}</div>{% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="empty">No events found.</div>
+    {% endfor %}
+  </div>
+</section>

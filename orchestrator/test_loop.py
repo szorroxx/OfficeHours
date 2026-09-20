@@ -67,7 +67,7 @@ def tool_call(cid: str, name: str, args: dict) -> dict:
 def t_schema_matches_dispatch():
     advertised = {t["function"]["name"] for t in tools.TOOL_SCHEMAS}
     assert advertised == set(tools.DISPATCH), "schema and dispatch disagree"
-    assert len(advertised) == 14, f"expected 14 tools, got {len(advertised)}"
+    assert len(advertised) == 24, f"expected 24 tools, got {len(advertised)}"
 
 
 def t_every_tool_runs_in_mock():
@@ -88,6 +88,16 @@ def t_every_tool_runs_in_mock():
         "fetch_page": {"url": "https://calendar.pitt.edu/"},
         "update_preferences": {"updates": {"display_name": "Finn"}},
         "log_time": {"minutes": 90},
+        "find_assignment": {"name": "problem set"},
+        "update_assignment": {"assignment_ids": ["m1"], "status": "dismissed"},
+        "add_tasks": {"tasks": [{"text": "Email the professor"}]},
+        "remove_from_schedule": {"task_match": "viola"},
+        "remove_events": {"keyword": "lunch"},
+        "delete_assignments": {"assignment_ids": ["m1"]},
+        "restore_assignments": {"titles": ["Preproposal"]},
+        "schedule_events": {"within_days": 7},
+        "get_study_sets": {"course": "PHYS 1361"},
+        "save_to_files": {"title": "Notes", "content": "- one\n- two"},
     }
     for name in tools.DISPATCH:
         result = tools.execute(name, sample_args[name])
@@ -1024,6 +1034,313 @@ def t_canvas_missing_page_is_clear():
         assert "Available" in str(exc), "error should list what IS available"
 
 
+def t_scheduling_never_needs_a_model():
+    """
+    make_schedule failed four times in one live conversation with "an
+    internal error (missing dependency)" -- the anthropic package. It was the
+    only feature with a hard model dependency and no fallback.
+    """
+    import cache
+
+    real = cache.claude
+
+    def unavailable(*_a, **_k):
+        raise ModuleNotFoundError("No module named 'anthropic'")
+
+    cache.claude = unavailable
+    try:
+        plan = tools.execute("make_schedule", {"horizon_days": 7})
+    finally:
+        cache.claude = real
+
+    assert "error" not in plan, plan
+    assert plan.get("blocks"), "no blocks produced without Claude"
+    assert "anthropic package isn't installed" in str(plan.get("note", "")), (
+        "the degradation must name the fix, not hide it")
+
+
+def t_scheduler_respects_its_own_rules():
+    """The guarantees a model couldn't make: no past, no overlap, no overrun."""
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+
+    import scheduler
+
+    tz = ZoneInfo("America/New_York")
+    now = datetime(2026, 9, 19, 23, 0, tzinfo=tz)
+    tasks = scheduler.tasks_from_assignments([
+        {"id": "1", "title": "Big project", "est_hours": 12,
+         "due_at": (now + timedelta(days=5)).isoformat(), "kind": "project"},
+        {"id": "2", "title": "Reading", "est_hours": 2,
+         "due_at": (now + timedelta(days=2)).isoformat(), "kind": "reading"},
+    ])
+    busy = scheduler.busy_from_blocks([
+        {"task": "Rehearsal", "starts_at": (now + timedelta(days=1)).replace(
+            hour=19, minute=30).isoformat(), "est_minutes": 150}])
+    out = scheduler.plan(tasks, now=now, tz=tz, horizon_days=7, busy=list(busy))
+
+    blocks = sorted(out["blocks"], key=lambda b: b["starts_at"])
+    assert blocks, "nothing scheduled"
+    assert all(b["starts_at"] > now.isoformat() for b in blocks), "scheduled in the past"
+    for a, b in zip(blocks, blocks[1:]):
+        assert b["starts_at"] >= a["ends_at"], f"overlap: {a['task']} / {b['task']}"
+    rehearsal_start = (now + timedelta(days=1)).replace(hour=19, minute=30).isoformat()
+    rehearsal_end = (now + timedelta(days=1)).replace(hour=22, minute=0).isoformat()
+    assert not [b for b in blocks
+                if b["starts_at"] < rehearsal_end and b["ends_at"] > rehearsal_start], \
+        "double-booked an existing commitment"
+
+
+def t_filing_is_a_tool_the_model_can_name():
+    """
+    Filing used to be a side effect inside the web layer. Asked to "add the
+    module to the files section", the model said it had no way to write files
+    -- true of its tool list. A capability the model can't name can't be
+    asked for.
+    """
+    assert "save_to_files" in tools.DISPATCH
+    advertised = {t["function"]["name"] for t in tools.TOOL_SCHEMAS}
+    assert "save_to_files" in advertised, "not in TOOL_SCHEMAS = invisible"
+
+    result = tools.execute("save_to_files",
+                           {"title": "Checklist", "content": "- revise"})
+    assert result.get("filed") == 1, result
+    assert result.get("saved_to_files") == "Checklist.html", result
+    assert result["files"][0]["dataUrl"].startswith("data:text/html"), result
+
+
+def t_document_tools_report_their_files():
+    """
+    The tool result has to mention the file, or the model can't tell the
+    student what it made -- and will guess, or deny it happened.
+    """
+    guide = tools.execute("make_study_guide",
+                          {"course": "PHYS 1351", "topics": ["Kinematics"]})
+    assert guide.get("saved_to_files"), guide
+    assert guide.get("files"), guide
+
+
+def t_filenames_are_safe():
+    """A model-supplied title becomes a filename."""
+    out = tools.execute("save_to_files",
+                        {"title": "../../etc/passwd", "content": "x"})
+    name = out["files"][0]["name"]
+    assert "/" not in name and ".." not in name, name
+
+
+def t_generated_documents_become_files():
+    """
+    A study guide that exists only in the database is invisible: the student
+    who asked for one found the Files tab empty.
+    """
+    import sys as _sys
+    from pathlib import Path as _Path
+
+    _sys.path.insert(0, str(_Path(__file__).parent.parent))
+    import agent
+
+    guide = tools.execute("make_study_guide",
+                          {"course": "PHYS 1351", "topics": ["Kinematics"]})
+    assert guide.get("sections"), guide
+    actions = agent.board_actions([
+        {"tool": "make_study_guide", "ok": True, "result": guide}])
+    files = [a for a in actions if a["type"] == "addFiles"]
+    assert files and files[0]["items"], actions
+    assert files[0]["items"][0]["dataUrl"].startswith("data:text/html"), files
+
+
+def t_saved_study_guides_are_readable():
+    """make_study_guide had no counterpart, so 'show me that guide' regenerated it."""
+    out = tools.execute("get_study_sets", {})
+    assert out.get("items"), out
+    assert out["items"][0].get("content", {}).get("sections"), out
+
+
+def t_events_keep_their_own_times():
+    """
+    The model retyped a 4pm career fair onto the calendar at 23:16.
+    schedule_events copies the stored time instead of accepting one.
+    """
+    stored = tools.execute("get_events", {"within_days": 14})["items"][0]
+    out = tools.execute("schedule_events", {"within_days": 14})
+    assert out["blocks"][0]["starts_at"] == stored["starts_at"], out
+
+
+def t_deleting_beats_marking_when_asked_to_remove():
+    """
+    There must be a tool that really deletes coursework.
+
+    Without one, "remove these from my dashboard" could only be answered by
+    marking, which leaves the rows on screen -- and the model, having marked
+    them, told the student their browser cache was at fault.
+    """
+    result = tools.execute("delete_assignments", {"assignment_ids": ["m1", "m2"]})
+    assert result.get("deleted") == 2, result
+    assert result.get("permanent") is True, (
+        "a delete that the next crawl undoes is not a delete")
+    assert "error" in tools.execute("delete_assignments", {"assignment_ids": []})
+
+
+def t_removals_need_a_target():
+    """
+    There must be no way to delete a whole schedule or the whole event list
+    by calling a tool with no arguments.
+    """
+    assert "error" in tools.execute("remove_from_schedule", {})
+    assert "error" in tools.execute("remove_events", {})
+
+
+def t_schedule_blocks_are_internally_consistent():
+    """
+    A block that says 2:00pm-4:00pm / 60 min is wrong however you read it, and
+    that is exactly what got stored when the model sent all three fields and
+    they disagreed.
+    """
+    import db
+
+    fixed = db._normalize_block({
+        "task": "Viola lesson",
+        "starts_at": "2026-09-24T14:00:00-04:00",
+        "ends_at": "2026-09-24T16:00:00-04:00",
+        "est_minutes": 60,
+    })
+    assert fixed["est_minutes"] == 120, fixed["est_minutes"]
+
+
+def t_naive_timestamps_are_local():
+    """
+    'starts_at: 2026-09-24T14:00:00' means 2pm where the student is. Stamping
+    it UTC put one lesson at 2pm and another at 7pm in the same schedule.
+    """
+    import db
+
+    naive = db.jsonable(db._as_datetime("2026-09-24T14:00:00", "t"))
+    explicit = db.jsonable(db._as_datetime("2026-09-24T14:00:00-04:00", "t"))
+    assert naive == explicit, f"{naive} != {explicit}"
+
+
+def t_schedule_reads_expose_ids():
+    """You can't delete a block you can't name."""
+    from pathlib import Path
+
+    src = (Path(__file__).parent / "db.py").read_text()
+    getter = src[src.index("def get_schedule("):]
+    getter = getter[:getter.index("\ndef ")]
+    assert "id," in getter, "get_schedule must return block ids"
+
+
+def t_can_take_an_item_off_the_list():
+    """
+    The write that was missing, and the reason the model confabulated.
+
+    A student twice asked for a group assignment to come off their overdue
+    list. With no tool for it, the model replied that the item was "already
+    submitted by your groupmate" -- untrue, and nothing changed. There must be
+    a way to comply.
+    """
+    found = tools.execute("find_assignment", {"name": "problem set"})
+    assert found["items"], "find_assignment found nothing to act on"
+
+    result = tools.execute("update_assignment",
+                           {"assignment_ids": [found["items"][0]["id"]],
+                            "status": "dismissed"})
+    assert result.get("updated") == 1, result
+    assert result.get("status") == "dismissed", result
+
+
+def t_dismissed_is_not_submitted():
+    """
+    'Not mine to do' must be its own status.
+
+    Marking a teammate's submission as 'submitted' by this student would make
+    the workload history claim work they never did.
+    """
+    import db
+
+    assert "dismissed" in db._STATUSES
+    bad = tools.execute("update_assignment",
+                        {"assignment_ids": ["m1"], "status": "vanished"})
+    assert "error" in bad, "an unknown status should be refused"
+
+
+def t_update_assignment_needs_ids():
+    assert "error" in tools.execute("update_assignment",
+                                    {"assignment_ids": [], "status": "submitted"})
+    # A model passing a bare string instead of a list shouldn't crash the turn.
+    ok = tools.execute("update_assignment",
+                       {"assignment_ids": "m1", "status": "submitted"})
+    assert ok.get("updated") == 1, ok
+
+
+def t_tasks_can_be_created():
+    """There was no way to add a to-do at all, so 'make me a list' couldn't work."""
+    result = tools.execute("add_tasks", {"tasks": [
+        {"text": "Read chapter 3", "est_minutes": 45},
+        "Email Dr. Reyes",
+        {"text": "   "},
+    ]})
+    assert result["added"] == 2, result
+    assert result["rejected"], "a task with no text should be reported"
+    assert result["tasks"][0]["est_minutes"] == 45
+
+
+def t_course_filter_matches_how_people_type():
+    """
+    'CS1684' must find 'CS 1684'.
+
+    The old ILIKE '%CS1684%' didn't, and the empty result read as "you have no
+    assignments for that course" -- so a student was told a course was empty
+    and then shown three of its assignments in the next message.
+    """
+    import db
+
+    sql_seen = {}
+
+    def fake_query(sql, params=(), fetch="all"):
+        sql_seen["sql"] = sql
+        sql_seen["params"] = params
+        return []
+
+    original = db.query
+    db.query = fake_query
+    try:
+        db.get_assignments("s", course="CS1684")
+    finally:
+        db.query = original
+
+    assert "regexp_replace" in sql_seen["sql"], (
+        "course filter still uses a plain ILIKE, so 'CS1684' won't match "
+        "'CS 1684'")
+
+
+def t_local_times_not_utc():
+    """
+    A deadline of 11:59pm local is stored as 03:59 UTC the NEXT day. Reporting
+    it unconverted made every late-evening deadline a day late on screen.
+    """
+    import db
+    from datetime import datetime, timezone
+
+    deadline = datetime(2026, 9, 3, 3, 59, 59, tzinfo=timezone.utc)
+    local = db.jsonable(deadline)
+    assert local.startswith("2026-09-02T23:59"), (
+        f"expected Sep 2 11:59pm local, got {local}")
+
+    # Naive datetimes are left alone rather than guessed at.
+    naive = db.jsonable(datetime(2026, 9, 3, 23, 59))
+    assert naive == "2026-09-03T23:59:00", naive
+
+
+def t_prompt_forbids_claiming_unmade_changes():
+    import orchestrator as orch
+
+    prompt = orch.SYSTEM_PROMPT.lower()
+    assert "never describe a change you did not make" in prompt
+    assert "update_assignment" in prompt, (
+        "the prompt must tell the model how to honour 'take that off my list'")
+    assert "utc" in prompt, "the prompt must tell the model times are local"
+
+
 # ==========================================================================
 
 if __name__ == "__main__":
@@ -1036,6 +1353,26 @@ if __name__ == "__main__":
     check("malformed arguments handled", t_malformed_arguments_handled)
     check("wrong argument names handled", t_wrong_argument_names_handled)
     check("credentials rejected", t_credentials_are_rejected)
+    check("can take an item off the list", t_can_take_an_item_off_the_list)
+    check("removals need a target", t_removals_need_a_target)
+    check("deleting beats marking", t_deleting_beats_marking_when_asked_to_remove)
+    check("scheduling never needs a model", t_scheduling_never_needs_a_model)
+    check("scheduler respects its rules", t_scheduler_respects_its_own_rules)
+    check("events keep their own times", t_events_keep_their_own_times)
+    check("documents become files", t_generated_documents_become_files)
+    check("filing is a nameable tool", t_filing_is_a_tool_the_model_can_name)
+    check("document tools report their files", t_document_tools_report_their_files)
+    check("filenames are safe", t_filenames_are_safe)
+    check("saved guides are readable", t_saved_study_guides_are_readable)
+    check("schedule blocks are consistent", t_schedule_blocks_are_internally_consistent)
+    check("naive timestamps are local", t_naive_timestamps_are_local)
+    check("schedule reads expose ids", t_schedule_reads_expose_ids)
+    check("dismissed is not submitted", t_dismissed_is_not_submitted)
+    check("update_assignment needs ids", t_update_assignment_needs_ids)
+    check("tasks can be created", t_tasks_can_be_created)
+    check("course filter matches how people type", t_course_filter_matches_how_people_type)
+    check("times are local, not utc", t_local_times_not_utc)
+    check("prompt forbids unmade changes", t_prompt_forbids_claiming_unmade_changes)
     check("overdue tool", t_overdue_tool)
     check("add_to_schedule", t_add_to_schedule)
     check("scheduling tools distinguished", t_scheduling_tools_are_distinguished)

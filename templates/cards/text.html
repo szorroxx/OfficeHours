@@ -1,0 +1,15 @@
+{# Premade chunk: plain prose. Also the fallback for any card type that has no
+   template of its own yet, so a new card type can't blank the page. #}
+<section class="panel">
+  <div class="panel-head">
+    <div class="panel-title">{{ title or "Note" }}</div>
+  </div>
+  <div class="list">
+    <div class="item">
+      <div class="rail" style="background: var(--muted)"></div>
+      <div class="item-body">
+        <div class="item-meta">{{ body }}</div>
+      </div>
+    </div>
+  </div>
+</section>

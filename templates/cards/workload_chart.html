@@ -1,0 +1,29 @@
+{# Premade chunk: the Tiger Data trend. One bar row per time_bucket() point.
+   Bars are plain divs with an inline width percentage -- no chart library, so
+   nothing to load and nothing that can fail to load. #}
+<section class="panel">
+  <div class="panel-head">
+    <div class="panel-title">{{ title or "Workload over time" }}</div>
+    <div class="source">From Tiger Data history</div>
+  </div>
+  <div class="list">
+    {% for line in series or [] %}
+    <div class="item">
+      <div class="rail" style="background: var(--accent)"></div>
+      <div class="item-body">
+        <div class="item-meta">{{ line.label }}</div>
+        {% set values = line.points | map(attribute='y') | map('float') | list %}
+        {% set top = (values | max) if values else 1 %}
+        {% for point in line.points or [] %}
+        <div class="chip-row">
+          <span class="chip" style="min-width: 88px">{{ point.x }}</span>
+          <span class="chip" style="width: {{ ((point.y | float) / (top if top > 0 else 1) * 60) | round(0, 'floor') | int + 8 }}%; background: var(--accent); color: var(--panel)">{{ point.y }}h</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="empty">No history recorded yet.</div>
+    {% endfor %}
+  </div>
+</section>

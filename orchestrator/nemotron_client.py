@@ -40,6 +40,10 @@ FAST_MODEL = os.getenv("NEMOTRON_FAST_MODEL", "nvidia/nemotron-3-nano-30b-a3b")
 
 _THINK_BLOCK = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
 _ORPHAN_CLOSE = re.compile(r"^.*?</think>\s*", re.DOTALL)
+# orchestrator.run() appends "<context>{...json...}</context>" to the user
+# message. The mock planner strips it before keyword matching; see the note
+# where it's used.
+_CONTEXT_BLOCK = re.compile(r"<context>.*?</context>", re.DOTALL)
 
 # --------------------------------------------------------------------------
 # Endpoint capability detection
@@ -66,6 +70,16 @@ UNSUPPORTED_PARAMS: set[str] = {
 # switch to self-hosted NIM and want it back.
 if os.getenv("NEMOTRON_ALLOW_THINKING_BUDGET") != "1":
     UNSUPPORTED_PARAMS.add("thinking_token_budget")
+    if os.getenv("THINKING_TOKEN_BUDGET"):
+        # Worth saying out loud: someone tuning for quality will reach for
+        # this first, and on the hosted build.nvidia.com endpoint it is
+        # silently dropped (the endpoint returns 400 for it, so the client
+        # strips it). Raising it there changes nothing. REASONING=on is the
+        # setting that actually does something.
+        print("[nemotron] THINKING_TOKEN_BUDGET is set but the hosted "
+              "endpoint rejects it, so it is being ignored. Use REASONING=on "
+              "to increase reasoning, or set "
+              "NEMOTRON_ALLOW_THINKING_BUDGET=1 if you are on self-hosted NIM.")
 
 _UNSUPPORTED_RE = re.compile(
     r"unsupported parameter\(?s?\)?[:\s]", re.IGNORECASE
@@ -377,8 +391,16 @@ class NemotronClient:
                 )
             )
 
+        # Keyword-match on what the STUDENT typed, not on the <context> block
+        # orchestrator.run() appends to it. That context is JSON containing
+        # board counts, whose keys include "events" and "assignments" -- so
+        # including it meant every prompt matched the events branch and the
+        # mock always called get_events. A mock that picks the wrong tool for
+        # every prompt is worse than no mock: you debug the orchestrator for
+        # an hour before noticing the fixture is what's lying to you.
         prompt = " ".join(
-            str(m.get("content") or "") for m in messages if m.get("role") == "user"
+            _CONTEXT_BLOCK.sub(" ", str(m.get("content") or ""))
+            for m in messages if m.get("role") == "user"
         ).lower()
         available = {t["function"]["name"] for t in (kwargs.get("tools") or [])}
         plan = _mock_plan(prompt, available)
@@ -405,15 +427,86 @@ def _mock_plan(prompt: str, available: set[str]) -> list[tuple[str, dict]]:
     def has(*words: str) -> bool:
         return any(w in prompt for w in words)
 
-    if has("refresh", "sync", "re-read", "latest", "up to date", "update canvas"):
+    # Change requests come first: "remove the preproposal" contains no
+    # refresh/schedule keyword but is the single most common thing a student
+    # asks for after seeing a list, and it needs a WRITE.
+    # Multi-step: clear the noise AND plan. This is the request that came back
+    # as an apology, so the mock should exercise the whole chain.
+    if (has("unnecessary", "don't need", "do not need", "noisy", "clear the",
+            "too many") and has("event")) or (
+            has("remove") and has("event")):
+        plan = [("remove_events", {"source": "calendar.pitt.edu"})]
+        if has("plan", "schedule", "how long", "add all"):
+            plan += [("get_assignments", {}),
+                     ("make_schedule", {"horizon_days": 7})]
+    elif has("remove the", "delete the", "wrong time", "cancel") and has(
+            "lesson", "block", "schedule", "pm", "am", "rehearsal"):
+        plan = [("get_schedule", {}),
+                ("remove_from_schedule", {"task_match": "viola"})]
+    # "delete them", "still showing up", "get rid of" -> a real delete.
+    elif has("still see", "still showing", "still there", "completely remove",
+             "erase", "get rid of", "permanently", "delete them",
+             "delete all", "remove them all"):
+        plan = [("get_assignments", {"status": "any"}),
+                ("delete_assignments", {"assignment_ids": ["m1", "m2"]})]
+    elif has("remove", "take it off", "take that off", "drop ", "delete",
+           "already submitted", "someone else", "groupmate", "group member",
+           "not mine", "mark ", "did that", "finished", "turned in"):
+        plan = [("find_assignment", {"name": "preproposal"}),
+                ("update_assignment", {"assignment_ids": ["m1"],
+                                       "status": "dismissed"})]
+    # Note the phrasing requirements: bare "task" or "todo" is not enough,
+    # because "what tasks do I have this week" is a QUESTION and matching it
+    # here made the mock answer a read request with a write.
+    elif (has("todo list", "to-do list", "list of todos", "list of to-dos",
+              "make me a list", "add a task", "add a todo", "remind me",
+              "checklist")
+          # "save a checklist to files" is a document request, not a to-do
+          # request, and the files branch below handles it.
+          and not has("what ", "do i have", "which ", "to files",
+                      "files section", "files tab", "as a document",
+                      "as a file", "save")):
+        plan = [("add_tasks", {"tasks": [
+            {"text": "[MOCK] Read the project brief", "est_minutes": 30},
+            {"text": "[MOCK] Email the professor about groups"}]})]
+    elif has("refresh", "sync", "re-read", "latest", "up to date", "update canvas"):
         plan = [("check_freshness", {}), ("refresh_from_canvas", {}),
                 ("get_assignments", {"due_within_days": 7})]
-    elif has("schedule", "plan my", "when should i", "time block"):
+    # A fixed commitment goes on the calendar with add_to_schedule; it must
+    # NOT re-plan the week, which is what make_schedule does. This branch has
+    # to come first, because "add a viola lesson to my schedule" contains the
+    # word "schedule" and was falling through to the planner -- so the one
+    # thing the student asked to appear on Thursday never got written.
+    elif has("lesson", "rehearsal", "appointment", "practice at", "concert",
+             "recital", "block off", "on my calendar", "put it on",
+             "add a meeting"):
+        plan = [("add_to_schedule", {"items": [
+            {"task": "[MOCK] Viola lesson",
+             "starts_at": "2026-09-24T15:00:00-04:00",
+             "ends_at": "2026-09-24T17:00:00-04:00",
+             "est_minutes": 120}]}),
+                ("get_schedule", {})]
+    elif has("add all events", "events to the schedule", "events to my schedule"):
+        plan = [("get_events", {"within_days": 7}),
+                ("schedule_events", {"within_days": 7})]
+    elif has("budget time", "block out", "how long", "estimate how long",
+             "study session", "study time", "plan out", "plan my", "schedule",
+             "when should i", "time block"):
         plan = [("get_assignments", {"due_within_days": 14}),
                 ("make_schedule", {"horizon_days": 7})]
-    elif has("study", "review", "flashcard", "practice", "prepare for"):
+    elif has("to files", "to the files", "files section", "files tab",
+             "save that", "save it", "file that", "save this as",
+             "make me a document", "as a document", "as a file"):
+        plan = [("save_to_files", {"course": "PHYS 1361"})]
+    elif has("show me the guide", "that study guide", "my study guides",
+             "open the guide", "study sets"):
+        plan = [("get_study_sets", {})]
+    elif has("module", "study", "review", "flashcard", "practice",
+             "prepare for", "study guide", "revision"):
         plan = [("make_study_guide", {"course": "PHYS 1361",
                                       "topics": ["Gauss's law", "electric potential"]})]
+    elif has("overdue", "behind", "did i miss", "missed", "late"):
+        plan = [("get_overdue", {})]
     elif has("event", "career fair", "on campus", "happening"):
         plan = [("get_events", {"within_days": 14})]
     elif has("trend", "workload", "busier", "last week", "over time", "history"):

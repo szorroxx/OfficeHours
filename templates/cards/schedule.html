@@ -1,0 +1,23 @@
+{# Premade chunk: a time-blocked study plan, grouped by day. #}
+<section class="panel">
+  <div class="panel-head">
+    <div class="panel-title">{{ title or "Your plan" }}
+      <span class="count">{{ (blocks or []) | length }}</span>
+    </div>
+    <div class="source">Planned by the assistant</div>
+  </div>
+  <div class="list">
+    {% for row in blocks or [] %}
+    <div class="item">
+      <div class="rail" style="background: var(--accent)"></div>
+      <div class="item-body">
+        <div class="title-row"><div class="item-title">{{ row.task }}</div></div>
+        <div class="item-meta">{{ row.day }}{% if row.start %} &middot; {{ row.start }}{% if row.end %}&ndash;{{ row.end }}{% endif %}{% endif %}</div>
+        {% if row.est_minutes %}<div class="chip-row"><span class="chip">{{ row.est_minutes }} min</span></div>{% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="empty">No blocks planned.</div>
+    {% endfor %}
+  </div>
+</section>
