@@ -165,18 +165,60 @@ TOOL_SCHEMAS: list[dict] = [
             "name": "make_schedule",
             "description": (
                 "Build a time-blocked study plan from the student's open "
-                "assignments and save it. Call get_assignments first -- this "
-                "tool needs real assignment data, not guesses."
+                "assignments and save it. Use this for anything like 'plan my "
+                "week', 'budget time for each assignment', 'block out study "
+                "time', or 'how long will this take and when should I do it'. "
+                "It reads the assignments itself and works around anything "
+                "already on the schedule, so it never double-books and never "
+                "plans in the past. Returns the blocks it made and anything "
+                "it could not fit, with the reason."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "horizon_days": {"type": "integer", "description": "Default 7."},
+                    "horizon_days": {"type": "integer",
+                                     "description": "How many days ahead to plan. Default 7."},
                     "constraints": {
                         "type": "string",
-                        "description": "Free text from the student, e.g. 'class 9-11am "
-                                       "weekdays, no work Friday night, orchestra Tuesday'.",
+                        "description": "The student's own words, passed through "
+                                       "verbatim: 'class 9-11am weekdays', 'no work "
+                                       "Friday nights', 'nothing after 9pm', 'at most "
+                                       "3 hours a day', 'one hour blocks'.",
                     },
+                    "strategy": {
+                        "type": "string",
+                        "enum": ["spread", "asap", "day_before"],
+                        "description": "spread (default) distributes sessions before "
+                                       "each due date; asap front-loads everything; "
+                                       "day_before puts one session the day before "
+                                       "each due date -- use that for 'block out an "
+                                       "hour for each assignment'.",
+                    },
+                    "session_minutes": {
+                        "type": "integer",
+                        "description": "Length of one sitting, e.g. 60 for 'an hour each'.",
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "schedule_events",
+            "description": (
+                "Put stored events onto the schedule at their real start "
+                "times. Use this for 'add my events to my schedule' instead "
+                "of add_to_schedule -- it copies the stored time, so you "
+                "cannot get the time wrong. Call get_events or "
+                "find_campus_events first if nothing is stored yet."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "within_days": {"type": "integer", "description": "Default 7."},
+                    "keyword": {"type": "string",
+                                "description": "Optional title filter, e.g. 'career fair'."},
                 },
             },
         },
@@ -601,96 +643,153 @@ def refresh_from_canvas(pages: list[str] | None = None) -> dict:
 
 
 def make_schedule(horizon_days: int = 7, constraints: str = "",
+                  strategy: str = "spread", session_minutes: int | None = None,
                   include_undated: bool = True) -> dict:
     """
-    Read assignments, ask Claude to plan, save the plan, return it.
+    Build a time-blocked study plan and save it.
 
-    WHY THE TOKEN BUDGET IS LARGE
-    This failed live with "the scheduling tool encountered an internal error"
-    on a board of nine assignments. The cause was max_tokens=3000: a plan that
-    breaks nine items into blocks is a long JSON document, the response was
-    cut off mid-object, and the parse failed. The model then retried the same
-    call and failed identically. A truncated plan is indistinguishable from a
-    broken tool unless you go and read the raw response, so: a budget with
-    room in it, one retry, and an error that says which of the two happened.
+    THIS NO LONGER DEPENDS ON A MODEL BEING REACHABLE.
+
+    It used to be one Claude call. On a deployment without the anthropic
+    package installed it raised ModuleNotFoundError, which surfaced to the
+    student four times in one conversation as "the scheduling tool
+    encountered an internal error (missing dependency)" -- and then, when
+    asked which dependency, got explained away as missing assignment data.
+    Scheduling was the only feature in the project with a hard model
+    dependency and no fallback.
+
+    Now scheduler.py places the blocks in plain Python, which is also simply
+    better at it: it cannot schedule a block in the past, after its own due
+    date, on top of an existing commitment, or beyond a daily limit -- all of
+    which the model did. Claude is asked for the ORDERING and a sentence of
+    rationale when it's available, and skipped without ceremony when it
+    isn't. So the model can shape the plan and cannot produce an invalid one.
     """
-    assignments = get_assignments(due_within_days=horizon_days * 2)["items"]
-    if include_undated:
-        # Items with no due date were being dropped from every plan, because
-        # the due_within_days filter needs a date to compare. A final exam
-        # with no date in Canvas still needs studying for.
-        dated_ids = {a.get("id") for a in assignments}
-        for item in get_assignments(status="open")["items"]:
-            if item.get("id") not in dated_ids and not item.get("due_at"):
-                assignments.append(item)
+    from datetime import datetime
+
+    import scheduler
+
+    assignments = get_assignments(due_within_days=None, status="open")["items"]
+    if not include_undated:
+        assignments = [a for a in assignments if a.get("due_at")]
     if not assignments:
-        return {"error": "no open assignments stored — refresh_from_canvas first",
+        return {"error": "no open assignments stored — run refresh_from_canvas "
+                         "first, or everything is already done",
                 "blocks": []}
 
-    profile = {} if MODE == "mock" else db.get_profile(student())
-    tz_name = profile.get("timezone") or os.getenv("TIMEZONE", "America/New_York")
+    parsed = scheduler.parse_constraints(constraints)
+    if session_minutes:
+        try:
+            parsed.session_minutes = max(15, min(int(session_minutes), 480))
+            parsed.understood.append(f"{parsed.session_minutes}-minute sessions")
+        except (TypeError, ValueError):
+            pass
 
-    system = (
-        "You are a study scheduler. Given assignments with due dates and "
-        "estimated hours, produce a time-blocked plan.\n\n"
-        "Return ONLY JSON: {\"blocks\": [{\"task\": str, \"assignment_title\": str, "
-        "\"starts_at\": ISO8601 with offset, \"ends_at\": ISO8601, "
-        "\"est_minutes\": int, \"priority\": int}], \"rationale\": str}\n\n"
-        "Rules:\n"
-        "- EVERY timestamp needs an explicit UTC offset, e.g. "
-        "2026-09-24T14:00:00-04:00. A timestamp without one is ambiguous and "
-        "lands the block at the wrong hour.\n"
-        "- starts_at, ends_at and est_minutes must agree with each other.\n"
-        "- Exams and projects outrank labs and readings.\n"
-        "- Break anything over 2 hours into separate blocks on different "
-        "days.\n"
-        "- Never schedule a block after its due date.\n"
-        "- An assignment with no due date still gets time; put it in the "
-        "gaps.\n"
-        "- Respect the stated constraints exactly.\n"
-        "- priority 1 = do first.\n"
-        "- Keep the rationale under 40 words. Spend the budget on blocks."
+    # Existing commitments are time that can't be booked twice: the rehearsal
+    # at 7:30 on Wednesday, and any blocks from an earlier plan.
+    existing = get_schedule()
+    busy = scheduler.busy_from_blocks(existing.get("blocks") or [])
+
+    # Optional: ask Claude which order to work in. Advisory only.
+    order, model_note = _ask_for_priority_order(assignments, constraints)
+
+    tz = db._tz() if MODE != "mock" else _mock_tz()
+    now = datetime.now(tz)
+    result = scheduler.plan(
+        scheduler.tasks_from_assignments(assignments, order=order),
+        now=now, tz=tz, horizon_days=horizon_days,
+        constraints=parsed, busy=busy,
+        strategy=strategy if strategy in ("spread", "asap", "day_before") else "spread",
     )
-    payload = json.dumps({
-        "today": _today(),
-        "horizon_days": horizon_days,
-        "constraints": constraints,
-        "timezone": tz_name,
-        "preferences": profile.get("prefs", {}),
-        "assignments": assignments,
-    }, default=str)
+    result["planner"] = "deterministic" + (" + claude ordering" if order else "")
+    if model_note:
+        result["note"] = model_note
 
-    # Room for roughly 60 blocks of JSON. Cheap next to a failed demo.
-    plan = cache.claude(system=system, user=payload, max_tokens=12000,
-                        label=f"schedule:{horizon_days}d:{len(assignments)}")
+    blocks = result.get("blocks") or []
+    if blocks and MODE != "mock":
+        saved = db.save_schedule(student(), blocks, result.get("rationale", ""))
+        result.update(saved)
+        # Re-read so the returned blocks carry their database ids, which is
+        # what remove_from_schedule needs to be able to target them.
+        result["blocks"] = (db.get_schedule(student()).get("blocks")
+                            or blocks)
+    elif blocks:
+        _MOCK_SCHEDULE.extend(blocks)
+    return result
 
-    if "error" in plan and "JSON" in str(plan.get("error", "")):
-        # Almost always truncation. Ask for a terser plan once before giving up.
-        plan = cache.claude(
-            system=system + "\n\nBe compact: at most 2 blocks per assignment, "
-                            "and a one-sentence rationale.",
-            user=payload, max_tokens=16000,
-            label=f"schedule:{horizon_days}d:{len(assignments)}:retry",
+
+def _mock_tz():
+    from zoneinfo import ZoneInfo
+
+    try:
+        return ZoneInfo(os.getenv("TIMEZONE", "America/New_York"))
+    except Exception:  # noqa: BLE001
+        from datetime import timedelta, timezone
+
+        return timezone(timedelta(hours=-4))
+
+
+def _ask_for_priority_order(assignments: list[dict],
+                            constraints: str) -> tuple[list[str] | None, str | None]:
+    """
+    Ask Claude what to work on first. Returns (titles_in_order, note).
+
+    Never raises and never blocks the plan. A missing key, a missing package,
+    a rate limit or a malformed answer all end the same way: no ordering, and
+    a note saying the plan was built without it. That note matters -- the old
+    behaviour was to fail the whole tool and let the model improvise an
+    explanation for the failure.
+    """
+    if len(assignments) < 2:
+        return None, None
+    try:
+        answer = cache.claude(
+            system=(
+                "You triage a student's coursework. Given assignments with "
+                "due dates, estimated hours and type, decide the order to "
+                "work on them.\n\n"
+                "Return ONLY JSON: {\"order\": [\"exact title\", ...], "
+                "\"rationale\": \"one sentence\"}\n\n"
+                "Use the exact titles you were given. Soonest and heaviest "
+                "first, exams and projects ahead of readings, and put "
+                "anything already overdue at the front."
+            ),
+            user=json.dumps([
+                {"title": a.get("title"), "course": a.get("course_code"),
+                 "due_at": a.get("due_at"), "est_hours": a.get("est_hours"),
+                 "kind": a.get("kind")}
+                for a in assignments[:40]
+            ], default=str),
+            max_tokens=2000,
+            label=f"triage:{len(assignments)}",
         )
+    except Exception as exc:  # noqa: BLE001
+        return None, _explain_model_gap(exc)
 
-    if "error" in plan:
-        return {"error": f"the planner could not produce a usable plan: "
-                         f"{str(plan.get('error'))[:200]}",
-                "assignments_considered": len(assignments),
-                "hint": "This is a model/response problem, not missing data. "
-                        "Retrying usually works; check the raw response with "
-                        "cache.py --list.",
-                "blocks": []}
+    if not isinstance(answer, dict) or "error" in answer:
+        return None, "Ordered by due date; the triage model returned no usable answer."
 
-    blocks = plan.get("blocks") or []
-    # Attach assignment ids so the schedule links back to real rows.
-    if MODE != "mock":
-        by_title = {a["title"]: a["id"] for a in assignments}
-        for b in blocks:
-            b["assignment_id"] = by_title.get(b.get("assignment_title"))
-        saved = db.save_schedule(student(), blocks, plan.get("rationale", ""))
-        plan.update(saved)
-    return plan
+    titles = [str(t) for t in (answer.get("order") or []) if t][:60]
+    known = {str(a.get("title")) for a in assignments}
+    titles = [t for t in titles if t in known]
+    if not titles:
+        return None, "Ordered by due date; the triage model named no known assignments."
+    return titles, str(answer.get("rationale") or "")[:200] or None
+
+
+def _explain_model_gap(exc: Exception) -> str:
+    """Turn a model-call failure into something a student and a developer can both act on."""
+    text = f"{type(exc).__name__}: {exc}"
+    if isinstance(exc, ModuleNotFoundError) or "No module named 'anthropic'" in text:
+        return ("Planned without the triage model: the anthropic package "
+                "isn't installed on the server (pip install -r "
+                "requirements.txt). The schedule itself is unaffected.")
+    if isinstance(exc, KeyError) and "ANTHROPIC_API_KEY" in text:
+        return ("Planned without the triage model: ANTHROPIC_API_KEY isn't "
+                "set. The schedule itself is unaffected.")
+    if "rate" in text.lower() or "429" in text:
+        return "Planned without the triage model: it was rate limited."
+    return f"Planned without the triage model ({text[:90]}). Schedule unaffected."
 
 
 def add_to_schedule(items: list[dict]) -> dict:
@@ -738,6 +837,48 @@ def add_to_schedule(items: list[dict]) -> dict:
     result = db.add_schedule_blocks(student(), blocks, note="added on request")
     result["added"] = [b["task"] for b in blocks][:20]
     return result
+
+
+def schedule_events(within_days: int = 7, keyword: str = "") -> dict:
+    """
+    Put stored events onto the schedule using THEIR OWN start times.
+
+    Asked to add this week's events to the schedule, the model called
+    add_to_schedule and supplied a start time it made up -- a career fair at
+    4pm went onto the calendar at 23:16. It had the real time in a tool
+    result two steps earlier and retyped it wrong.
+
+    So this tool doesn't take a time. It reads the events and copies their
+    stored start and end, which removes the opportunity to get it wrong.
+    """
+    events = get_events(within_days=within_days).get("items") or []
+    if keyword:
+        needle = keyword.lower()
+        events = [e for e in events if needle in str(e.get("title", "")).lower()]
+    if not events:
+        return {"blocks_added": 0, "added": [],
+                "note": f"no stored events in the next {within_days} days -- "
+                        f"run find_campus_events first"}
+
+    items = []
+    for event in events[:40]:
+        starts = event.get("starts_at") or event.get("when")
+        if not starts:
+            continue
+        items.append({
+            "task": str(event.get("title") or "Event")[:200],
+            "starts_at": starts,
+            "ends_at": event.get("ends_at"),
+            # An event with no stated end gets an hour, rather than a guess
+            # that could swallow the evening.
+            "est_minutes": event.get("est_minutes") or 60,
+            "priority": 5,
+        })
+    if not items:
+        return {"blocks_added": 0, "added": [],
+                "note": "the stored events have no start times, so they can't "
+                        "be placed on a calendar"}
+    return add_to_schedule(items)
 
 
 def get_schedule() -> dict:
@@ -1076,6 +1217,7 @@ DISPATCH: dict[str, Callable[..., dict]] = {
     "remove_events": remove_events,
     "delete_assignments": delete_assignments,
     "restore_assignments": restore_assignments,
+    "schedule_events": schedule_events,
 }
 
 # Sanity check: every advertised tool must actually exist.

@@ -858,6 +858,208 @@ check("the prompt says marking is not removing",
 
 
 # ==========================================================================
+section("the scheduler")
+# ==========================================================================
+# Fourth live run: make_schedule failed four times in one conversation with
+# "an internal error (missing dependency)". The dependency was the anthropic
+# package, absent on the server; scheduling was the only feature with a hard
+# model dependency and no fallback. It's now plain Python, so these tests are
+# about whether the plan is actually correct.
+
+import scheduler as sched  # noqa: E402
+from datetime import datetime as _dtm, timedelta as _td  # noqa: E402
+from zoneinfo import ZoneInfo as _ZI  # noqa: E402
+
+_tz_ny = _ZI("America/New_York")
+_now = _dtm(2026, 9, 19, 23, 22, tzinfo=_tz_ny)
+
+REAL_BOARD = [
+    {"id": "a1", "title": "HW01", "course_code": "PHYS 1351",
+     "due_at": "2026-09-02T23:59:00-04:00", "est_hours": 1.8, "kind": "homework"},
+    {"id": "a2", "title": "Homework 03", "course_code": "CS 1675",
+     "due_at": "2026-09-21T23:59:00-04:00", "est_hours": 5.4, "kind": "homework"},
+    {"id": "a3", "title": "Proposal", "course_code": "CS 1684",
+     "due_at": "2026-09-27T23:59:00-04:00", "est_hours": 14.4, "kind": "project"},
+    {"id": "a4", "title": "Ethics in AI", "course_code": "CS 1684",
+     "due_at": "2026-09-30T13:00:00-04:00", "est_hours": 3.6, "kind": "reading"},
+    {"id": "a5", "title": "FinalExam", "course_code": "PHYS 1351",
+     "due_at": None, "est_hours": 4.5, "kind": "exam"},
+]
+REHEARSAL = sched.busy_from_blocks([
+    {"task": "Orchestra rehearsal", "starts_at": "2026-09-23T19:30:00-04:00",
+     "ends_at": "2026-09-23T22:00:00-04:00"}])
+
+result = sched.plan(sched.tasks_from_assignments(REAL_BOARD), now=_now,
+                    tz=_tz_ny, horizon_days=7,
+                    constraints=sched.parse_constraints(
+                        "class 9-11am weekdays, no work friday nights, "
+                        "no more than 4 hours a day"),
+                    busy=list(REHEARSAL))
+plan_blocks = result["blocks"]
+
+check("a plan is produced with no model at all", len(plan_blocks) > 0,
+      "this is the whole point: scheduling must not need Claude")
+check("the planner says it was deterministic",
+      result["planner"] == "deterministic", result["planner"])
+
+check("nothing is scheduled in the past",
+      all(b["starts_at"] > _now.isoformat() for b in plan_blocks),
+      "the model scheduled study time for work due three weeks earlier")
+
+due_by = {a["title"]: a["due_at"] for a in REAL_BOARD}
+late = [b for b in plan_blocks
+        if due_by.get(b["assignment_title"])
+        and b["assignment_title"] != "HW01"          # overdue: no deadline left
+        and b["ends_at"] > due_by[b["assignment_title"]]]
+check("no block runs past its own due date", not late, str(late[:2]))
+
+overlaps = []
+ordered = sorted(plan_blocks, key=lambda b: b["starts_at"])
+for earlier, later in zip(ordered, ordered[1:]):
+    if later["starts_at"] < earlier["ends_at"]:
+        overlaps.append((earlier["task"], later["task"]))
+check("blocks never overlap each other", not overlaps, str(overlaps[:2]))
+
+clash = [b for b in plan_blocks
+         if b["starts_at"] < "2026-09-23T22:00" and b["ends_at"] > "2026-09-23T19:30"]
+check("an existing commitment is never double-booked", not clash,
+      f"scheduled over the orchestra rehearsal: {clash[:1]}")
+
+per_day: dict[str, int] = {}
+for b in plan_blocks:
+    per_day[b["starts_at"][:10]] = per_day.get(b["starts_at"][:10], 0) + b["est_minutes"]
+check("the daily cap is respected", all(v <= 240 for v in per_day.values()),
+      str(per_day))
+
+fri_evening = [b for b in plan_blocks
+               if _dtm.fromisoformat(b["starts_at"]).weekday() == 4
+               and _dtm.fromisoformat(b["starts_at"]).hour >= 17]
+check("'no work friday nights' is honoured", not fri_evening, str(fri_evening[:1]))
+
+in_class = [b for b in plan_blocks
+            if _dtm.fromisoformat(b["starts_at"]).weekday() < 5
+            and 9 <= _dtm.fromisoformat(b["starts_at"]).hour < 11]
+check("'class 9-11am weekdays' is honoured", not in_class, str(in_class[:1]))
+
+check("sessions are a sensible length",
+      all(30 <= b["est_minutes"] <= 120 for b in plan_blocks),
+      str(sorted({b["est_minutes"] for b in plan_blocks})))
+check("durations land on quarter hours",
+      all(b["est_minutes"] % 15 == 0 for b in plan_blocks),
+      "66- and 36-minute blocks are correct and look like a bug")
+check("long work is split across days",
+      len({b["starts_at"][:10] for b in plan_blocks
+           if b["assignment_title"] == "Proposal"}) > 1,
+      "14 hours in one sitting isn't a plan")
+check("what couldn't fit is reported, not dropped",
+      all("reason" in u for u in result["unscheduled"]),
+      str(result["unscheduled"][:1]))
+check("an assignment with no due date still gets time",
+      any(b["assignment_title"] == "FinalExam" for b in plan_blocks))
+check("blocks carry the assignment id, so they link back",
+      all(b.get("assignment_id") for b in plan_blocks))
+
+# --- strategies ---
+day_before = sched.plan(
+    sched.tasks_from_assignments(REAL_BOARD), now=_now, tz=_tz_ny,
+    horizon_days=14, strategy="day_before",
+    constraints=sched.parse_constraints("each one hour, between 6pm and 7pm"))
+check("'an hour each, the day before' gives one session per assignment",
+      len(day_before["blocks"]) == len({b["assignment_title"]
+                                        for b in day_before["blocks"]}),
+      str([b["task"] for b in day_before["blocks"]]))
+check("and puts it in the requested window",
+      all(_dtm.fromisoformat(b["starts_at"]).hour == 18
+          for b in day_before["blocks"]),
+      str([b["starts_at"] for b in day_before["blocks"]][:3]))
+check("and the day before the deadline where possible",
+      any(b["starts_at"][:10] == "2026-09-26"
+          for b in day_before["blocks"] if b["assignment_title"] == "Proposal"),
+      str([b["starts_at"] for b in day_before["blocks"]]))
+
+# --- constraint parsing ---
+for text, expected_field, expected in [
+    ("nothing after 9pm", "day_end", 21),
+    ("after 6pm", "day_start", 18),
+    ("between 6 and 7pm", "day_start", 18),
+    ("at most 2 hours a day", "daily_cap_minutes", 120),
+    ("45 minute blocks", "session_minutes", 45),
+    ("one hour for each", "session_minutes", 60),
+]:
+    parsed = sched.parse_constraints(text)
+    check(f"parses: {text}", getattr(parsed, expected_field) == expected,
+          f"{expected_field}={getattr(parsed, expected_field)} wanted {expected}")
+
+check("parses a day off",
+      4 in sched.parse_constraints("keep fridays free").blackout_weekdays)
+check("a constraint it can't read is reported, not silently dropped",
+      sched.parse_constraints("only when Mercury is in retrograde").ignored,
+      "silently ignoring a constraint means the student finds out by having "
+      "that time scheduled")
+check("what WAS understood is reported too",
+      sched.parse_constraints("no more than 3 hours a day").understood)
+
+check("an empty board is handled", sched.plan([], now=_now, tz=_tz_ny)["blocks"] == [])
+check("a zero-length task still gets a usable session",
+      sched.plan([sched.Task(title="x", minutes=0,
+                             due=_now + _td(days=3))],
+                 now=_now, tz=_tz_ny)["blocks"][0]["est_minutes"] >= 30)
+
+# --- make_schedule survives Claude being missing, which is what happened ---
+import cache as _cache  # noqa: E402
+
+_real_claude = _cache.claude
+
+
+def _no_anthropic(*_a, **_k):
+    raise ModuleNotFoundError("No module named 'anthropic'")
+
+
+_cache.claude = _no_anthropic
+try:
+    degraded = _tools.execute("make_schedule", {"horizon_days": 7})
+finally:
+    _cache.claude = _real_claude
+
+check("make_schedule still works with the anthropic package missing",
+      "error" not in degraded and degraded.get("blocks"),
+      str(degraded)[:200])
+check("and says so, naming the fix",
+      "anthropic package isn't installed" in str(degraded.get("note", "")),
+      str(degraded.get("note")))
+
+# --- events go on the schedule at their real time ---
+stored_event = _tools.execute("get_events", {"within_days": 14})["items"][0]
+scheduled = _tools.execute("schedule_events", {"within_days": 14})
+check("scheduling an event copies its stored start time",
+      scheduled["blocks"][0]["starts_at"] == stored_event["starts_at"],
+      f"{scheduled['blocks'][0]['starts_at']} != {stored_event['starts_at']}")
+check("a career fair at 4pm does not land at 23:16",
+      "T16:00" in scheduled["blocks"][0]["starts_at"],
+      scheduled["blocks"][0]["starts_at"])
+check("scheduling events with none stored says so, rather than inventing one",
+      _tools.execute("schedule_events",
+                     {"within_days": 7, "keyword": "nonexistent"}
+                     ).get("blocks_added") == 0)
+
+# --- a failed tool is reported verbatim ---
+failed_changes = agent._changes([], {}, [
+    {"tool": "make_schedule", "ok": False,
+     "result_preview": '{"error": "make_schedule failed: ModuleNotFoundError: '
+                       'No module named \'anthropic\'"}'}])
+check("a tool failure is surfaced with its real error",
+      failed_changes["failures"]
+      and "anthropic" in failed_changes["failures"][0]["error"],
+      str(failed_changes.get("failures")))
+check("a successful run reports no failures",
+      agent._changes([], {}, [{"tool": "get_assignments", "ok": True}])["failures"]
+      == [])
+page = (ROOT / "app.html").read_text()
+check("the page shows tool failures to the student",
+      "failed: " in page and "changes.failures" in page)
+
+
+# ==========================================================================
 section("HTTP API")
 # ==========================================================================
 

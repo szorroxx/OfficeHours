@@ -67,7 +67,7 @@ def tool_call(cid: str, name: str, args: dict) -> dict:
 def t_schema_matches_dispatch():
     advertised = {t["function"]["name"] for t in tools.TOOL_SCHEMAS}
     assert advertised == set(tools.DISPATCH), "schema and dispatch disagree"
-    assert len(advertised) == 21, f"expected 21 tools, got {len(advertised)}"
+    assert len(advertised) == 22, f"expected 22 tools, got {len(advertised)}"
 
 
 def t_every_tool_runs_in_mock():
@@ -95,6 +95,7 @@ def t_every_tool_runs_in_mock():
         "remove_events": {"keyword": "lunch"},
         "delete_assignments": {"assignment_ids": ["m1"]},
         "restore_assignments": {"titles": ["Preproposal"]},
+        "schedule_events": {"within_days": 7},
     }
     for name in tools.DISPATCH:
         result = tools.execute(name, sample_args[name])
@@ -1031,6 +1032,73 @@ def t_canvas_missing_page_is_clear():
         assert "Available" in str(exc), "error should list what IS available"
 
 
+def t_scheduling_never_needs_a_model():
+    """
+    make_schedule failed four times in one live conversation with "an
+    internal error (missing dependency)" -- the anthropic package. It was the
+    only feature with a hard model dependency and no fallback.
+    """
+    import cache
+
+    real = cache.claude
+
+    def unavailable(*_a, **_k):
+        raise ModuleNotFoundError("No module named 'anthropic'")
+
+    cache.claude = unavailable
+    try:
+        plan = tools.execute("make_schedule", {"horizon_days": 7})
+    finally:
+        cache.claude = real
+
+    assert "error" not in plan, plan
+    assert plan.get("blocks"), "no blocks produced without Claude"
+    assert "anthropic package isn't installed" in str(plan.get("note", "")), (
+        "the degradation must name the fix, not hide it")
+
+
+def t_scheduler_respects_its_own_rules():
+    """The guarantees a model couldn't make: no past, no overlap, no overrun."""
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+
+    import scheduler
+
+    tz = ZoneInfo("America/New_York")
+    now = datetime(2026, 9, 19, 23, 0, tzinfo=tz)
+    tasks = scheduler.tasks_from_assignments([
+        {"id": "1", "title": "Big project", "est_hours": 12,
+         "due_at": (now + timedelta(days=5)).isoformat(), "kind": "project"},
+        {"id": "2", "title": "Reading", "est_hours": 2,
+         "due_at": (now + timedelta(days=2)).isoformat(), "kind": "reading"},
+    ])
+    busy = scheduler.busy_from_blocks([
+        {"task": "Rehearsal", "starts_at": (now + timedelta(days=1)).replace(
+            hour=19, minute=30).isoformat(), "est_minutes": 150}])
+    out = scheduler.plan(tasks, now=now, tz=tz, horizon_days=7, busy=list(busy))
+
+    blocks = sorted(out["blocks"], key=lambda b: b["starts_at"])
+    assert blocks, "nothing scheduled"
+    assert all(b["starts_at"] > now.isoformat() for b in blocks), "scheduled in the past"
+    for a, b in zip(blocks, blocks[1:]):
+        assert b["starts_at"] >= a["ends_at"], f"overlap: {a['task']} / {b['task']}"
+    rehearsal_start = (now + timedelta(days=1)).replace(hour=19, minute=30).isoformat()
+    rehearsal_end = (now + timedelta(days=1)).replace(hour=22, minute=0).isoformat()
+    assert not [b for b in blocks
+                if b["starts_at"] < rehearsal_end and b["ends_at"] > rehearsal_start], \
+        "double-booked an existing commitment"
+
+
+def t_events_keep_their_own_times():
+    """
+    The model retyped a 4pm career fair onto the calendar at 23:16.
+    schedule_events copies the stored time instead of accepting one.
+    """
+    stored = tools.execute("get_events", {"within_days": 14})["items"][0]
+    out = tools.execute("schedule_events", {"within_days": 14})
+    assert out["blocks"][0]["starts_at"] == stored["starts_at"], out
+
+
 def t_deleting_beats_marking_when_asked_to_remove():
     """
     There must be a tool that really deletes coursework.
@@ -1221,6 +1289,9 @@ if __name__ == "__main__":
     check("can take an item off the list", t_can_take_an_item_off_the_list)
     check("removals need a target", t_removals_need_a_target)
     check("deleting beats marking", t_deleting_beats_marking_when_asked_to_remove)
+    check("scheduling never needs a model", t_scheduling_never_needs_a_model)
+    check("scheduler respects its rules", t_scheduler_respects_its_own_rules)
+    check("events keep their own times", t_events_keep_their_own_times)
     check("schedule blocks are consistent", t_schedule_blocks_are_internally_consistent)
     check("naive timestamps are local", t_naive_timestamps_are_local)
     check("schedule reads expose ids", t_schedule_reads_expose_ids)

@@ -632,8 +632,27 @@ def _changes(actions: list[dict], surface_report: dict,
                "remove_from_schedule", "remove_events",
                "delete_assignments", "restore_assignments")]
 
+    # Tools that FAILED, with the actual error. The student was told four
+    # times that "the scheduling tool encountered an internal error (missing
+    # dependency)" and, when they asked which dependency, got an invented
+    # answer. The real message was
+    # "ModuleNotFoundError: No module named 'anthropic'" -- one line that
+    # names the fix. Paraphrasing an error through a language model loses
+    # exactly the part you need.
+    failures = []
+    for step in steps or []:
+        if step.get("ok"):
+            continue
+        detail = str(step.get("result_preview") or "")
+        match = re.search(r'"error"\s*:\s*"(.*?)"', detail)
+        failures.append({
+            "tool": step.get("tool"),
+            "error": (match.group(1) if match else detail)[:300],
+        })
+
     return {
         "board": board_summary,
+        "failures": failures,
         "tiger_data_writes": sorted(set(writes)),
         "surface": {
             "added": surface_report.get("added", []),

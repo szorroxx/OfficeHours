@@ -472,7 +472,12 @@ def _mock_plan(prompt: str, available: set[str]) -> list[tuple[str, dict]]:
              "ends_at": "2026-09-24T17:00:00-04:00",
              "est_minutes": 120}]}),
                 ("get_schedule", {})]
-    elif has("schedule", "plan my", "when should i", "time block"):
+    elif has("add all events", "events to the schedule", "events to my schedule"):
+        plan = [("get_events", {"within_days": 7}),
+                ("schedule_events", {"within_days": 7})]
+    elif has("budget time", "block out", "how long", "estimate how long",
+             "study session", "study time", "plan out", "plan my", "schedule",
+             "when should i", "time block"):
         plan = [("get_assignments", {"due_within_days": 14}),
                 ("make_schedule", {"horizon_days": 7})]
     elif has("study", "review", "flashcard", "practice", "prepare for"):

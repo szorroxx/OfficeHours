@@ -284,6 +284,10 @@
   .msg-changes { margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 3px; }
   .msg-change { font-size: 11px; color: var(--muted); line-height: 1.35; }
   .msg-change::before { content: '\2713'; margin-right: 5px; color: var(--green); font-weight: 700; }
+  /* A failed tool is not a checkmark. */
+  .msg-change:has(+ .msg-change) { }
+  .msg-change.warn::before { content: ''; }
+  .msg-change.warn { color: var(--red); }
   .bubble.user .msg-changes { border-top-color: rgba(255,255,255,0.25); }
   .bubble.user .msg-change { color: rgba(255,255,255,0.85); }
 
@@ -1319,6 +1323,8 @@
       if (a.added) lines.push(`Added ${a.added} ${label}${a.added === 1 ? '' : 's'} to your board`);
       else if (a.seen) lines.push(`Checked ${a.seen} ${label}${a.seen === 1 ? '' : 's'}, already on your board`);
     });
+    (changes.failures || []).forEach(f =>
+      lines.push('\u26a0 ' + f.tool + ' failed: ' + f.error));
     if ((changes.tiger_data_writes || []).length)
       lines.push('Wrote to Tiger Data: ' + changes.tiger_data_writes.join(', '));
     if ((s.added || []).length)   lines.push('New panel: ' + s.added.join(', '));
@@ -1394,7 +1400,9 @@
       // server, and this is a chat bubble, not a place to interpret markup.
       if (m.changes && m.changes.length) {
         const box = el('div','msg-changes');
-        m.changes.forEach(line => box.appendChild(el('div','msg-change', escapeHtml(line))));
+        m.changes.forEach(line => box.appendChild(
+          el('div', 'msg-change' + (line.startsWith('\u26a0') ? ' warn' : ''),
+             escapeHtml(line))));
         b.appendChild(box);
       }
       log.appendChild(b);

@@ -129,6 +129,32 @@ finished item with a line through it and leave it there, which meant
 now filters them out of the panels, the week strip and the month calendar, with
 a "Show N completed" toggle. It changes what renders, never what's stored.
 
+## If something looks broken, check this first
+
+```bash
+curl localhost:5000/api/health | python3 -m json.tool
+```
+
+`model_paths` tells you whether Nemotron and Claude can actually be reached —
+package installed, key set — without spending anything. A missing `anthropic`
+package took scheduling down on a live deployment for an entire evening, and
+the only symptom anyone saw was the assistant saying "internal error (missing
+dependency)". One GET would have named it.
+
+What still works when Claude is unreachable:
+
+| Feature | Without Claude |
+|---|---|
+| Scheduling | **works** — `scheduler.py` places blocks in plain Python |
+| Card layout / HTML panels | works — falls back to house templates |
+| Canvas crawl from a JSON export | works — no model needed |
+| Canvas crawl from raw HTML | unavailable — extraction needs a model |
+| Study guides | unavailable |
+
+Tool failures now appear in the chat under the reply, with the real error
+text. If you see `⚠ make_schedule failed: …`, that line is the bug report —
+don't ask the model what went wrong, it will guess.
+
 ## Known gaps, honestly
 
 - **Attachment contents don't reach the model.** `/api/files` serves uploaded

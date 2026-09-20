@@ -290,6 +290,13 @@ def _mock_claude(label: str) -> dict:
         return {"sections": [{"topic": "[MOCK] Gauss's Law",
                               "summary": "Flux through a closed surface is proportional to enclosed charge.",
                               "questions": ["State Gauss's law in integral form."]}]}
+    if label.startswith("triage"):
+        # Ordering advice for the scheduler. Titles must match real ones or
+        # the planner ignores them, which is the correct behaviour and is
+        # what this fixture deliberately exercises.
+        return {"order": ["Quiz 3 (Chapter 2)", "Problem Set 4 – Gauss's Law",
+                          "Lab 3: cross-validation", "Midterm Project proposal"],
+                "rationale": "[MOCK] soonest deadlines first, project last."}
     if label.startswith("surface"):
         # label is "surface:<primary card type>" -- see the note in
         # surface.plan_ops. Keying the fixture off it means mock mode shows

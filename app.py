@@ -223,6 +223,40 @@ def favicon():
     return ("", 204)
 
 
+def _model_paths() -> dict:
+    """What works without calling anything: package present, key present."""
+    import importlib.util
+
+    def probe(package: str, key: str) -> dict:
+        installed = importlib.util.find_spec(package) is not None
+        configured = bool(os.getenv(key, "").strip())
+        state = "ready" if (installed and configured) else "unavailable"
+        problems = []
+        if not installed:
+            problems.append(f"the {package} package is not installed "
+                            f"(pip install -r requirements.txt)")
+        if not configured:
+            problems.append(f"{key} is not set")
+        return {"state": state, "package_installed": installed,
+                "key_configured": configured,
+                "problems": problems or None}
+
+    out = {
+        "nemotron": probe("openai", "NVIDIA_API_KEY"),
+        "claude": probe("anthropic", "ANTHROPIC_API_KEY"),
+    }
+    # Say plainly what still works when Claude is missing, so nobody spends
+    # an evening assuming the whole agent is down.
+    if out["claude"]["state"] != "ready":
+        out["claude"]["degrades_to"] = (
+            "Scheduling still works (scheduler.py places blocks in plain "
+            "Python). Card layout and the HTML surface fall back to house "
+            "templates. Canvas crawling works from a JSON export but not "
+            "from raw HTML, and study guides are unavailable."
+        )
+    return out
+
+
 @app.route("/api/health")
 def health():
     """Hit this first. Says what's wired up without spending anything."""
@@ -235,6 +269,15 @@ def health():
         "canvas": {"source": canvas.CANVAS_SOURCE, "pages": canvas.list_sources()},
         "surface": {"premade_card_types": surface.premade_types(),
                     "max_chunks": surface.MAX_CHUNKS},
+        # Which optional model paths actually work right now.
+        #
+        # This block exists because a missing anthropic package took down
+        # scheduling on a live deployment and the only symptom the student
+        # ever saw was "internal error (missing dependency)". One GET would
+        # have named it. Nothing here calls an API: it checks that the
+        # package imports and the key is present, which is what silently
+        # fails.
+        "model_paths": _model_paths(),
         "recorded_runs": cache.recorded_count(),
         "alexa": {"skill_id_enforced": bool(os.getenv("ALEXA_SKILL_ID", "").strip())},
     })
@@ -818,6 +861,15 @@ if __name__ == "__main__":
     # MODE=live, where the old behaviour -- reading only orchestrator/.env --
     # gave you mock. Same command, real money. So say it out loud rather than
     # let the first page load be the thing that tells you.
+    paths = _model_paths()
+    for name, info in paths.items():
+        if info["state"] != "ready" and cache.MODE != "mock":
+            print()
+            print(f"  !!  {name} is unavailable: "
+                  f"{'; '.join(info['problems'] or [])}")
+            if info.get("degrades_to"):
+                print(f"      {info['degrades_to']}")
+
     if cache.MODE != "mock":
         print()
         print(f"  !!  MODE={cache.MODE.upper()} — this will make real API calls "
