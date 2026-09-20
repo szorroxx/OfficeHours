@@ -1,0 +1,15 @@
+{# Premade chunk: something the student should notice. Same panel shape as the
+   others, with the red rail the site already uses for urgency. #}
+<section class="panel">
+  <div class="panel-head">
+    <div class="panel-title">{{ title or "Heads up" }}</div>
+  </div>
+  <div class="list">
+    <div class="item">
+      <div class="rail" style="background: var(--red)"></div>
+      <div class="item-body">
+        <div class="item-meta" style="color: var(--red)">{{ body }}</div>
+      </div>
+    </div>
+  </div>
+</section>

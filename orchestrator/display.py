@@ -101,13 +101,22 @@ def render_spec(prompt: str, summary: str, steps: list[dict],
         "channel": channel,
     }
 
+    # The label carries which tools ran. Two reasons: in live mode it keeps
+    # the cache key honest (a schedule result and an assignment result are
+    # different requests and shouldn't collide), and in mock mode it's what
+    # lets the fixture return a card that matches what actually happened.
+    # Without it the mock returned the same assignment list for every prompt,
+    # which then made the layout agent look like it was ignoring the data
+    # when it was really being handed the same data every time.
+    ran = "+".join(sorted({s["tool"] for s in steps})) or "none"
+
     try:
         spec = cache.claude(
             system="You decide how a study-assistant dashboard renders a result.\n\n"
                    + RENDER_CONTRACT,
             user=_json(payload),
             max_tokens=3000,
-            label=f"display:{channel}",
+            label=f"display:{channel}:{ran}",
         )
     except Exception as exc:  # noqa: BLE001
         note = _explain(exc)

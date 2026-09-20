@@ -1,8 +1,0 @@
-Metadata-Version: 2.4
-Name: officehours
-Version: 0.1.0
-Requires-Python: >=3.10
-Requires-Dist: nvidia-nat[langchain]
-Requires-Dist: asyncpg
-Requires-Dist: pydantic
-Requires-Dist: flask

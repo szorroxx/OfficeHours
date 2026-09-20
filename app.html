@@ -279,6 +279,14 @@
   .pending-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
   .pending-chip button { border: none; background: none; cursor: pointer; color: var(--muted); font-size: 15px; line-height: 1; }
   .pending-chip button:hover { color: var(--red); }
+  /* "What changed" under an assistant reply. Quieter than the reply itself:
+     it's a receipt, not part of the answer. */
+  .msg-changes { margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 3px; }
+  .msg-change { font-size: 11px; color: var(--muted); line-height: 1.35; }
+  .msg-change::before { content: '\2713'; margin-right: 5px; color: var(--green); font-weight: 700; }
+  .bubble.user .msg-changes { border-top-color: rgba(255,255,255,0.25); }
+  .bubble.user .msg-change { color: rgba(255,255,255,0.85); }
+
   .msg-files { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
   .msg-file { font-size: 11px; font-weight: 600; border-radius: 12px; padding: 2px 9px; }
   .bubble.user .msg-file { background: rgba(255,255,255,0.18); color: #fff; }
@@ -395,6 +403,23 @@
           <div class="list" id="todos"></div>
         </section>
       </main>
+
+      <!-- The assistant's own panels.
+           Everything in here is HTML the display agent put on the page: either
+           rendered from a house template in templates/cards/ or written by
+           Claude and passed through the allowlist sanitizer in surface.py.
+           The server is the source of truth (GET /api/surface), so this
+           section is a render of stored chunks, never markup this file
+           invents. Hidden entirely until there's something in it, so a fresh
+           account doesn't show an empty shell. -->
+      <div id="surface-wrap" hidden>
+        <div class="section-title" style="display:flex; align-items:center; gap:10px">
+          <span>From the assistant</span>
+          <span class="count" id="surface-count">0</span>
+          <button class="linkbtn" id="surface-reset" style="margin-left:auto">Clear these</button>
+        </div>
+        <main class="board" id="surface"></main>
+      </div>
     </div>
 
     <div id="view-files" class="view" hidden>
@@ -554,13 +579,37 @@
   // attachment: { id, name, type, size, dataUrl }
   // completed:  [id, ...]   username: string   chat: [{ role, content }]
 
-  // Point this at your backend to make the server (TigerData/Postgres) the
-  // source of truth: the board loads from it, every change goes through it, and
-  // AI updates come back from it. Empty = fully local (browser storage + the
-  // built-in mock chat), so the standalone demo still runs.
-  // Example: 'https://your-app.onrender.com/api'
-  const API_BASE = '';
-  const backend = () => API_BASE !== '';
+  // ---- Backend detection ----
+  // This file is served by app.py, which exposes the API at /api on the same
+  // origin -- so the normal case needs no configuration at all. But the file
+  // also has to keep working when opened on its own (double-clicked, or
+  // pasted into a preview), which is how it was built and demoed. So instead
+  // of hardcoding one or the other, boot() probes /api/health once:
+  //
+  //   probe succeeds  -> backend mode. The server is the source of truth:
+  //                      accounts, the board, and the real Nemotron/Claude
+  //                      agent behind the chat box.
+  //   probe fails     -> local mode. Browser storage, no accounts, and a chat
+  //                      that says plainly that it isn't connected.
+  //
+  // Set window.OH_API_BASE before this script to force a specific origin
+  // (e.g. a tunnel URL while the frontend runs somewhere else).
+  let API_BASE = (typeof window !== 'undefined' && window.OH_API_BASE) || null;
+  const backend = () => API_BASE !== null;
+
+  async function detectBackend() {
+    if (API_BASE !== null) return true;             // explicitly configured
+    if (location.protocol === 'file:') return false; // opened as a file
+    try {
+      const r = await fetch('/api/health', { cache: 'no-store' });
+      if (!r.ok) return false;
+      const h = await r.json();
+      API_BASE = '/api';
+      serverInfo = h || {};
+      return true;
+    } catch { return false; }
+  }
+  let serverInfo = {};
   let authToken = null;
   let authMode = 'login';
 
@@ -1157,6 +1206,77 @@
     renderAll();
   }
 
+  // ---- The assistant's HTML surface ----
+  // Chunks arrive already rendered and already sanitized (surface.py runs an
+  // allowlist over every chunk before it is stored, whether it came from a
+  // house template or from Claude). This function does no cleaning of its own
+  // and shouldn't: one sanitizer, server-side, on the way IN, so nothing
+  // unsafe is ever in the store for some other client to read back.
+  let surfaceChunks = [];
+
+  function renderSurface() {
+    const wrap = document.getElementById('surface-wrap');
+    const host = document.getElementById('surface');
+    if (!wrap || !host) return;
+    wrap.hidden = surfaceChunks.length === 0;
+    document.getElementById('surface-count').textContent = surfaceChunks.length;
+    host.innerHTML = '';
+    surfaceChunks.forEach(chunk => {
+      const holder = el('div');
+      holder.id = 'chunk-' + chunk.id;
+      holder.innerHTML = chunk.html || '';
+      host.appendChild(holder);
+    });
+  }
+
+  function adoptSurface(chunks, changed) {
+    if (!Array.isArray(chunks)) return;
+    surfaceChunks = chunks;
+    renderSurface();
+    // Flash whatever the agent just touched, so a change to one panel among
+    // several is visible rather than something you have to go looking for.
+    (changed || []).forEach(id => flashPanel('chunk-' + id));
+  }
+
+  async function loadSurface() {
+    if (!backend()) { surfaceChunks = []; renderSurface(); return; }
+    try {
+      const res = await apiGet('/surface');
+      surfaceChunks = (res && res.chunks) || [];
+    } catch (e) {
+      if (e.status !== 401) console.error('surface load failed', e);
+      surfaceChunks = [];
+    }
+    renderSurface();
+  }
+
+  // ---- "What changed", under the assistant's reply ----
+  // The spec asks for the agent's changes to be visible next to its answer.
+  // That deliberately includes the things it did NOT do: a panel the server
+  // refused to delete, or markup that got stripped, is exactly what you want
+  // named rather than left as a mystery about why the page looks odd.
+  function changeLines(changes) {
+    if (!changes) return [];
+    const lines = [];
+    const s = changes.surface || {};
+
+    (changes.applied || []).forEach(a => {
+      const label = { addAssignments:'assignment', addExams:'exam', addEvents:'event', addTodos:'to-do' }[a.type] || a.type;
+      if (a.added) lines.push(`Added ${a.added} ${label}${a.added === 1 ? '' : 's'} to your board`);
+      else if (a.seen) lines.push(`Checked ${a.seen} ${label}${a.seen === 1 ? '' : 's'}, already on your board`);
+    });
+    if ((changes.tiger_data_writes || []).length)
+      lines.push('Wrote to Tiger Data: ' + changes.tiger_data_writes.join(', '));
+    if ((s.added || []).length)   lines.push('New panel: ' + s.added.join(', '));
+    if ((s.updated || []).length) lines.push('Refreshed panel: ' + s.updated.join(', '));
+    if ((s.removed || []).length) lines.push('Removed panel: ' + s.removed.join(', '));
+    (s.kept_despite_request || []).forEach(r => lines.push('Kept ' + r));
+    (s.sanitized || []).forEach(x => lines.push(`Stripped ${(x.dropped || []).join(', ')} from ${x.id}`));
+    if ((changes.tools_run || []).length)
+      lines.push('Tools: ' + changes.tools_run.join(' → '));
+    return lines;
+  }
+
   function adoptBoard(board) {
     if (!board) return;
     assignments = board.assignments || []; exams = board.exams || [];
@@ -1171,34 +1291,27 @@
     return mockCrawlerReply(payload);
   }
 
-  let crawlStage = 'idle';
+  let crawlStage = 'idle';  // kept so sign-out's reset still has something to clear
   const wait = ms => new Promise(r => setTimeout(r, ms));
+
+  // Local mode only: there is no model to talk to, so say so.
+  //
+  // What used to be here was a scripted conversation that asked for the
+  // student's Canvas username, then a Duo two-factor code, then pretended to
+  // sync. It was only ever a placeholder, but it taught the demo to ask for
+  // credentials -- and the real pipeline is built the opposite way round:
+  // orchestrator/tools.py refuses to store anything matching 'password' or
+  // 'token', and schema.sql has no password column by design. Rather than
+  // port a flow the rest of the project is built to refuse, this now points
+  // at the thing that actually works.
   async function mockCrawlerReply({ message, attachments }) {
-    const text = String(message || '').toLowerCase();
-    await wait(650);
+    await wait(350);
     if (attachments && attachments.length) {
       const names = attachments.map(a => a.name).join(', ');
-      return { reply: `Got your file${attachments.length > 1 ? 's' : ''}: ${names}. In this demo I can't read files yet, but once the AI is connected it'll pull the key details out and use them.` };
+      return { reply: `I can see ${names}, but this page isn't connected to the assistant right now, so I can't read it. Start the server (python3 app.py) and reload to get the real thing.` };
     }
-    if (crawlStage === 'idle') {
-      if (/(canvas|assignment|homework|due|deadline|exam|check|look|scan|sync|event|class|course)/.test(text)) {
-        crawlStage = 'awaiting_login';
-        return { reply: "I can pull that from Canvas. First I need to sign in to your account. What's your Canvas username?" };
-      }
-      return { reply: "I can scan Canvas for assignments, exams, and events, or help manage your to-do list. Try: \"Look through my Canvas for upcoming assignments.\"" };
-    }
-    if (crawlStage === 'awaiting_login') {
-      crawlStage = 'awaiting_2fa';
-      return { reply: "Got it. Pitt requires two-factor authentication. Approve the Duo push, then reply with the code (or just \"approved\")." };
-    }
-    crawlStage = 'idle';
     return {
-      reply: "Approved. I scanned your active courses and found 1 assignment, 1 exam, and 1 event. Adding them to your board.",
-      actions: [
-        { type:'addAssignments', items:[ { title:'Midterm study guide', course:'CS 1501 — Algorithms', dueISO: daysFromNow(4), estimateMins:120, source:'canvas', completed:false } ] },
-        { type:'addExams', items:[ { title:'Final project demo', course:'CS 1699 — Capstone', dueISO: daysFromNow(6), location:'Sennott 5317', source:'canvas', completed:false } ] },
-        { type:'addEvents', items:[ { title:'Review session', location:'Benedum G30', startISO: daysFromNow(2), source:'canvas', completed:false } ] },
-      ],
+      reply: "This page is running on its own, without the assistant behind it — so the board works and saves in this browser, but I can't check Canvas or answer questions yet.\n\nRun `python3 app.py` and open http://localhost:5000 to connect the real pipeline. Then ask me what's due and I'll read your coursework from Tiger Data, crawl Canvas if it's stale, and update this dashboard.",
     };
   }
 
@@ -1222,12 +1335,24 @@
         m.files.forEach(f => fr.appendChild(el('span','msg-file', escapeHtml(f.name) + ' \u00b7 ' + fmtSize(f.size))));
         b.appendChild(fr);
       }
+      // What the agent actually did, under what it said. escapeHtml on every
+      // line: these strings include ids and tag names that came back from the
+      // server, and this is a chat bubble, not a place to interpret markup.
+      if (m.changes && m.changes.length) {
+        const box = el('div','msg-changes');
+        m.changes.forEach(line => box.appendChild(el('div','msg-change', escapeHtml(line))));
+        b.appendChild(box);
+      }
       log.appendChild(b);
     });
     if (sending) log.appendChild(el('div','typing','<span></span><span></span><span></span>'));
     log.scrollTop = log.scrollHeight;
   }
-  async function pushMessage(role, content, files) { messages.push({ role, content, files }); await set('chat', messages); renderChat(); }
+  async function pushMessage(role, content, files, changes) {
+    messages.push({ role, content, files, changes });
+    await set('chat', messages);
+    renderChat();
+  }
 
   function renderPending() {
     const box = document.getElementById('chat-pending'); box.innerHTML = '';
@@ -1264,9 +1389,14 @@
     try {
       const res = await getAssistantReply({ message:text, history, dashboard:{ assignments, exams, events, todos }, attachments });
       sending = false;
-      await pushMessage('assistant', (res && res.reply) || '');
-      if (backend()) adoptBoard(res && res.board);
-      else if (res && res.actions && res.actions.length) await applyActions(res.actions);
+      await pushMessage('assistant', (res && res.reply) || '', undefined, changeLines(res && res.changes));
+      if (backend()) {
+        adoptBoard(res && res.board);
+        const s = (res && res.changes && res.changes.surface) || {};
+        adoptSurface(res && res.surface, [].concat(s.added || [], s.updated || []));
+      } else if (res && res.actions && res.actions.length) {
+        await applyActions(res.actions);
+      }
     } catch (e) {
       console.error('assistant error', e);
       sending = false;
@@ -1396,7 +1526,7 @@
     document.getElementById('dashboard-view').style.display = 'block';
     document.getElementById('chat-launch').style.display = 'flex';
     switchView('dashboard');
-    loadData(); loadChat(); loadLibrary();
+    loadData(); loadChat(); loadLibrary(); loadSurface();
   }
   function showLogin() {
     document.getElementById('dashboard-view').style.display = 'none';
@@ -1489,6 +1619,10 @@
     authToken = null; await set('token', null);
     document.getElementById('username').value = '';
     crawlStage = 'idle'; pendingFiles = []; renderPending();
+    // Drop the agent's panels from the DOM too. They're per-account on the
+    // server, so leaving them up would show one person's dashboard to whoever
+    // signs in next on this browser.
+    surfaceChunks = []; renderSurface();
     showLogin();
   };
   document.getElementById('load-demo').onclick = async () => {
@@ -1513,10 +1647,33 @@
     renderAll();
   };
 
+  document.getElementById('surface-reset').onclick = async () => {
+    if (!surfaceChunks.length) return;
+    if (!confirm('Remove the assistant\'s panels from your dashboard? Your board is not affected.')) return;
+    if (backend()) {
+      try { await apiSend('PUT', '/surface', { chunks: [] }); }
+      catch (e) { console.error('surface reset failed', e); }
+    }
+    // A person clearing their own dashboard goes through PUT /api/surface,
+    // which has none of the agent's removal limits -- those exist to stop a
+    // model deleting your panels, not to stop you.
+    surfaceChunks = []; renderSurface();
+  };
+
   (async function init() {
     username = await get('username', '') || '';
-    if (backend()) {
-      document.getElementById('demo-note').style.display = 'none';
+    const live = await detectBackend();
+
+    const note = document.getElementById('demo-note');
+    if (live) {
+      note.style.display = 'none';
+    } else {
+      // Say which mode this is, rather than claiming "any credentials work"
+      // and leaving someone to wonder why the assistant won't answer.
+      note.textContent = 'Running without a server: the board saves in this browser and the assistant is offline.';
+    }
+
+    if (live) {
       authToken = await get('token', null);
       if (authToken) showDashboard(); else showLogin();
     } else {

@@ -4,20 +4,34 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "officehours"
-version = "0.1.0"
+version = "0.2.0"
 requires-python = ">=3.10"
+# The real dependency list is requirements.txt (which includes
+# orchestrator/requirements.txt). This block exists so the NeMo Agent Toolkit
+# entry point below can be registered with `pip install -e .`; it is not how
+# the website is installed.
 dependencies = [
-    "nvidia-nat[langchain]",
-    "asyncpg",
-    "pydantic",
     "flask",
+    "anthropic",
+    "openai",
+    "psycopg[binary,pool]",
+    "beautifulsoup4",
+    "jinja2",
 ]
 
+[project.optional-dependencies]
+# Only needed to run the NAT workflow (orchestrator/config.yml). The website
+# and the orchestrator loop don't use it.
+nat = ["nvidia-nat[langchain]"]
+
 [tool.setuptools]
-py-modules = ["tiger_data_tool", "app"]
+py-modules = ["app", "agent", "store", "surface"]
 
 [tool.setuptools.packages.find]
-include = ["api*", "orchestrator*"]
+include = ["orchestrator*"]
 
+# The NAT plugin lives in orchestrator/, not at the repo root. The root copy
+# was an older version that ignored student_id and returned formatted strings
+# instead of fields; it's been removed rather than kept in parallel.
 [project.entry-points.'nat.plugins']
-officehours = "tiger_data_tool"
+officehours = "orchestrator.tiger_data_tool"

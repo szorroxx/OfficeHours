@@ -709,6 +709,27 @@ def upsert_events(items: list[dict], source: str = "manual") -> dict:
     return {"events_written": written}
 
 
+def ensure_student(student_id: str, display_name: str = "") -> dict:
+    """
+    Make sure a students row exists for this id.
+
+    Called when someone registers on the website. Every other table here has
+    a foreign key to students(id), so without this row the first write for a
+    new account fails with a constraint violation rather than anything that
+    points at the cause.
+    """
+    query(
+        """INSERT INTO students (id, display_name, canvas_base)
+           VALUES (%s, %s, %s)
+           ON CONFLICT (id) DO NOTHING""",
+        (_text(student_id, "student_id", required=True, limit=80),
+         _text(display_name, "display_name", limit=120) or "Student",
+         os.getenv("CANVAS_DIR", "canvas_pages")),
+        fetch="none",
+    )
+    return {"student_id": student_id, "ready": True}
+
+
 def update_profile(student_id: str, patch: dict) -> dict:
     """
     Updates the student record. Only these fields can be changed, and

@@ -31,6 +31,45 @@ import db
 STUDENT_ID = os.getenv("STUDENT_ID", "demo-student")
 MODE = os.getenv("MODE", "mock").lower()
 
+# --------------------------------------------------------------------------
+# Which student's data are we reading?
+#
+# A module-level STUDENT_ID is right for ask.py (one person, one terminal) and
+# wrong for the website, where every request belongs to a different account.
+# A ContextVar is the fix: it holds a value for the duration of one request
+# and is not shared between concurrent ones, unlike reassigning the global --
+# which under a threaded server would mean request A's student id leaking into
+# request B's queries, i.e. showing someone else's coursework.
+#
+# Everything below calls student() rather than reading STUDENT_ID, so the
+# CLI keeps its old behaviour (the ContextVar is unset, so it falls back to
+# the environment) and the website gets per-account scoping for free.
+# --------------------------------------------------------------------------
+
+from contextlib import contextmanager  # noqa: E402
+from contextvars import ContextVar  # noqa: E402
+
+_current_student: ContextVar[str | None] = ContextVar("current_student", default=None)
+
+
+def student() -> str:
+    return _current_student.get() or STUDENT_ID
+
+
+@contextmanager
+def use_student(student_id: str):
+    """
+    Scope every tool call in this block to one student.
+
+        with tools.use_student("acct-u123"):
+            run = orchestrator.run(prompt)
+    """
+    token = _current_student.set(str(student_id) if student_id else None)
+    try:
+        yield student_id
+    finally:
+        _current_student.reset(token)
+
 # Words we refuse to store, no matter who asks. Matched as SUBSTRINGS, so
 # 'canvas_token' and 'user_password' get caught too, not just exact names.
 # Checked in both tools.py and db.py.
@@ -343,7 +382,7 @@ def check_freshness() -> dict:
         return {"courses": [
             {"course": "PHYS 1361", "last_crawled_at": None, "age_hours": None, "stale": True},
         ], "any_stale": True, "never_crawled": False}
-    return db.check_freshness(STUDENT_ID)
+    return db.check_freshness(student())
 
 
 def get_assignments(course: str | None = None, due_within_days: int | None = None,
@@ -353,7 +392,7 @@ def get_assignments(course: str | None = None, due_within_days: int | None = Non
         if course:
             items = [a for a in items if course.lower() in a["course_code"].lower()]
         return {"items": items, "count": len(items)}
-    items = db.get_assignments(STUDENT_ID, course, due_within_days, status)
+    items = db.get_assignments(student(), course, due_within_days, status)
     return {"items": items, "count": len(items)}
 
 
@@ -362,7 +401,7 @@ def get_overdue() -> dict:
         items = [dict(_MOCK_ASSIGNMENTS[0], days_late=3.2),
                  dict(_MOCK_ASSIGNMENTS[2], days_late=0.4)]
         return {"items": items, "count": len(items)}
-    items = db.get_overdue(STUDENT_ID)
+    items = db.get_overdue(student())
     for a in items:
         if a.get("days_late") is not None:
             a["days_late"] = round(float(a["days_late"]), 1)
@@ -373,7 +412,7 @@ def refresh_from_canvas(pages: list[str] | None = None) -> dict:
     if MODE == "mock":
         return {"synced": 3, "courses": ["PHYS 1361"],
                 "note": "[MOCK] wrote 3 assignments to Tiger Data"}
-    return canvas.crawl(STUDENT_ID, pages)
+    return canvas.crawl(student(), pages)
 
 
 def make_schedule(horizon_days: int = 7, constraints: str = "") -> dict:
@@ -383,7 +422,7 @@ def make_schedule(horizon_days: int = 7, constraints: str = "") -> dict:
         return {"error": "no open assignments stored — refresh_from_canvas first",
                 "blocks": []}
 
-    profile = {} if MODE == "mock" else db.get_profile(STUDENT_ID)
+    profile = {} if MODE == "mock" else db.get_profile(student())
     plan = cache.claude(
         system=(
             "You are a study scheduler. Given assignments with due dates and "
@@ -416,7 +455,7 @@ def make_schedule(horizon_days: int = 7, constraints: str = "") -> dict:
         by_title = {a["title"]: a["id"] for a in assignments}
         for b in blocks:
             b["assignment_id"] = by_title.get(b.get("assignment_title"))
-        saved = db.save_schedule(STUDENT_ID, blocks, plan.get("rationale", ""))
+        saved = db.save_schedule(student(), blocks, plan.get("rationale", ""))
         plan.update(saved)
     return plan
 
@@ -448,7 +487,7 @@ def add_to_schedule(items: list[dict]) -> dict:
         return {"blocks_added": len(blocks),
                 "added": [b["task"] for b in blocks]}
 
-    result = db.add_schedule_blocks(STUDENT_ID, blocks, note="added on request")
+    result = db.add_schedule_blocks(student(), blocks, note="added on request")
     result["added"] = [b["task"] for b in blocks][:20]
     return result
 
@@ -456,7 +495,7 @@ def add_to_schedule(items: list[dict]) -> dict:
 def get_schedule() -> dict:
     if MODE == "mock":
         return cache._mock_claude("schedule")
-    return db.get_schedule(STUDENT_ID)
+    return db.get_schedule(student())
 
 
 def make_study_guide(course: str, topics: list[str], format: str = "outline") -> dict:  # noqa: A002
@@ -478,7 +517,7 @@ def make_study_guide(course: str, topics: list[str], format: str = "outline") ->
     if "error" in guide:
         return guide
     if MODE != "mock":
-        saved = db.save_study_set(STUDENT_ID, course, ", ".join(topics), format, guide)
+        saved = db.save_study_set(student(), course, ", ".join(topics), format, guide)
         guide.update(saved)
     guide["course"] = course
     guide["format"] = format
@@ -586,7 +625,7 @@ def get_workload_history(days: int = 30) -> dict:
             {"day": "2026-09-15", "course_code": "PHYS 1361", "est_hours": 4.0, "open_count": 2},
             {"day": "2026-09-19", "course_code": "PHYS 1361", "est_hours": 6.5, "open_count": 3},
         ]}
-    points = db.get_workload_history(STUDENT_ID, days)
+    points = db.get_workload_history(student(), days)
     return {"points": points, "count": len(points)}
 
 
@@ -603,7 +642,7 @@ def update_preferences(updates: dict) -> dict:
     if MODE == "mock":
         result = {"updated": bool(clean), "prefs_keys": sorted(clean)}
     else:
-        result = db.update_profile(STUDENT_ID, clean)
+        result = db.update_profile(student(), clean)
 
     if rejected:
         result["rejected_fields"] = rejected
@@ -619,12 +658,12 @@ def log_time(minutes: int, assignment_title: str | None = None) -> dict:
         return {"logged": True}
     assignment_id = None
     if assignment_title:
-        matches = db.get_assignments(STUDENT_ID, status="any")
+        matches = db.get_assignments(student(), status="any")
         for a in matches:
             if assignment_title.lower() in a["title"].lower():
                 assignment_id = a["id"]
                 break
-    return db.log_study_session(STUDENT_ID, assignment_id, minutes)
+    return db.log_study_session(student(), assignment_id, minutes)
 
 
 DISPATCH: dict[str, Callable[..., dict]] = {

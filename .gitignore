@@ -22,3 +22,15 @@ canvas_pages/canvas_export.json
 rowanCanvas_files/
 
 uv.lock
+
+# Build artifacts and caches
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+
+# Orchestrator's on-disk model cache (orchestrator/recorded/ is committed instead)
+orchestrator/cache/
+
+# The file store, when not using Postgres
+data.json

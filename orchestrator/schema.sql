@@ -121,6 +121,79 @@ CREATE TABLE IF NOT EXISTS campus_events (
 );
 
 -- --------------------------------------------------------------------------
+-- The website's own tables (accounts, the board, the Files tab, the surface)
+--
+-- These are the Python port of what store.pg.js used to create. They live in
+-- this file, not in a second schema, so there is exactly one place that says
+-- what the database looks like. That was the concrete integration bug: the
+-- orchestrator and the Node backend each defined their own tables against the
+-- same Timescale instance, with no relationship between a logged-in account
+-- and a `students` row.
+--
+-- The app_ prefix marks "this is website state", as opposed to the coursework
+-- tables above, which are the agent's world. The bridge between them is
+-- app_users.student_id -> students.id.
+-- --------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS app_users (
+    id            TEXT PRIMARY KEY,
+    username_key  TEXT UNIQUE NOT NULL,       -- lowercased, for lookup
+    username      TEXT NOT NULL,              -- as typed, for display
+    -- scrypt, N=16384 r=8 p=1 dklen=64. NEVER a plaintext password.
+    salt          TEXT NOT NULL,
+    hash          TEXT NOT NULL,
+    created_at    TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS app_sessions (
+    token         TEXT PRIMARY KEY,
+    user_id       TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+    created_at    TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS app_sessions_user_idx ON app_sessions (user_id);
+
+-- One row per board item. The payload stays JSONB because the frontend owns
+-- these shapes (see the templates in app.html) and they change faster than a
+-- migration is worth.
+CREATE TABLE IF NOT EXISTS app_items (
+    id            TEXT PRIMARY KEY,
+    user_id       TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+    kind          TEXT NOT NULL,              -- assignments|exams|events|todos
+    canvas_id     TEXT,
+    data          JSONB NOT NULL,
+    created_at    TIMESTAMPTZ DEFAULT now(),
+    updated_at    TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS app_items_user_kind_idx ON app_items (user_id, kind);
+
+-- What makes re-running the crawler idempotent instead of duplicating rows.
+CREATE UNIQUE INDEX IF NOT EXISTS app_items_canvas_idx
+    ON app_items (user_id, kind, canvas_id) WHERE canvas_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS app_library (
+    user_id       TEXT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
+    data          JSONB NOT NULL
+);
+
+-- The HTML the display agent has put on the page. One row per chunk, so a
+-- chunk can be updated or added without touching its neighbours -- which is
+-- what "modular" and "hesitant to remove" need to be enforceable rather than
+-- just requested in a prompt. See surface.py.
+CREATE TABLE IF NOT EXISTS app_surface (
+    user_id       TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+    id            TEXT NOT NULL,              -- stable, e.g. 'assignment_list'
+    position      INT  DEFAULT 0,
+    kind          TEXT,                       -- card type, or 'custom'
+    title         TEXT,
+    html          TEXT,                       -- already rendered AND sanitized
+    source        TEXT DEFAULT 'agent',       -- agent|premade|user
+    updated_at    TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (user_id, id)
+);
+
+-- --------------------------------------------------------------------------
 -- History  (the actual time-series part)
 -- --------------------------------------------------------------------------
 

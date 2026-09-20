@@ -40,6 +40,10 @@ FAST_MODEL = os.getenv("NEMOTRON_FAST_MODEL", "nvidia/nemotron-3-nano-30b-a3b")
 
 _THINK_BLOCK = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
 _ORPHAN_CLOSE = re.compile(r"^.*?</think>\s*", re.DOTALL)
+# orchestrator.run() appends "<context>{...json...}</context>" to the user
+# message. The mock planner strips it before keyword matching; see the note
+# where it's used.
+_CONTEXT_BLOCK = re.compile(r"<context>.*?</context>", re.DOTALL)
 
 # --------------------------------------------------------------------------
 # Endpoint capability detection
@@ -377,8 +381,16 @@ class NemotronClient:
                 )
             )
 
+        # Keyword-match on what the STUDENT typed, not on the <context> block
+        # orchestrator.run() appends to it. That context is JSON containing
+        # board counts, whose keys include "events" and "assignments" -- so
+        # including it meant every prompt matched the events branch and the
+        # mock always called get_events. A mock that picks the wrong tool for
+        # every prompt is worse than no mock: you debug the orchestrator for
+        # an hour before noticing the fixture is what's lying to you.
         prompt = " ".join(
-            str(m.get("content") or "") for m in messages if m.get("role") == "user"
+            _CONTEXT_BLOCK.sub(" ", str(m.get("content") or ""))
+            for m in messages if m.get("role") == "user"
         ).lower()
         available = {t["function"]["name"] for t in (kwargs.get("tools") or [])}
         plan = _mock_plan(prompt, available)
@@ -414,6 +426,8 @@ def _mock_plan(prompt: str, available: set[str]) -> list[tuple[str, dict]]:
     elif has("study", "review", "flashcard", "practice", "prepare for"):
         plan = [("make_study_guide", {"course": "PHYS 1361",
                                       "topics": ["Gauss's law", "electric potential"]})]
+    elif has("overdue", "behind", "did i miss", "missed", "late"):
+        plan = [("get_overdue", {})]
     elif has("event", "career fair", "on campus", "happening"):
         plan = [("get_events", {"within_days": 14})]
     elif has("trend", "workload", "busier", "last week", "over time", "history"):

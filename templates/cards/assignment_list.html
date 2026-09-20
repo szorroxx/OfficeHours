@@ -1,0 +1,33 @@
+{# Premade chunk: a list of assignments.
+   Classes are app.html's own (.panel/.item/.rail/.chip) so this renders in the
+   site's style with no extra CSS. Values are autoescaped by Jinja, so a card
+   containing markup shows as text instead of running. #}
+<section class="panel">
+  <div class="panel-head">
+    <div class="panel-title">{{ title or "Assignments" }}
+      <span class="count">{{ (items or []) | length }}</span>
+    </div>
+    <div class="source">From the assistant</div>
+  </div>
+  <div class="list">
+    {% for row in items or [] %}
+    <div class="item">
+      <div class="rail" style="background: var({{ '--red' if (row.priority or 0) == 1 else '--amber' if (row.priority or 0) == 2 else '--muted' }})"></div>
+      <div class="item-body">
+        <div class="title-row"><div class="item-title">{{ row.title }}</div></div>
+        {% if row.course %}<div class="item-meta">{{ row.course }}</div>{% endif %}
+        {% if row.due %}<div class="item-when">{{ row.due }}</div>{% endif %}
+        <div class="chip-row">
+          {% if row.est_minutes %}
+          {% set hours = row.est_minutes // 60 %}{% set minutes = row.est_minutes % 60 %}
+          <span class="chip">~{% if hours %}{{ hours }}h{% endif %}{% if hours and minutes %} {% endif %}{% if minutes %}{{ minutes }}m{% endif %}</span>
+          {% endif %}
+          {% if row.priority %}<span class="chip">priority {{ row.priority }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty">Nothing here.</div>
+    {% endfor %}
+  </div>
+</section>

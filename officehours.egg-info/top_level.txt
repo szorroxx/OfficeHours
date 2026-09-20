@@ -1,4 +1,0 @@
-api
-app
-orchestrator
-tiger_data_tool

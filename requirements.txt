@@ -1,12 +1,14 @@
-# app.py now imports orchestrator/'s modules directly and calls
-# orchestrator.run() in-process (see the note at the top of app.py), instead
-# of proxying HTTP to a separately-run server. So this needs the same
-# dependencies orchestrator/ needs -- pulled in via -r rather than duplicated
-# here, so the two lists can't quietly drift apart. flask is the one thing
-# orchestrator/requirements.txt doesn't already need (it's FastAPI there).
+# One backend, one requirements file. app.py imports orchestrator/'s modules
+# directly and runs the agent loop in-process, so it needs everything the
+# orchestrator needs -- pulled in with -r rather than duplicated here, so the
+# two lists can't quietly drift apart.
 #
-# MODE=mock (the default) doesn't actually touch most of these -- see
-# tools.py's MODE == "mock" branches -- but installing them up front means
-# switching to MODE=live later doesn't also mean a second pip install.
-flask
+# MODE=mock (the default) doesn't touch most of these: see the MODE == "mock"
+# branches in orchestrator/tools.py. They're installed up front so switching
+# to MODE=live later isn't also a second pip install.
+
+# The website
+flask>=3.0.0
+
+# Everything the agent needs
 -r orchestrator/requirements.txt
