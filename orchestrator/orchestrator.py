@@ -54,6 +54,35 @@ from nemotron_client import FAST_MODEL, NemotronClient, Reply
 MAX_TURNS = int(os.getenv("MAX_TURNS", "14"))
 MAX_TOKENS = int(os.getenv("MAX_TOKENS", "8192"))
 THINKING_BUDGET = int(os.getenv("THINKING_TOKEN_BUDGET", "4096"))
+
+# --------------------------------------------------------------------------
+# Reasoning effort: the biggest single quality lever, and it was hardcoded
+#
+# Nemotron is a reasoning model, and this used to pass thinking="low", which
+# sets low_effort=True in the chat template -- deliberately the cheap setting.
+# "on" removes that cap and lets it reason properly before choosing tools,
+# which is exactly where the failures have been: picking the wrong tool,
+# missing a tool it had, giving up halfway through a multi-step request.
+#
+#   REASONING=off   fastest, no reasoning. Fine for the voice path.
+#   REASONING=low   the old default. Cheap, and visibly worse at tool choice.
+#   REASONING=on    full reasoning. Slower and more expensive per turn.
+#
+# TEMPERATURE moves WITH it, which is easy to miss. NVIDIA's guidance, quoted
+# in this project's own config.yml, is ~1.0 when reasoning is on and 0.0 when
+# it's off: 0.0 with reasoning enabled produces degenerate traces. So leaving
+# temperature at 0.2 while turning reasoning on would make things worse, not
+# better. Unless TEMPERATURE is set explicitly, it's paired automatically.
+# --------------------------------------------------------------------------
+REASONING = os.getenv("REASONING", "low").strip().lower()
+if REASONING not in ("off", "low", "on"):
+    REASONING = "low"
+
+_DEFAULT_TEMPERATURE = {"off": 0.0, "low": 0.2, "on": 1.0}[REASONING]
+try:
+    TEMPERATURE = float(os.getenv("TEMPERATURE", _DEFAULT_TEMPERATURE))
+except ValueError:
+    TEMPERATURE = _DEFAULT_TEMPERATURE
 # How much of a tool result the model gets to read. 12k characters truncated
 # a 40-event calendar mid-list, so it couldn't reason about what to remove.
 TOOL_RESULT_CHARS = int(os.getenv("TOOL_RESULT_CHARS", "40000"))
@@ -237,7 +266,7 @@ def run(
 
     schemas = tools.FAST_TOOL_SCHEMAS if voice else tools.TOOL_SCHEMAS
     model = FAST_MODEL if voice else None
-    thinking = "off" if voice else "low"
+    thinking = "off" if voice else REASONING
     max_turns = 2 if voice else MAX_TURNS
 
     user_content = prompt
@@ -260,7 +289,7 @@ def run(
                 thinking=thinking,
                 max_tokens=600 if voice else MAX_TOKENS,
                 thinking_token_budget=None if voice else THINKING_BUDGET,
-                temperature=0.2,
+                temperature=0.0 if voice else TEMPERATURE,
                 model=model,
             )
 

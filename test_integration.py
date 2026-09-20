@@ -727,6 +727,18 @@ check("and removing events can't take an assignment with it",
 # --- multi-step capacity ---
 import orchestrator as _orch  # noqa: E402
 
+check("reasoning effort is configurable, not hardcoded",
+      hasattr(_orch, "REASONING") and _orch.REASONING in ("off", "low", "on"),
+      "thinking='low' was hardcoded; it sets Nemotron's low_effort flag")
+check("temperature is paired with reasoning, not left at a stale value",
+      (_orch.REASONING, _orch.TEMPERATURE) in
+      (("off", 0.0), ("low", 0.2), ("on", 1.0))
+      or bool(os.getenv("TEMPERATURE")),
+      f"reasoning={_orch.REASONING} temperature={_orch.TEMPERATURE}; "
+      f"0.0 with reasoning on gives degenerate traces")
+check("an unknown reasoning value falls back rather than being passed through",
+      _orch.REASONING in ("off", "low", "on"))
+
 check("the loop has room for a multi-step request", _orch.MAX_TURNS >= 12,
       f"MAX_TURNS={_orch.MAX_TURNS}")
 check("answers aren't truncated mid-plan", _orch.MAX_TOKENS >= 8000,

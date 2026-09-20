@@ -70,6 +70,16 @@ UNSUPPORTED_PARAMS: set[str] = {
 # switch to self-hosted NIM and want it back.
 if os.getenv("NEMOTRON_ALLOW_THINKING_BUDGET") != "1":
     UNSUPPORTED_PARAMS.add("thinking_token_budget")
+    if os.getenv("THINKING_TOKEN_BUDGET"):
+        # Worth saying out loud: someone tuning for quality will reach for
+        # this first, and on the hosted build.nvidia.com endpoint it is
+        # silently dropped (the endpoint returns 400 for it, so the client
+        # strips it). Raising it there changes nothing. REASONING=on is the
+        # setting that actually does something.
+        print("[nemotron] THINKING_TOKEN_BUDGET is set but the hosted "
+              "endpoint rejects it, so it is being ignored. Use REASONING=on "
+              "to increase reasoning, or set "
+              "NEMOTRON_ALLOW_THINKING_BUDGET=1 if you are on self-hosted NIM.")
 
 _UNSUPPORTED_RE = re.compile(
     r"unsupported parameter\(?s?\)?[:\s]", re.IGNORECASE

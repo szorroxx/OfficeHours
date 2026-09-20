@@ -129,6 +129,35 @@ finished item with a line through it and leave it there, which meant
 now filters them out of the panels, the week strip and the month calendar, with
 a "Show N completed" toggle. It changes what renders, never what's stored.
 
+## Turning up quality
+
+In rough order of effect per unit of effort:
+
+| Change | Why | Cost |
+|---|---|---|
+| `REASONING=on` | Nemotron is a reasoning model and the default was `low`, which sets its `low_effort` flag. Tool choice is exactly where this shows. | slower, more tokens per turn |
+| Sharpen a tool description | Tool-calling accuracy tracks description quality more than model size. If it picks the wrong tool, read that tool's `description` as if you were the model. | free |
+| `MAX_TURNS`, `MAX_TOKENS` | Already raised to 14 / 8192. Raise further if a complex request still stops short. | more tokens |
+| `CLAUDE_MODEL` | Used for triage ordering, card layout and study guides — not for tool choice. Upgrading improves prose and study guides, not reliability. | more expensive |
+| `NEMOTRON_MODEL` | Check what your key can see: `python3 smoke_test.py`. | varies |
+| Fewer tools | 24 tools is a lot to choose between. Trimming the set for a given intent usually beats any token increase. | a code change |
+
+**`TEMPERATURE` has to move with `REASONING`.** NVIDIA's guidance, quoted in
+this project's own `config.yml`, is ~1.0 with reasoning on and 0.0 with it
+off — 0.0 plus reasoning gives degenerate traces. Leave `TEMPERATURE` unset
+and it is paired for you.
+
+**`THINKING_TOKEN_BUDGET` does nothing on the hosted endpoint.** It returns
+400 for that parameter, so `nemotron_client` strips it. It now prints a
+warning if you set it. Self-hosted NIM accepts it with
+`NEMOTRON_ALLOW_THINKING_BUDGET=1`.
+
+**What more tokens will not fix.** Every failure in this project so far was a
+missing tool, a wrong mapping, or a silent dependency — not a model too small
+to think. `REASONING=on` is worth trying; if something is still wrong after
+that, read the `⚠` line under the reply and `/api/health` before turning
+dials.
+
 ## Is my deployment current?
 
 ```bash
