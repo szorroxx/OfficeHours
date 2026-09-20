@@ -67,7 +67,7 @@ def tool_call(cid: str, name: str, args: dict) -> dict:
 def t_schema_matches_dispatch():
     advertised = {t["function"]["name"] for t in tools.TOOL_SCHEMAS}
     assert advertised == set(tools.DISPATCH), "schema and dispatch disagree"
-    assert len(advertised) == 19, f"expected 19 tools, got {len(advertised)}"
+    assert len(advertised) == 21, f"expected 21 tools, got {len(advertised)}"
 
 
 def t_every_tool_runs_in_mock():
@@ -93,6 +93,8 @@ def t_every_tool_runs_in_mock():
         "add_tasks": {"tasks": [{"text": "Email the professor"}]},
         "remove_from_schedule": {"task_match": "viola"},
         "remove_events": {"keyword": "lunch"},
+        "delete_assignments": {"assignment_ids": ["m1"]},
+        "restore_assignments": {"titles": ["Preproposal"]},
     }
     for name in tools.DISPATCH:
         result = tools.execute(name, sample_args[name])
@@ -1029,6 +1031,21 @@ def t_canvas_missing_page_is_clear():
         assert "Available" in str(exc), "error should list what IS available"
 
 
+def t_deleting_beats_marking_when_asked_to_remove():
+    """
+    There must be a tool that really deletes coursework.
+
+    Without one, "remove these from my dashboard" could only be answered by
+    marking, which leaves the rows on screen -- and the model, having marked
+    them, told the student their browser cache was at fault.
+    """
+    result = tools.execute("delete_assignments", {"assignment_ids": ["m1", "m2"]})
+    assert result.get("deleted") == 2, result
+    assert result.get("permanent") is True, (
+        "a delete that the next crawl undoes is not a delete")
+    assert "error" in tools.execute("delete_assignments", {"assignment_ids": []})
+
+
 def t_removals_need_a_target():
     """
     There must be no way to delete a whole schedule or the whole event list
@@ -1203,6 +1220,7 @@ if __name__ == "__main__":
     check("credentials rejected", t_credentials_are_rejected)
     check("can take an item off the list", t_can_take_an_item_off_the_list)
     check("removals need a target", t_removals_need_a_target)
+    check("deleting beats marking", t_deleting_beats_marking_when_asked_to_remove)
     check("schedule blocks are consistent", t_schedule_blocks_are_internally_consistent)
     check("naive timestamps are local", t_naive_timestamps_are_local)
     check("schedule reads expose ids", t_schedule_reads_expose_ids)

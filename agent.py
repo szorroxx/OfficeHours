@@ -196,6 +196,7 @@ WRITE_TOOLS = frozenset({
     "make_study_guide", "find_campus_events", "update_preferences",
     "log_time", "update_assignment", "add_tasks",
     "remove_from_schedule", "remove_events",
+    "delete_assignments", "restore_assignments",
 })
 
 _ASKED_FOR_CHANGE = re.compile(
@@ -404,16 +405,36 @@ def board_actions(steps: list[dict]) -> list[dict]:
                                     "title": title[:200], "kind": "events"})
 
         elif tool == "update_assignment":
-            # A status change has to be reflected on the board as well, or the
-            # row the student asked you to drop stays on screen.
+            # 'dismissed' means "this is not mine to do" -- the student wants
+            # it GONE, so the board row goes. 'submitted'/'graded' mean they
+            # did the work, so the row is ticked and kept.
+            #
+            # This distinction is the whole bug from the last round. Dismissed
+            # items were being ticked, the dashboard renders ticked items with
+            # a line through them rather than hiding them, and a student who
+            # asked three times was told to clear their browser cache. Marking
+            # is not removing.
             for row in result.get("items") or []:
-                if row.get("status") in ("submitted", "graded", "dismissed"):
+                status = row.get("status")
+                if status == "dismissed":
+                    removed.append({
+                        "canvasId": str(row.get("id") or "")[:120],
+                        "title": str(row.get("title") or "")[:200],
+                    })
+                elif status in ("submitted", "graded"):
                     completed.append({
                         "canvasId": str(row.get("id") or "")[:120],
                         "title": str(row.get("title") or "")[:200],
                         "completed": True,
-                        "note": f"marked {row.get('status')} by the assistant",
+                        "note": f"marked {status} by the assistant",
                     })
+
+        elif tool in ("delete_assignments",):
+            for row in result.get("items") or []:
+                removed.append({
+                    "canvasId": str(row.get("id") or "")[:120],
+                    "title": str(row.get("title") or "")[:200],
+                })
 
     actions = []
     if assignments:
@@ -587,21 +608,29 @@ def _changes(actions: list[dict], surface_report: dict,
     thing that otherwise turns into "why does the page look like that".
     """
     board_summary = []
-    labels = {"addAssignments": "assignments", "addExams": "exams",
-              "addEvents": "events", "addTodos": "to-dos",
-              "completeItems": "items ticked off",
-              "removeItems": "items removed"}
+    # Singular/plural pairs. The old version appended an "s" to whatever the
+    # label was, which produced "Checked 3 completeItemss, already on your
+    # board" in the change log -- a double plural on an internal action name.
+    labels = {"addAssignments": ("assignment", "assignments"),
+              "addExams": ("exam", "exams"),
+              "addEvents": ("event", "events"),
+              "addTodos": ("to-do", "to-dos"),
+              "completeItems": ("item ticked off", "items ticked off"),
+              "removeItems": ("item removed", "items removed")}
     for action in actions:
         count = len(action.get("items") or [])
         if count:
-            board_summary.append(f"{count} {labels.get(action['type'], action['type'])}")
+            singular, plural = labels.get(action["type"],
+                                          (action["type"], action["type"]))
+            board_summary.append(f"{count} {singular if count == 1 else plural}")
 
     writes = [step["tool"] for step in steps or []
               if step.get("ok") and step.get("tool") in
               ("refresh_from_canvas", "make_schedule", "add_to_schedule",
                "make_study_guide", "find_campus_events", "update_preferences",
                "log_time", "update_assignment", "add_tasks",
-               "remove_from_schedule", "remove_events")]
+               "remove_from_schedule", "remove_events",
+               "delete_assignments", "restore_assignments")]
 
     return {
         "board": board_summary,

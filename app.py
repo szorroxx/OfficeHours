@@ -459,6 +459,15 @@ def _apply_actions(user_id: str, actions: list[dict]) -> list[dict]:
             gone = store.remove_matching(user_id, items)
             applied.append({"type": "removeItems", "added": gone,
                             "seen": len(items)})
+            # Chunks render a snapshot of the data, so a panel built before
+            # the delete would still show the rows. Rebuilding is the layout
+            # agent's job on the next turn; dropping the stale assignment
+            # panels now is the honest interim.
+            if gone:
+                store.set_surface(user_id, [
+                    chunk for chunk in store.get_surface(user_id)
+                    if chunk.get("kind") not in ("assignment_list", "schedule")
+                ])
             continue
 
         if action.get("type") == "completeItems":

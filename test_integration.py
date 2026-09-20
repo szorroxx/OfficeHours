@@ -544,16 +544,22 @@ check("the agent can put to-dos on the board", len(todos) == 2, str(task_actions
 check("to-do estimates survive", todos[0].get("estimateMins") == 45, str(todos[0]))
 
 # --- "take that off my list" has to change something ---
+# NOTE: this assertion used to read "a dismissed assignment is ticked off the
+# board", and it passed while the product was broken. Ticking was the bug: a
+# student dismissed thirteen assignments, was told they were removed, and saw
+# thirteen struck-through rows. The test encoded my wrong assumption about
+# what the student wanted, so it defended the behaviour instead of catching
+# it. Dismissed means gone; submitted means ticked.
 done_actions = agent.board_actions([{
     "tool": "update_assignment", "ok": True,
-    "result": {"updated": 1, "status": "dismissed", "items": [
-        {"id": "abc123", "title": "Preproposal", "status": "dismissed"}]}}])
+    "result": {"updated": 1, "status": "submitted", "items": [
+        {"id": "abc123", "title": "HW01", "status": "submitted"}]}}])
 completed = next((a["items"] for a in done_actions
                   if a["type"] == "completeItems"), [])
-check("a dismissed assignment is ticked off the board",
+check("a submitted assignment is ticked off the board",
       len(completed) == 1 and completed[0]["completed"] is True, str(done_actions))
 check("and the reason is recorded, not silently ticked",
-      "dismissed" in completed[0].get("note", ""), str(completed))
+      "submitted" in completed[0].get("note", ""), str(completed))
 check("an assignment left open is not ticked",
       not [a for a in agent.board_actions([{
           "tool": "update_assignment", "ok": True,
@@ -738,6 +744,117 @@ check("running out of turns says what got done",
       "ran out of steps partway" in _orch.SYSTEM_PROMPT
       or "ran out of steps partway" in open(
           ROOT / "orchestrator" / "orchestrator.py").read())
+
+
+# ==========================================================================
+section("marking is not removing")
+# ==========================================================================
+# Third live run: the assistant dismissed thirteen assignments, said they no
+# longer appear on the dashboard, and they all still appeared -- struck
+# through. Asked again, it blamed the browser cache. Two separate faults:
+# 'dismissed' mapped to a tick rather than a removal, and the dashboard
+# rendered ticked rows instead of hiding them.
+
+dismissed_actions = agent.board_actions([{
+    "tool": "update_assignment", "ok": True,
+    "result": {"updated": 1, "status": "dismissed", "items": [
+        {"id": "d1", "title": "Preproposal", "status": "dismissed"}]}}])
+check("a dismissed assignment is REMOVED from the board, not ticked",
+      any(a["type"] == "removeItems" for a in dismissed_actions)
+      and not any(a["type"] == "completeItems" for a in dismissed_actions),
+      str(dismissed_actions))
+
+submitted_actions = agent.board_actions([{
+    "tool": "update_assignment", "ok": True,
+    "result": {"items": [{"id": "s1", "title": "HW01", "status": "submitted"}]}}])
+check("work the student actually did is kept and ticked",
+      any(a["type"] == "completeItems" for a in submitted_actions),
+      str(submitted_actions))
+
+deleted_actions = agent.board_actions([{
+    "tool": "delete_assignments", "ok": True,
+    "result": {"deleted": 2, "items": [
+        {"id": "x1", "title": "Quiz 01"}, {"id": "x2", "title": "HW01"}]}}])
+check("a deleted assignment is removed from the board",
+      next((len(a["items"]) for a in deleted_actions
+            if a["type"] == "removeItems"), 0) == 2, str(deleted_actions))
+
+check("there is a tool that really deletes coursework",
+      "delete_assignments" in _tools.DISPATCH)
+check("and one to undo it", "restore_assignments" in _tools.DISPATCH)
+check("deleting refuses an empty id list",
+      "error" in _tools.execute("delete_assignments", {"assignment_ids": []}))
+check("deleting accepts a bare id, not just a list",
+      _tools.execute("delete_assignments",
+                     {"assignment_ids": "m1"}).get("deleted") == 1)
+
+# A delete has to survive the next crawl, or it's a no-op with extra steps.
+db_src = (ROOT / "orchestrator" / "db.py").read_text()
+upsert = db_src[db_src.index("def upsert_assignments("):]
+upsert = upsert[:upsert.index("\ndef ")]
+check("the crawler skips assignments the student deleted",
+      "suppressed_assignments" in upsert,
+      "otherwise refresh_from_canvas rebuilds the same id and re-adds the row")
+check("a crawl can't reset a status the student set",
+      "WHEN assignments.status IN" in upsert and "dismissed" in upsert,
+      "status = EXCLUDED.status turned every dismissal back into 'open'")
+check("deleting also clears orphaned schedule blocks",
+      "schedule_blocks" in db_src[db_src.index("def delete_assignments("):
+                                  db_src.index("def restore_assignments(")])
+
+# --- the dashboard's half ---
+page = (ROOT / "app.html").read_text()
+check("the page has one visibility rule for finished work",
+      "function visible(rows)" in page and "showDone" in page)
+for renderer in ("renderAssignments", "renderExams", "renderEvents",
+                 "renderTodos"):
+    index = page.index("function " + renderer)
+    check(f"{renderer} hides finished work",
+          "visible(" in page[index:index + 420], renderer)
+check("the week strip hides it too",
+      "visible(events)" in page[page.index("function renderSchedule"):
+                                page.index("function renderSchedule") + 900])
+check("the month calendar hides it too",
+      "visible(assignments)" in page[page.index("function calItemsByDay"):
+                                     page.index("function calItemsByDay") + 900])
+check("finished work can still be brought back into view",
+      "Show ' + n + ' completed" in page or "completed'" in page,
+      "hiding must be reversible, or it's data loss from the user's view")
+
+# --- the change log said "3 completeItemss" ---
+plural = agent._changes(
+    [{"type": "completeItems", "items": [{"title": "a"}, {"title": "b"}]},
+     {"type": "removeItems", "items": [{"title": "c"}]}],
+    {}, [])
+check("counts are pluralised properly",
+      plural["board"] == ["2 items ticked off", "1 item removed"],
+      str(plural["board"]))
+single = agent._changes([{"type": "addAssignments", "items": [{"title": "a"}]}],
+                        {}, [])
+check("and singular when there's one", single["board"] == ["1 assignment"],
+      str(single["board"]))
+
+# --- the store really drops the rows ---
+store_d = fresh_store()
+ud = store_d.create_user("deleter", "password")
+store_d.upsert_items(ud["id"], "assignments", [
+    {"title": "Quiz 01", "canvasId": "q1"}, {"title": "HW01", "canvasId": "h1"}])
+store_d.upsert_items(ud["id"], "exams", [{"title": "FinalExam", "canvasId": "f1"}])
+store_d.remove_matching(ud["id"], [
+    {"canvasId": "q1", "title": "Quiz 01"},
+    {"canvasId": "f1", "title": "FinalExam"}])
+left = store_d.get_board(ud["id"])
+check("removed rows are gone from the store, not flagged",
+      len(left["assignments"]) == 1 and len(left["exams"]) == 0,
+      str({k: len(v) for k, v in left.items()}))
+check("the row that wasn't named survives",
+      left["assignments"][0]["title"] == "HW01")
+
+check("the prompt forbids blaming the browser",
+      "never blame the browser" in _orch.SYSTEM_PROMPT.lower()
+      and "clear their cache" in _orch.SYSTEM_PROMPT.lower())
+check("the prompt says marking is not removing",
+      "marking is not removing" in _orch.SYSTEM_PROMPT.lower())
 
 
 # ==========================================================================

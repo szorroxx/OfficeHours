@@ -594,7 +594,14 @@ def upsert_assignments(student_id: str, items: list[dict]) -> dict:
     because the id is derived from course + title. That is how "update
     outdated information" works in practice.
     """
-    written, skipped, errors = 0, 0, []
+    written, skipped, errors, suppressed = 0, 0, [], 0
+
+    # Ids the student has deleted. Without this check, deleting an assignment
+    # was pointless: the next refresh_from_canvas re-crawled the same Canvas
+    # row, rebuilt the same deterministic id, and put it straight back.
+    blocked = {r["assignment_id"] for r in query(
+        "SELECT assignment_id FROM suppressed_assignments WHERE student_id = %s",
+        (student_id,))}
 
     for raw in items or []:
         try:
@@ -609,6 +616,9 @@ def upsert_assignments(student_id: str, items: list[dict]) -> dict:
                 status = "open"
 
             aid = make_id(student_id, course, title)
+            if aid in blocked:
+                suppressed += 1
+                continue
             query(
                 """INSERT INTO assignments
                        (id, student_id, course_code, title, kind, due_at, points,
@@ -622,7 +632,18 @@ def upsert_assignments(student_id: str, items: list[dict]) -> dict:
                        est_hours   = COALESCE(EXCLUDED.est_hours, assignments.est_hours),
                        est_source  = COALESCE(EXCLUDED.est_source, assignments.est_source),
                        priority    = COALESCE(EXCLUDED.priority, assignments.priority),
-                       status      = EXCLUDED.status,
+                       -- Keep a status the STUDENT set. A crawl reports that
+                       -- an assignment exists; it does not know that a
+                       -- teammate submitted it. Blindly taking EXCLUDED.status
+                       -- meant every dismissed item came back as 'open' on the
+                       -- next sync, so dismissing it looked like it hadn't
+                       -- worked.
+                       status      = CASE
+                                       WHEN assignments.status IN
+                                            ('dismissed','submitted','graded')
+                                       THEN assignments.status
+                                       ELSE EXCLUDED.status
+                                     END,
                        description = COALESCE(EXCLUDED.description, assignments.description),
                        source_url  = COALESCE(EXCLUDED.source_url, assignments.source_url),
                        updated_at  = now()""",
@@ -646,6 +667,10 @@ def upsert_assignments(student_id: str, items: list[dict]) -> dict:
                 errors.append(str(exc))
 
     out = {"assignments_written": written, "skipped": skipped}
+    if suppressed:
+        out["suppressed"] = suppressed
+        out["note"] = (f"{suppressed} assignment(s) were skipped because you "
+                       f"deleted them earlier.")
     if errors:
         out["validation_errors"] = errors
     return out
@@ -950,6 +975,79 @@ def set_assignment_status(student_id: str, assignment_ids: list[str],
     )
     return {"updated": len(rows), "status": status, "items": list(rows),
             "not_found": sorted(set(ids) - {r["id"] for r in rows})}
+
+
+def delete_assignments(student_id: str, assignment_ids: list[str],
+                       permanent: bool = True) -> dict:
+    """
+    Really delete assignments, not just mark them.
+
+    This is what was missing, and the model was right to say so: "The system
+    does not have a tool to erase assignments entirely from the database."
+    It then insisted that dismissing them removed them from the dashboard,
+    which was not true -- the rows stayed on screen with a line through them,
+    and a student who had asked three times was told to clear their browser
+    cache.
+
+    `permanent` records the id in suppressed_assignments so the next Canvas
+    crawl doesn't bring it back. Without that, deleting is a no-op with extra
+    steps: the crawler rebuilds the same deterministic id from the same page
+    and re-inserts the row.
+
+    The suppression list is also the undo: clear a row from it and the next
+    refresh restores the assignment.
+    """
+    ids = [str(i) for i in (assignment_ids or []) if i][:200]
+    if not ids:
+        return {"error": "no assignment ids given"}
+
+    rows = query(
+        """DELETE FROM assignments
+           WHERE student_id = %s AND id = ANY(%s)
+           RETURNING id, course_code, title""",
+        (student_id, ids),
+    )
+
+    if permanent:
+        for row in rows:
+            query(
+                """INSERT INTO suppressed_assignments
+                       (student_id, assignment_id, title, reason)
+                   VALUES (%s, %s, %s, 'deleted by the student')
+                   ON CONFLICT (student_id, assignment_id) DO NOTHING""",
+                (student_id, row["id"], row["title"]), fetch="none",
+            )
+
+    # Schedule blocks pointing at a deleted assignment would otherwise linger
+    # as orphans on the calendar.
+    orphans = query(
+        """DELETE FROM schedule_blocks
+           WHERE student_id = %s AND assignment_id = ANY(%s)
+           RETURNING id""",
+        (student_id, ids),
+    )
+
+    return {"deleted": len(rows), "items": list(rows),
+            "schedule_blocks_removed": len(orphans),
+            "permanent": permanent,
+            "not_found": sorted(set(ids) - {r["id"] for r in rows})}
+
+
+def restore_assignments(student_id: str, titles: list[str] | None = None) -> dict:
+    """Undo a delete: stop suppressing, so the next crawl brings it back."""
+    if titles:
+        rows = query(
+            """DELETE FROM suppressed_assignments
+               WHERE student_id = %s AND title = ANY(%s) RETURNING title""",
+            (student_id, [str(t) for t in titles][:100]),
+        )
+    else:
+        rows = query(
+            "DELETE FROM suppressed_assignments WHERE student_id = %s RETURNING title",
+            (student_id,),
+        )
+    return {"restored": len(rows), "titles": [r["title"] for r in rows],
+            "note": "Run refresh_from_canvas to pull them back in."}
 
 
 def remove_schedule_blocks(student_id: str, block_ids: list[str] | None = None,

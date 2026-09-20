@@ -366,6 +366,8 @@
       <div class="section-title">This week</div>
       <div class="schedule"><div class="week" id="week"></div></div>
 
+      <div id="done-bar" class="footer" style="padding:6px 40px 0; justify-content:flex-start" hidden></div>
+
       <main class="board">
         <section class="panel" id="panel-assignments">
           <div class="panel-head">
@@ -724,6 +726,37 @@
   function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
   function displayName() { return username ? username.charAt(0).toUpperCase() + username.slice(1) : 'there'; }
 
+  // ---- Completed items are hidden, not struck through ----
+  //
+  // The board used to render a finished item with a line through it and leave
+  // it on screen. That is a reasonable default for a to-do list and the wrong
+  // one here: a student who asks the assistant to remove thirteen
+  // assignments, and is told they were removed, sees thirteen struck-through
+  // rows and concludes nothing happened. It read as the assistant lying.
+  //
+  // So: finished work leaves the board by default, with a counter to bring it
+  // back. The preference is per-browser; it changes what's displayed, never
+  // what's stored.
+  let showDone = false;
+  function visible(rows) {
+    return showDone ? rows : rows.filter(r => !r.completed && !r.done);
+  }
+  function doneCount() {
+    return [assignments, exams, events, todos]
+      .reduce((n, list) => n + list.filter(r => r.completed || r.done).length, 0);
+  }
+  function renderDoneToggle() {
+    const bar = document.getElementById('done-bar');
+    if (!bar) return;
+    const n = doneCount();
+    bar.hidden = n === 0;
+    bar.innerHTML = '';
+    const btn = el('button', 'linkbtn pos',
+      showDone ? 'Hide ' + n + ' completed' : 'Show ' + n + ' completed');
+    btn.onclick = () => { showDone = !showDone; renderAll(); };
+    bar.appendChild(btn);
+  }
+
   // ---- Expand state + detail helpers ----
   let expanded = new Set();
   function toggleExpand(id) { expanded.has(id) ? expanded.delete(id) : expanded.add(id); renderAll(); }
@@ -915,12 +948,14 @@
       col.appendChild(el('div','day-date', d.toLocaleDateString([], { month:'short', day:'numeric' })));
       const pills = el('div','pills');
 
+      // Same visibility rule as the panels: finished work leaves the week
+      // strip too, or "removed" items reappear one section further down.
       const entries = [];
-      events.filter(e => dayKey(e.startISO) === key).forEach(e =>
+      visible(events).filter(e => dayKey(e.startISO) === key).forEach(e =>
         entries.push({ color:TYPE_COLOR.event, title:e.title, meta:new Date(e.startISO).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}), done: !!e.completed }));
-      exams.filter(x => dayKey(x.dueISO) === key).forEach(x =>
+      visible(exams).filter(x => dayKey(x.dueISO) === key).forEach(x =>
         entries.push({ color:TYPE_COLOR.exam, title:x.title, meta:'Exam', done: !!x.completed }));
-      assignments.forEach(a => {
+      visible(assignments).forEach(a => {
         const placed = a.scheduledISO || a.dueISO;
         if (dayKey(placed) === key) entries.push({ color:TYPE_COLOR.assignment, title:a.title, meta: a.scheduledISO ? 'Planned' : 'Due', done: !!a.completed });
       });
@@ -964,8 +999,8 @@
 
   function renderAssignments() {
     const box = document.getElementById('assignments'); box.innerHTML = '';
-    const rows = [...assignments].sort((x,y) => new Date(x.dueISO) - new Date(y.dueISO));
-    if (!rows.length) { box.appendChild(el('div','empty','Nothing synced yet.')); return; }
+    const rows = visible(assignments).sort((x,y) => new Date(x.dueISO) - new Date(y.dueISO));
+    if (!rows.length) { box.appendChild(el('div','empty', assignments.length ? 'All done.' : 'Nothing synced yet.')); return; }
     rows.forEach(a => {
       const done = !!a.completed, u = urgency(a.dueISO), open = expanded.has(a.id);
       box.appendChild(hydrate('assignment', {
@@ -979,7 +1014,7 @@
   }
   function renderExams() {
     const box = document.getElementById('exams'); box.innerHTML = '';
-    const rows = [...exams].sort((x,y) => new Date(x.dueISO) - new Date(y.dueISO));
+    const rows = visible(exams).sort((x,y) => new Date(x.dueISO) - new Date(y.dueISO));
     if (!rows.length) { box.appendChild(el('div','empty','No exams scheduled.')); return; }
     rows.forEach(x => {
       const done = !!x.completed, w = examWhen(x.dueISO), open = expanded.has(x.id);
@@ -994,7 +1029,7 @@
   }
   function renderEvents() {
     const box = document.getElementById('events'); box.innerHTML = '';
-    const rows = [...events].sort((x,y) => new Date(x.startISO) - new Date(y.startISO));
+    const rows = visible(events).sort((x,y) => new Date(x.startISO) - new Date(y.startISO));
     if (!rows.length) { box.appendChild(el('div','empty','Nothing synced yet.')); return; }
     rows.forEach(e => {
       const done = !!e.completed, w = eventWhen(e.startISO), open = expanded.has(e.id);
@@ -1010,7 +1045,7 @@
   function renderTodos() {
     const box = document.getElementById('todos'); box.innerHTML = '';
     if (!todos.length) box.appendChild(el('div','empty','Add your first task above.'));
-    [...todos].sort((a,b) => (a.done - b.done)).forEach(t => {
+    visible(todos).sort((a,b) => (a.done - b.done)).forEach(t => {
       const open = expanded.has(t.id);
       box.appendChild(hydrate('todo', {
         id: t.id, expandable: true, done: t.done,
@@ -1034,6 +1069,7 @@
     renderHeader(); renderSchedule();
     renderAssignments(); renderExams(); renderEvents(); renderTodos();
     counts();
+    renderDoneToggle();
     renderCalendar();
   }
 
@@ -1136,10 +1172,14 @@
   function calItemsByDay() {
     const map = {};
     const push = (iso, e) => { if (!iso) return; const k = dayKey(iso); (map[k] = map[k] || []).push(e); };
-    events.forEach(e => push(e.startISO, { color: TYPE_COLOR.event, title: e.title, done: !!e.completed }));
-    exams.forEach(x => push(x.dueISO, { color: TYPE_COLOR.exam, title: x.title, done: !!x.completed }));
-    assignments.forEach(a => push(a.scheduledISO || a.dueISO, { color: TYPE_COLOR.assignment, title: a.title, done: !!a.completed }));
-    todos.filter(t => t.done && t.completedISO).forEach(t => push(t.completedISO, { color: TYPE_COLOR.todo, title: t.text, done: true }));
+    // visible() here too, so the month view follows the same rule as the
+    // board and the week strip. Three places rendering the same data with
+    // different visibility rules is how "I removed it" stops being true
+    // somewhere the student happens to look.
+    visible(events).forEach(e => push(e.startISO, { color: TYPE_COLOR.event, title: e.title, done: !!e.completed }));
+    visible(exams).forEach(x => push(x.dueISO, { color: TYPE_COLOR.exam, title: x.title, done: !!x.completed }));
+    visible(assignments).forEach(a => push(a.scheduledISO || a.dueISO, { color: TYPE_COLOR.assignment, title: a.title, done: !!a.completed }));
+    todos.filter(t => showDone && t.done && t.completedISO).forEach(t => push(t.completedISO, { color: TYPE_COLOR.todo, title: t.text, done: true }));
     return map;
   }
   function renderCalendar() {

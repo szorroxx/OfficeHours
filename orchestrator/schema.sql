@@ -120,6 +120,21 @@ CREATE TABLE IF NOT EXISTS campus_events (
     updated_at    TIMESTAMPTZ DEFAULT now()
 );
 
+-- Assignments the student has deleted.
+--
+-- Needed because assignment ids are deterministic (a hash of student +
+-- course + title), so a plain DELETE is undone by the next crawl: it rebuilds
+-- the same id from the same Canvas page and re-inserts the row. Keeping the
+-- id here tells the crawler to skip it, and clearing a row here is the undo.
+CREATE TABLE IF NOT EXISTS suppressed_assignments (
+    student_id    TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    assignment_id TEXT NOT NULL,
+    title         TEXT,
+    reason        TEXT,
+    created_at    TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (student_id, assignment_id)
+);
+
 -- --------------------------------------------------------------------------
 -- The website's own tables (accounts, the board, the Files tab, the surface)
 --

@@ -433,6 +433,12 @@ def _mock_plan(prompt: str, available: set[str]) -> list[tuple[str, dict]]:
             "lesson", "block", "schedule", "pm", "am", "rehearsal"):
         plan = [("get_schedule", {}),
                 ("remove_from_schedule", {"task_match": "viola"})]
+    # "delete them", "still showing up", "get rid of" -> a real delete.
+    elif has("still see", "still showing", "still there", "completely remove",
+             "erase", "get rid of", "permanently", "delete them",
+             "delete all", "remove them all"):
+        plan = [("get_assignments", {"status": "any"}),
+                ("delete_assignments", {"assignment_ids": ["m1", "m2"]})]
     elif has("remove", "take it off", "take that off", "drop ", "delete",
            "already submitted", "someone else", "groupmate", "group member",
            "not mine", "mark ", "did that", "finished", "turned in"):

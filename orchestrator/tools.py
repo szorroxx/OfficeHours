@@ -349,6 +349,56 @@ TOOL_SCHEMAS: list[dict] = [
     {
         "type": "function",
         "function": {
+            "name": "delete_assignments",
+            "description": (
+                "PERMANENTLY delete assignments, so they disappear from the "
+                "dashboard entirely instead of showing as done. Use this when "
+                "the student says remove, delete, get rid of, clear, or says "
+                "they can still see items you already marked. Deleting also "
+                "stops the next Canvas crawl from re-adding them. Call "
+                "get_assignments or find_assignment first to get the ids. "
+                "Prefer update_assignment with 'submitted' when the student "
+                "actually did the work and might want a record of it; use "
+                "this when they want it GONE."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "assignment_ids": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Ids from get_assignments or find_assignment.",
+                    },
+                    "permanent": {
+                        "type": "boolean",
+                        "description": "Default true: also stop future crawls "
+                                       "re-adding them. Pass false to delete "
+                                       "only what's stored now.",
+                    },
+                },
+                "required": ["assignment_ids"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "restore_assignments",
+            "description": (
+                "Undo a delete. Stops suppressing the named assignments so "
+                "the next refresh_from_canvas brings them back. Omit titles "
+                "to un-suppress everything."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "titles": {"type": "array", "items": {"type": "string"}},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "remove_from_schedule",
             "description": (
                 "Delete blocks from the student's schedule. Use when they say "
@@ -854,6 +904,30 @@ def update_preferences(updates: dict) -> dict:
     return result
 
 
+def delete_assignments(assignment_ids: list[str], permanent: bool = True) -> dict:
+    """Really delete assignments. See db.delete_assignments."""
+    if isinstance(assignment_ids, str):
+        assignment_ids = [assignment_ids]
+    ids = [str(i) for i in (assignment_ids or []) if i]
+    if not ids:
+        return {"error": "no assignment ids given -- call get_assignments or "
+                         "find_assignment first"}
+    if MODE == "mock":
+        return {"deleted": len(ids), "permanent": permanent,
+                "items": [{"id": i, "title": f"[MOCK] {i}",
+                           "course_code": "MOCK 101"} for i in ids],
+                "schedule_blocks_removed": 0, "not_found": []}
+    return db.delete_assignments(student(), ids, permanent)
+
+
+def restore_assignments(titles: list[str] | None = None) -> dict:
+    """Undo a delete, so the next Canvas crawl brings the work back."""
+    if MODE == "mock":
+        return {"restored": len(titles or []), "titles": titles or [],
+                "note": "Run refresh_from_canvas to pull them back in."}
+    return db.restore_assignments(student(), titles)
+
+
 def remove_from_schedule(block_ids: list[str] | None = None,
                          task_match: str | None = None,
                          on_day: str | None = None) -> dict:
@@ -1000,6 +1074,8 @@ DISPATCH: dict[str, Callable[..., dict]] = {
     "add_tasks": add_tasks,
     "remove_from_schedule": remove_from_schedule,
     "remove_events": remove_events,
+    "delete_assignments": delete_assignments,
+    "restore_assignments": restore_assignments,
 }
 
 # Sanity check: every advertised tool must actually exist.

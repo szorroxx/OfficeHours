@@ -104,6 +104,31 @@ Also worth one live check: `MODE=live python3 db.py --init` then
 `hypertables: NONE`, the `CREATE EXTENSION` line didn't run and the workload
 chart will be empty.
 
+## Removing things
+
+Three different acts, three different results — worth knowing which is which:
+
+| The student says | Tool | What happens |
+|---|---|---|
+| "I submitted it" | `update_assignment` → `submitted` | ticked, stays on the board under "Show completed" |
+| "my teammate submitted it" | `update_assignment` → `dismissed` | removed from the board, kept in Tiger Data |
+| "delete it / I don't want to see it" | `delete_assignments` | deleted from the database, and the next Canvas crawl won't re-add it |
+| "actually put it back" | `restore_assignments` + `refresh_from_canvas` | restored |
+
+Two details that matter:
+
+**Deleting has to outlive a crawl.** Assignment ids are a hash of student +
+course + title, so a plain `DELETE` is undone by the next
+`refresh_from_canvas`: it rebuilds the same id from the same Canvas page and
+re-inserts the row. `suppressed_assignments` records what was deleted so the
+crawler skips it. That table is also the undo.
+
+**Completed work is hidden, not struck through.** The board used to render a
+finished item with a line through it and leave it there, which meant
+"I removed those for you" and thirteen visible rows. `showDone` in app.html
+now filters them out of the panels, the week strip and the month calendar, with
+a "Show N completed" toggle. It changes what renders, never what's stored.
+
 ## Known gaps, honestly
 
 - **Attachment contents don't reach the model.** `/api/files` serves uploaded
