@@ -22,6 +22,7 @@ from __future__ import annotations
 import os
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -44,6 +45,11 @@ app.add_middleware(
 )
 
 _client: NemotronClient | None = None
+
+
+@app.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/docs")
 
 
 def client() -> NemotronClient:
@@ -108,11 +114,53 @@ def voice(body: VoiceIn) -> dict:
         speech = requests.post(url, json={"utterance": u}).json()["speech"]
     """
     run = orchestrator.run(body.utterance, nem=client(), channel="voice")
+    speech = run.display.get("speech") or run.summary or "I could not get your Office Hours update."
     return {
-        "speech": run.display.get("speech", run.summary),
+        "speech": speech,
         "card_title": run.display.get("headline", "Office Hours"),
         "elapsed_ms": run.elapsed_ms,
         "error": run.error,
+    }
+
+
+@app.post("/alexa")
+def alexa(body: dict) -> dict:
+    """Translate Alexa Custom Skill requests into the existing voice path."""
+    request = body.get("request", {})
+    request_type = request.get("type")
+
+    if request_type == "LaunchRequest":
+        utterance = "Give me my Office Hours update."
+    elif request_type == "IntentRequest":
+        intent_name = request.get("intent", {}).get("name", "")
+        utterance = {
+            "DueIntent": "What assignments are due?",
+            "ScheduleIntent": "What is on my schedule?",
+            "EventsIntent": "What events are coming up?",
+        }.get(intent_name)
+        if utterance is None:
+            utterance = "Give me my Office Hours update."
+    elif request_type == "SessionEndedRequest":
+        return {"version": "1.0", "response": {"shouldEndSession": True}}
+    else:
+        utterance = "Give me my Office Hours update."
+
+    result = voice(VoiceIn(
+        utterance=utterance,
+        session_id=body.get("session", {}).get("sessionId"),
+    ))
+    speech = result.get("speech") or "I could not get your Office Hours update."
+    return {
+        "version": "1.0",
+        "response": {
+            "shouldEndSession": True,
+            "outputSpeech": {"type": "PlainText", "text": speech},
+            "card": {
+                "type": "Simple",
+                "title": result.get("card_title", "Office Hours"),
+                "content": speech,
+            },
+        },
     }
 
 
