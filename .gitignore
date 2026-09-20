@@ -12,3 +12,4 @@ data.json
 *.log
 npm-debug.log*
 .DS_Store
+canvas_pages/canvas_export.json
