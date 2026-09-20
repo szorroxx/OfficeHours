@@ -21,7 +21,7 @@ website text box
 ```
 
 **The one idea everything else follows from:** Nemotron never calls anything.
-You give it a list of tool *descriptions*; it replies with a tool name and some
+You give it a list of tool _descriptions_; it replies with a tool name and some
 arguments; **your Python runs the actual function**. So "Nemotron updates Tiger
 Data" means Nemotron says `refresh_from_canvas()`, your code runs the crawler,
 and `db.py` writes the rows with SQL you wrote. The model never sees a query.
@@ -32,11 +32,11 @@ and `db.py` writes the rows with SQL you wrote. The model never sees a query.
 
 One setting in `.env` controls what the project costs to run.
 
-| `MODE=` | What happens | Cost |
-|---|---|---|
-| `mock` | No API calls at all. A fake Nemotron picks tools by keyword, fake Claude returns canned data. Everything runs end to end. | **$0** |
-| `live` | Real API calls. Every response is saved to `./cache/`. | real money |
-| `replay` | Plays back what `live` recorded. Works with the wifi unplugged. | **$0** |
+| `MODE=`  | What happens                                                                                                              | Cost       |
+| -------- | ------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `mock`   | No API calls at all. A fake Nemotron picks tools by keyword, fake Claude returns canned data. Everything runs end to end. | **$0**     |
+| `live`   | Real API calls. Every response is saved to `./cache/`.                                                                    | real money |
+| `replay` | Plays back what `live` recorded. Works with the wifi unplugged.                                                           | **$0**     |
 
 You have $60 and it only needs to work once, so:
 
@@ -156,13 +156,50 @@ endpoint and see the response. Use that instead of writing curl by hand.
 Start with `GET /health` — it tells you which keys are configured and which
 mode you're in, without spending anything.
 
+### 7a. Run Alexa locally
+
+The Alexa adapter is `POST /alexa`. It converts Alexa Custom Skill requests
+into the fast read-only `/voice` path and returns Alexa's response format.
+
+On Windows, from `orchestrator/`, run this in one PowerShell terminal:
+
+```powershell
+.\start-alexa.ps1
+```
+
+The launcher uses `.venv` directly, so PowerShell script activation is not
+required. The server listens on `http://127.0.0.1:8001` by default. In a
+second terminal, expose it to Alexa:
+
+```powershell
+ngrok http 8001
+```
+
+Set Alexa's HTTPS endpoint to the ngrok URL with `/alexa` appended:
+
+```text
+https://YOUR-NGROK-URL.ngrok-free.app/alexa
+```
+
+Import `alexa-interaction-model.json` in the Alexa Developer Console. Useful
+commands include "what is due", "what is overdue", "what is on my schedule",
+"what events are coming up", "is my coursework up to date", and "how has my
+workload changed".
+
+To test the adapter without Alexa:
+
+```powershell
+$body = @{ request = @{ type = "IntentRequest"; intent = @{ name = "DueIntent" } } } | ConvertTo-Json -Depth 5
+Invoke-RestMethod http://127.0.0.1:8001/alexa -Method POST -ContentType "application/json" -Body $body
+```
+
 ### 8. When you're ready to spend money
 
 ```bash
 python3 smoke_test.py       # ~5 calls: is the key good? does tool calling work?
 ```
 
-Run this *before* the real thing. Check 4 confirms Nemotron actually emits tool
+Run this _before_ the real thing. Check 4 confirms Nemotron actually emits tool
 calls on your chosen model. If that fails, the whole design needs a different
 model, and you want to know in minute five.
 
@@ -179,20 +216,20 @@ MODE=replay python3 ask.py "give me the latest from canvas"   # free forever now
 
 ## What each file does
 
-| File | What it is | Will you edit it? |
-|---|---|---|
-| `schema.sql` | The database tables | rarely |
-| `db.py` | All SQL lives here. Fixed read/write functions. | sometimes |
-| `canvas.py` | Reads Canvas HTML → strips tags → Claude extracts assignments | **yes** |
-| `tools.py` | The tools Nemotron can call, and what they do | **yes, most** |
-| `orchestrator.py` | The loop: ask model → run tools → repeat → summarize | rarely |
-| `display.py` | Claude decides the cards. **The contract with Kenneth.** | when templates land |
-| `nemotron_client.py` | Nemotron wrapper: reasoning control, retries, the mock model | rarely |
-| `cache.py` | mock / live / replay | rarely |
-| `server.py` | The HTTP endpoints | sometimes |
-| `ask.py` | Ask one question from the terminal | no |
-| `test_loop.py` | 22 offline tests | add to it |
-| `smoke_test.py` | Real-API validation | no |
+| File                 | What it is                                                    | Will you edit it?   |
+| -------------------- | ------------------------------------------------------------- | ------------------- |
+| `schema.sql`         | The database tables                                           | rarely              |
+| `db.py`              | All SQL lives here. Fixed read/write functions.               | sometimes           |
+| `canvas.py`          | Reads Canvas HTML → strips tags → Claude extracts assignments | **yes**             |
+| `tools.py`           | The tools Nemotron can call, and what they do                 | **yes, most**       |
+| `orchestrator.py`    | The loop: ask model → run tools → repeat → summarize          | rarely              |
+| `display.py`         | Claude decides the cards. **The contract with Kenneth.**      | when templates land |
+| `nemotron_client.py` | Nemotron wrapper: reasoning control, retries, the mock model  | rarely              |
+| `cache.py`           | mock / live / replay                                          | rarely              |
+| `server.py`          | The HTTP endpoints                                            | sometimes           |
+| `ask.py`             | Ask one question from the terminal                            | no                  |
+| `test_loop.py`       | 22 offline tests                                              | add to it           |
+| `smoke_test.py`      | Real-API validation                                           | no                  |
 
 If you only understand two files, make them `tools.py` and `display.py`. Those
 are the two places your teammates' work meets yours.
@@ -251,7 +288,7 @@ seconds.
 
 ## The Tiger Data track
 
-Timescale is a *time-series* database, and most of your data isn't time-series
+Timescale is a _time-series_ database, and most of your data isn't time-series
 — assignments are just rows. So there are two hypertables that genuinely are:
 
 - **`workload_snapshots`** — one row per course every time the crawler runs.
@@ -283,7 +320,7 @@ weekend (in mock mode it's free, and it still writes snapshot rows).
 1. **The trace.** `trace.steps` has every tool call, its arguments, whether it
    worked, and how long it took, plus the reasoning text. Render it as a
    sidebar. Judges watching `check_freshness → refresh_from_canvas →
-   get_assignments → make_schedule` appear live beats any slide.
+get_assignments → make_schedule` appear live beats any slide.
 2. **Recovery.** Ask about a course that isn't in the database. Nemotron gets
    an empty result, decides to crawl, then re-reads. Two sentences that prove
    it's an agent and not an if-statement.
