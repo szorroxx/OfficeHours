@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "office hours",
+      "invocationName": "campus coursework",
       "intents": [
         {
           "name": "AMAZON.CancelIntent",
