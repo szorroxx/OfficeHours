@@ -417,9 +417,42 @@ def _mock_plan(prompt: str, available: set[str]) -> list[tuple[str, dict]]:
     def has(*words: str) -> bool:
         return any(w in prompt for w in words)
 
-    if has("refresh", "sync", "re-read", "latest", "up to date", "update canvas"):
+    # Change requests come first: "remove the preproposal" contains no
+    # refresh/schedule keyword but is the single most common thing a student
+    # asks for after seeing a list, and it needs a WRITE.
+    if has("remove", "take it off", "take that off", "drop ", "delete",
+           "already submitted", "someone else", "groupmate", "group member",
+           "not mine", "mark ", "did that", "finished", "turned in"):
+        plan = [("find_assignment", {"name": "preproposal"}),
+                ("update_assignment", {"assignment_ids": ["m1"],
+                                       "status": "dismissed"})]
+    # Note the phrasing requirements: bare "task" or "todo" is not enough,
+    # because "what tasks do I have this week" is a QUESTION and matching it
+    # here made the mock answer a read request with a write.
+    elif (has("todo list", "to-do list", "list of todos", "list of to-dos",
+              "make me a list", "add a task", "add a todo", "remind me",
+              "checklist")
+          and not has("what ", "do i have", "which ")):
+        plan = [("add_tasks", {"tasks": [
+            {"text": "[MOCK] Read the project brief", "est_minutes": 30},
+            {"text": "[MOCK] Email the professor about groups"}]})]
+    elif has("refresh", "sync", "re-read", "latest", "up to date", "update canvas"):
         plan = [("check_freshness", {}), ("refresh_from_canvas", {}),
                 ("get_assignments", {"due_within_days": 7})]
+    # A fixed commitment goes on the calendar with add_to_schedule; it must
+    # NOT re-plan the week, which is what make_schedule does. This branch has
+    # to come first, because "add a viola lesson to my schedule" contains the
+    # word "schedule" and was falling through to the planner -- so the one
+    # thing the student asked to appear on Thursday never got written.
+    elif has("lesson", "rehearsal", "appointment", "practice at", "concert",
+             "recital", "block off", "on my calendar", "put it on",
+             "add a meeting"):
+        plan = [("add_to_schedule", {"items": [
+            {"task": "[MOCK] Viola lesson",
+             "starts_at": "2026-09-24T15:00:00-04:00",
+             "ends_at": "2026-09-24T17:00:00-04:00",
+             "est_minutes": 120}]}),
+                ("get_schedule", {})]
     elif has("schedule", "plan my", "when should i", "time block"):
         plan = [("get_assignments", {"due_within_days": 14}),
                 ("make_schedule", {"horizon_days": 7})]

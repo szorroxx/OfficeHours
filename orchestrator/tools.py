@@ -349,6 +349,91 @@ TOOL_SCHEMAS: list[dict] = [
     {
         "type": "function",
         "function": {
+            "name": "find_assignment",
+            "description": (
+                "Look up assignments by name when the student refers to one "
+                "in prose ('the preproposal', 'topic 1', 'the physics HW'). "
+                "Returns matching rows WITH THEIR IDS. Call this before "
+                "update_assignment, which needs an id. Fast and free."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string",
+                             "description": "Part of the assignment title."},
+                    "course": {"type": "string",
+                               "description": "Optional course filter, e.g. 'CS 1684'."},
+                },
+                "required": ["name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_assignment",
+            "description": (
+                "Change the status of assignments the student has dealt with. "
+                "Use 'submitted' when they say they turned it in, 'graded' "
+                "when it's been marked, and 'dismissed' when it is not theirs "
+                "to do -- a group item a teammate submits, optional extra "
+                "credit they're skipping, or a duplicate Canvas row. "
+                "Dismissed and submitted items drop off the open and overdue "
+                "lists. Call find_assignment first to get the ids. This is "
+                "how you honour 'remove that from my list'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "assignment_ids": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Ids from find_assignment or get_assignments.",
+                    },
+                    "status": {"type": "string",
+                               "enum": ["open", "submitted", "graded", "dismissed"]},
+                },
+                "required": ["assignment_ids", "status"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "add_tasks",
+            "description": (
+                "Add to-do items to the student's board. Use for anything "
+                "they ask you to remember or track that isn't a Canvas "
+                "assignment: steps pulled out of a document, errands, "
+                "'remind me to email the professor'. One task per distinct "
+                "action, phrased as something you can finish."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tasks": {
+                        "type": "array",
+                        "description": "The to-dos to add.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "text": {"type": "string",
+                                         "description": "What to do, e.g. "
+                                                        "'Email Dr. Reyes about the extension'."},
+                                "est_minutes": {"type": "integer"},
+                                "due_at": {"type": "string",
+                                           "description": "Optional ISO 8601 date."},
+                            },
+                            "required": ["text"],
+                        },
+                    }
+                },
+                "required": ["tasks"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "log_time",
             "description": (
                 "Record that the student actually spent time on something, so "
@@ -368,7 +453,8 @@ TOOL_SCHEMAS: list[dict] = [
 
 # Trimmed read-only set for the voice path (Alexa, later). Fast tools only.
 FAST_TOOL_NAMES = {"check_freshness", "get_assignments", "get_overdue",
-                   "get_schedule", "get_events", "get_workload_history"}
+                   "get_schedule", "get_events", "get_workload_history",
+                   "find_assignment"}
 FAST_TOOL_SCHEMAS = [t for t in TOOL_SCHEMAS if t["function"]["name"] in FAST_TOOL_NAMES]
 
 
@@ -484,8 +570,15 @@ def add_to_schedule(items: list[dict]) -> dict:
         })
 
     if MODE == "mock":
+        # Remember it for this process, so a mock get_schedule afterwards
+        # shows what was just added. Without this, "add a viola lesson" then
+        # "what's on my schedule" returned the canned study plan and the
+        # lesson was nowhere -- which is exactly the bug this flow exists to
+        # demonstrate a fix for, so the fixture shouldn't reproduce it.
+        _MOCK_SCHEDULE.extend(blocks)
         return {"blocks_added": len(blocks),
-                "added": [b["task"] for b in blocks]}
+                "added": [b["task"] for b in blocks],
+                "blocks": list(blocks)}
 
     result = db.add_schedule_blocks(student(), blocks, note="added on request")
     result["added"] = [b["task"] for b in blocks][:20]
@@ -494,7 +587,10 @@ def add_to_schedule(items: list[dict]) -> dict:
 
 def get_schedule() -> dict:
     if MODE == "mock":
-        return cache._mock_claude("schedule")
+        plan = dict(cache._mock_claude("schedule"))
+        if _MOCK_SCHEDULE:
+            plan["blocks"] = list(plan.get("blocks") or []) + list(_MOCK_SCHEDULE)
+        return plan
     return db.get_schedule(student())
 
 
@@ -653,6 +749,74 @@ def update_preferences(updates: dict) -> dict:
     return result
 
 
+def find_assignment(name: str, course: str | None = None) -> dict:
+    if MODE == "mock":
+        needle = str(name or "").lower().replace(" ", "")
+        items = [a for a in _MOCK_ASSIGNMENTS
+                 if needle in a["title"].lower().replace(" ", "")]
+        return {"items": items, "count": len(items)}
+    items = db.find_assignments(student(), str(name or ""), course)
+    return {"items": items, "count": len(items)}
+
+
+def update_assignment(assignment_ids: list[str], status: str) -> dict:
+    """
+    Change assignment status. The write that lets "take that off my list"
+    actually work.
+    """
+    if isinstance(assignment_ids, str):          # a model passing one id bare
+        assignment_ids = [assignment_ids]
+    if MODE == "mock":
+        ids = [i for i in (assignment_ids or []) if i]
+        if not ids:
+            return {"error": "no assignment ids given"}
+        if status not in ("open", "submitted", "graded", "dismissed"):
+            return {"error": "status must be open, submitted, graded or dismissed"}
+        return {"updated": len(ids), "status": status,
+                "items": [{"id": i, "title": f"[MOCK] {i}", "status": status}
+                          for i in ids],
+                "not_found": []}
+    return db.set_assignment_status(student(), assignment_ids, status)
+
+
+def add_tasks(tasks: list[dict]) -> dict:
+    """
+    Validate to-dos and hand them back for the website to store.
+
+    These live on the board (app_items), not in the coursework tables: a
+    to-do is website state the student owns, not something crawled out of
+    Canvas. agent.board_actions turns this result into an addTodos action and
+    app.py persists it, which is the same route Canvas rows take.
+    """
+    if not isinstance(tasks, list) or not tasks:
+        return {"error": "tasks must be a non-empty list"}
+
+    clean, rejected = [], []
+    for task in tasks[:30]:
+        if isinstance(task, str):
+            task = {"text": task}
+        if not isinstance(task, dict):
+            continue
+        text = str(task.get("text") or task.get("task") or "").strip()
+        if not text:
+            rejected.append("a task with no text")
+            continue
+        row = {"text": text[:300]}
+        try:
+            if task.get("est_minutes"):
+                row["est_minutes"] = max(0, min(int(task["est_minutes"]), 60 * 24))
+        except (TypeError, ValueError):
+            pass
+        if task.get("due_at"):
+            row["due_at"] = str(task["due_at"])[:40]
+        clean.append(row)
+
+    out = {"added": len(clean), "tasks": clean}
+    if rejected:
+        out["rejected"] = rejected
+    return out
+
+
 def log_time(minutes: int, assignment_title: str | None = None) -> dict:
     if MODE == "mock":
         return {"logged": True}
@@ -681,6 +845,9 @@ DISPATCH: dict[str, Callable[..., dict]] = {
     "get_workload_history": get_workload_history,
     "update_preferences": update_preferences,
     "log_time": log_time,
+    "find_assignment": find_assignment,
+    "update_assignment": update_assignment,
+    "add_tasks": add_tasks,
 }
 
 # Sanity check: every advertised tool must actually exist.
@@ -731,6 +898,10 @@ def _today() -> str:
 
     return datetime.now().astimezone().isoformat(timespec="minutes")
 
+
+# Blocks added during this process in mock mode. Not persistence -- it resets
+# with the process -- just enough state that add-then-read behaves honestly.
+_MOCK_SCHEDULE: list[dict] = []
 
 _MOCK_ASSIGNMENTS = [
     {"id": "m1", "course_code": "PHYS 1361", "title": "Quiz 3 (Chapter 2)", "kind": "quiz",

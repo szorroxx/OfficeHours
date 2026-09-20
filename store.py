@@ -592,6 +592,49 @@ def remove_item(user_id: str, kind: str, item_id: str) -> bool:
     return bool(row)
 
 
+def complete_items(user_id: str, items: list[dict]) -> int:
+    """
+    Tick off board rows the agent marked submitted, graded or dismissed.
+
+    Matches on canvasId first (the Tiger Data assignment id), then falls back
+    to an exact title match, because the board row may predate the id -- an
+    item added by hand, or crawled before the deterministic ids existed.
+
+    Searches every column: one Tiger Data assignment row shows up as an
+    assignment or an exam depending on its kind, and the caller shouldn't
+    have to know which.
+    """
+    board = get_board(user_id)
+    ticked = 0
+
+    wanted_ids = {str(i.get("canvasId")) for i in items if i.get("canvasId")}
+    wanted_titles = {str(i.get("title", "")).strip().lower()
+                     for i in items if i.get("title")}
+
+    for kind in KINDS:
+        for index, row in enumerate(board[kind]):
+            match = (str(row.get("canvasId")) in wanted_ids
+                     or str(row.get("title", "")).strip().lower() in wanted_titles)
+            if not match or row.get("completed"):
+                continue
+            updated = {**row, "completed": True}
+            if kind == "todos":
+                updated["done"] = True
+            note = next((i.get("note") for i in items
+                         if str(i.get("canvasId")) == str(row.get("canvasId"))
+                         or str(i.get("title", "")).strip().lower()
+                         == str(row.get("title", "")).strip().lower()), None)
+            if note:
+                updated["note"] = str(note)[:200]
+            board[kind][index] = updated
+            _write_item(user_id, kind, updated)
+            ticked += 1
+
+    if backend() == "file":
+        _save_board(user_id, board)
+    return ticked
+
+
 def clear(user_id: str) -> dict:
     if backend() == "file":
         _save_board(user_id, _empty_board())

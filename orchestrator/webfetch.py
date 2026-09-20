@@ -251,7 +251,10 @@ def fetch_text(url: str, render: bool | None = None) -> dict:
             "advice": (
                 f"{urlparse(url).hostname} builds its pages with JavaScript, so "
                 f"a plain download returns an empty shell.\n\n"
-                f"Two ways round it:\n"
+                f"Three ways round it, easiest first:\n"
+                f"  0. Paste the text straight into the chat, or attach the\n"
+                f"     page as a file. The assistant can turn pasted text into\n"
+                f"     to-dos or a study set without fetching anything.\n"
                 f"  1. Install a headless browser once:\n"
                 f"       pip install playwright && playwright install chromium\n"
                 f"     Then this tool renders the page itself.\n"

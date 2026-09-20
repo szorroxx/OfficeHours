@@ -451,9 +451,21 @@ def _apply_actions(user_id: str, actions: list[dict]) -> list[dict]:
                     "addEvents": "events", "addTodos": "todos"}
     applied = []
     for action in actions or []:
-        kind = type_to_kind.get(action.get("type"))
         items = action.get("items")
-        if not kind or not isinstance(items, list):
+        if not isinstance(items, list) or not items:
+            continue
+
+        if action.get("type") == "completeItems":
+            # Tick off rows the agent marked submitted/dismissed. Searches
+            # every column because an exam and an assignment are the same
+            # Tiger Data row, split across two board columns by kind.
+            ticked = store.complete_items(user_id, items)
+            applied.append({"type": "completeItems", "added": ticked,
+                            "seen": len(items)})
+            continue
+
+        kind = type_to_kind.get(action.get("type"))
+        if not kind:
             continue
         added = store.upsert_items(user_id, kind, items)
         applied.append({"type": action["type"], "added": len(added),

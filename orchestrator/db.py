@@ -34,6 +34,32 @@ from typing import Any
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 DEFAULT_STUDENT = os.getenv("STUDENT_ID", "demo-student")
 
+# --------------------------------------------------------------------------
+# The student's timezone, and why this line matters so much
+#
+# Postgres hands back TIMESTAMPTZ as tz-aware UTC. Every layer above then
+# formatted it as-is, which produced a specific and very confusing class of
+# wrong answer: a Canvas deadline of 11:59pm EDT is stored as 03:59 the NEXT
+# DAY in UTC, so "due Monday 11:59pm" was reported to the student as "due
+# Tuesday". Every late-evening deadline in the system was a day late, the
+# model then repeated that in prose, and campus events came out as things like
+# "Lunch-and-Learn at 04:00 UTC".
+#
+# Converting here, in jsonable(), fixes it once for everything: the JSON the
+# model reads, the cards the page renders, and the Alexa speech all get local
+# time. Set TIMEZONE in .env if the student isn't in Pittsburgh.
+# --------------------------------------------------------------------------
+TIMEZONE = os.getenv("TIMEZONE", os.getenv("STUDENT_TZ", "America/New_York"))
+
+
+def _tz():
+    from zoneinfo import ZoneInfo
+
+    try:
+        return ZoneInfo(TIMEZONE)
+    except Exception:  # noqa: BLE001 - bad tz name shouldn't break every query
+        return ZoneInfo("America/New_York")
+
 _pool = None
 
 
@@ -203,7 +229,14 @@ def jsonable(value: Any) -> Any:
     from datetime import date, datetime, timedelta
     from decimal import Decimal
 
-    if isinstance(value, (datetime, date)):
+    if isinstance(value, datetime):
+        # Aware timestamps become local time. Naive ones are left alone: we
+        # don't know what they meant, and guessing is how you get a second,
+        # subtler version of the same bug.
+        if value.tzinfo is not None:
+            value = value.astimezone(_tz())
+        return value.isoformat()
+    if isinstance(value, date):
         return value.isoformat()
     if isinstance(value, Decimal):
         # float, not str: the model and the frontend both want to do arithmetic
@@ -237,7 +270,12 @@ class ValidationError(ValueError):
 
 
 _KINDS = {"homework", "quiz", "exam", "lab", "project", "reading", "other"}
-_STATUSES = {"open", "submitted", "graded"}
+# 'dismissed' means "this is not mine to do" -- a group assignment someone
+# else submits, an optional extra-credit item, a duplicate Canvas row. It is
+# not the same as 'submitted', and conflating them would make the workload
+# history claim you did work you didn't. Dismissed items drop out of open
+# lists and out of overdue.
+_STATUSES = {"open", "submitted", "graded", "dismissed"}
 
 
 def _as_datetime(value: Any, field: str) -> datetime | None:
@@ -322,8 +360,16 @@ def get_assignments(
         sql.append("AND status = %s")
         params.append(status)
     if course:
-        # ILIKE is case-insensitive matching, so 'phys 1361' finds 'PHYS 1361'.
-        sql.append("AND course_code ILIKE %s")
+        # Match on the code with spaces, dashes and punctuation stripped from
+        # BOTH sides, so "CS1684", "cs 1684" and "CS-1684" all find "CS 1684".
+        #
+        # The old version was a plain ILIKE '%CS1684%', which does not match
+        # 'CS 1684' -- and the failure was worse than a missing filter,
+        # because an empty result reads as "you have no assignments for that
+        # course". A student asked to drop CS 1684, was told the course had
+        # nothing in it, and then saw three CS 1684 rows in the next message.
+        sql.append("AND regexp_replace(course_code, '[^a-zA-Z0-9]', '', 'g') "
+                   "ILIKE regexp_replace(%s, '[^a-zA-Z0-9]', '', 'g')")
         params.append(f"%{course}%")
     if due_within_days is not None:
         sql.append("AND due_at IS NOT NULL AND due_at <= now() + %s * interval '1 day'")
@@ -389,7 +435,8 @@ def get_study_sets(student_id: str = DEFAULT_STUDENT, course: str | None = None)
              FROM study_sets WHERE student_id = %s"""
     params: list[Any] = [student_id]
     if course:
-        sql += " AND course_code ILIKE %s"
+        sql += (" AND regexp_replace(course_code, '[^a-zA-Z0-9]', '', 'g') "
+                "ILIKE regexp_replace(%s, '[^a-zA-Z0-9]', '', 'g')")
         params.append(f"%{course}%")
     sql += " ORDER BY created_at DESC LIMIT 20"
     return [
@@ -768,6 +815,62 @@ def update_profile(student_id: str, patch: dict) -> dict:
         out["rejected_fields"] = rejected
         out["note"] = "Credentials are never stored. Use a scoped Canvas token instead."
     return out
+
+
+def find_assignments(student_id: str, query_text: str,
+                     course: str | None = None) -> list[dict]:
+    """
+    Fuzzy-find assignments by title, for tools that act on one the student
+    named in prose ("the preproposal", "CS1684 topic 1").
+
+    Matches on the title with punctuation and spacing stripped, same as the
+    course filter, so "pre-proposal" finds "Preproposal".
+    """
+    sql = ["""SELECT id, course_code, title, kind, due_at, status, est_hours
+              FROM assignments
+              WHERE student_id = %s
+                AND regexp_replace(lower(title), '[^a-z0-9]', '', 'g')
+                    LIKE regexp_replace(lower(%s), '[^a-z0-9]', '', 'g')"""]
+    params: list[Any] = [student_id, f"%{query_text}%"]
+    if course:
+        sql.append("AND regexp_replace(course_code, '[^a-zA-Z0-9]', '', 'g') "
+                   "ILIKE regexp_replace(%s, '[^a-zA-Z0-9]', '', 'g')")
+        params.append(f"%{course}%")
+    sql.append("ORDER BY due_at NULLS LAST LIMIT 20")
+    return list(query(" ".join(sql), tuple(params)))
+
+
+def set_assignment_status(student_id: str, assignment_ids: list[str],
+                          status: str) -> dict:
+    """
+    Change the status of specific assignments.
+
+    This is the write that was missing, and its absence caused the worst
+    failure in the project so far. A student explained twice that a group
+    preproposal was submitted by a teammate and asked for it to come off the
+    overdue list. With no tool for it, the model answered that the item "has
+    already been submitted by your groupmate, so it isn't considered overdue"
+    -- which was not true, contradicted the rows it had just read, and left
+    the list unchanged. It had no way to comply and no way to say so, so it
+    described a change it hadn't made.
+
+    Ids, not titles, so the caller has to look the assignment up first and
+    can't blanket-update a whole course by accident.
+    """
+    if status not in _STATUSES:
+        return {"error": f"status must be one of {sorted(_STATUSES)}"}
+    ids = [str(i) for i in (assignment_ids or []) if i][:50]
+    if not ids:
+        return {"error": "no assignment ids given"}
+
+    rows = query(
+        """UPDATE assignments SET status = %s, updated_at = now()
+           WHERE student_id = %s AND id = ANY(%s)
+           RETURNING id, course_code, title, status""",
+        (status, student_id, ids),
+    )
+    return {"updated": len(rows), "status": status, "items": list(rows),
+            "not_found": sorted(set(ids) - {r["id"] for r in rows})}
 
 
 def log_study_session(student_id: str, assignment_id: str | None,

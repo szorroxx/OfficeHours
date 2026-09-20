@@ -49,8 +49,20 @@ import surface
 # Tool results we know how to turn into board rows. Anything else still shows
 # up in the reply and on the HTML surface; it just doesn't become a card on
 # the board, because the board has four fixed columns.
-_ASSIGNMENT_TOOLS = ("get_assignments", "get_overdue", "refresh_from_canvas")
+_ASSIGNMENT_TOOLS = ("get_assignments", "get_overdue", "refresh_from_canvas",
+                     "find_assignment")
 _EVENT_TOOLS = ("get_events", "find_campus_events")
+# Schedule blocks have to reach the board too, not just the schedule table.
+#
+# This was a real and very visible failure: a student asked for a viola lesson
+# at 3pm Thursday, add_to_schedule wrote the row, the reply said it was added
+# -- and it appeared nowhere on the dashboard, because the week view and the
+# calendar read the board's four columns and a schedule block isn't in any of
+# them. The student said "I don't see it on my dashboard" three times. An
+# action that reports success and leaves no trace on screen is worse than one
+# that fails.
+_SCHEDULE_TOOLS = ("make_schedule", "add_to_schedule", "get_schedule")
+_TASK_TOOLS = ("add_tasks",)
 
 
 def handle(message: str, history: list[dict] | None = None,
@@ -113,6 +125,23 @@ def handle(message: str, history: list[dict] | None = None,
     if payload.get("error"):
         reply = f"{reply}\n\n(Something went wrong mid-run: {payload['error']})"
 
+    # Catch the model claiming a change it didn't make.
+    #
+    # The prompt now forbids this, but a prompt rule is a request and this is
+    # a check. It exists because of a specific failure: asked twice to take a
+    # group assignment off an overdue list, the model replied that the item
+    # "has already been submitted by your groupmate, so it isn't considered
+    # overdue" -- untrue, contradicted by the rows it had just read, and
+    # nothing changed. The student had no way to tell that from a real
+    # confirmation.
+    #
+    # So: if they asked for a change, no write tool ran, and the reply talks
+    # as though one did, append a correction. Conservative on purpose -- it
+    # only fires when the write set is completely empty.
+    correction = _unbacked_claim(message, reply, run.steps)
+    if correction:
+        reply = f"{reply}\n\n{correction}"
+
     return {
         "reply": reply,
         "actions": actions,
@@ -157,6 +186,91 @@ def _credential_warning(message: str) -> str | None:
 
 
 # --------------------------------------------------------------------------
+# Guard against claimed-but-unmade changes
+# --------------------------------------------------------------------------
+
+# Tools that change something. If none of these ran, nothing changed.
+WRITE_TOOLS = frozenset({
+    "refresh_from_canvas", "make_schedule", "add_to_schedule",
+    "make_study_guide", "find_campus_events", "update_preferences",
+    "log_time", "update_assignment", "add_tasks",
+})
+
+_ASKED_FOR_CHANGE = re.compile(
+    r"\b(add|added|remove|removed|delete|deleted|drop|take (?:it |that |them )?off|"
+    r"mark|marked|update|updated|change|changed|schedule|reschedule|"
+    r"set|clear|move|rename|put|track|remind|make me|create)\b",
+    re.IGNORECASE,
+)
+_CLAIMED_A_CHANGE = re.compile(
+    r"\b(i(?:'ve| have)? (?:added|removed|deleted|updated|marked|scheduled|"
+    r"saved|set|created|put|moved|cleared)|"
+    r"(?:has|have|is|are|was|were) been (?:added|removed|deleted|updated|"
+    r"marked|scheduled|saved|submitted)|"
+    r"i(?:'ve| have)? (?:now )?(?:put|placed)|"
+    r"(?:it|that|this|they)(?:'s| is| are) (?:now )?(?:added|removed|on your|"
+    r"in your|off your|marked))\b",
+    re.IGNORECASE,
+)
+
+
+# The other shape the failure took, and the more damaging one: rather than
+# claiming to have acted, the model explains the request away by asserting the
+# item is ALREADY in the state the student asked for. Asked to drop a group
+# preproposal from an overdue list, it said the item "has already been
+# submitted by your groupmate, so it isn't considered overdue" and that
+# "there's nothing to remove" -- while the same assignment sat in the rows it
+# had just read, and turned up again two messages later. No action is claimed,
+# so the pattern above misses it entirely, and the student is told their
+# request was unnecessary instead of being told it wasn't done.
+_EXPLAINED_AWAY = re.compile(
+    r"(already (?:been )?(?:submitted|marked|removed|completed|handled|done)|"
+    r"nothing to (?:remove|delete|change|do)|"
+    r"(?:is|are|it)(?:n't| not) (?:considered|listed|included|showing)|"
+    r"no longer (?:appears|appear|considered|on|an? )|"
+    r"(?:doesn't|does not|won't|will not) appear|"
+    r"simply (?:doesn't|does not)|"
+    r"there (?:is|are) (?:currently )?(?:no|none|nothing))",
+    re.IGNORECASE,
+)
+
+
+def _unbacked_claim(message: str, reply: str, steps: list[dict]) -> str | None:
+    """Return a correction to append, or None if the reply is honest."""
+    wrote = [s for s in steps or []
+             if s.get("ok") and s.get("tool") in WRITE_TOOLS]
+    if wrote:
+        return None
+    if not _ASKED_FOR_CHANGE.search(message or ""):
+        return None
+    claimed = bool(_CLAIMED_A_CHANGE.search(reply or ""))
+    explained_away = bool(_EXPLAINED_AWAY.search(reply or ""))
+    if not claimed and not explained_away:
+        return None
+
+    tried = sorted({s.get("tool") for s in steps or []
+                    if s.get("tool") in WRITE_TOOLS})
+    if tried:
+        return ("**Correction: that didn't go through.** I tried "
+                f"({', '.join(tried)}) and it failed, so nothing on your "
+                "board or schedule changed. Worth trying again.")
+
+    if explained_away and not claimed:
+        return ("**Correction: nothing changed, and I shouldn't have implied "
+                "it was already handled.** I only read your data this turn. "
+                "If you can still see the item on your dashboard, it's still "
+                "there — tell me its title and I'll mark it dismissed, which "
+                "takes it off your open and overdue lists without pretending "
+                "you submitted it.")
+
+    return ("**Correction: I didn't actually change anything.** I only read "
+            "your data this turn — no write ran, so your board and schedule "
+            "are exactly as they were. If you want me to make that change, "
+            "say so directly and I'll use the tool for it; if I don't have "
+            "one, I'll tell you.")
+
+
+# --------------------------------------------------------------------------
 # Context handed to the orchestrator
 # --------------------------------------------------------------------------
 
@@ -173,6 +287,8 @@ def _context(board: dict | None, attachments: list[dict] | None,
     board = board or {}
     context: dict[str, Any] = {
         "today": datetime.now(timezone.utc).astimezone().isoformat(timespec="minutes"),
+        "timezone": os.getenv("TIMEZONE", os.getenv("STUDENT_TZ", "America/New_York")),
+        "times_are_local": True,
         "board_counts": {kind: len(board.get(kind) or [])
                          for kind in ("assignments", "exams", "events", "todos")},
         "board_titles": [str(row.get("title") or row.get("text") or "")[:60]
@@ -193,10 +309,14 @@ def _context(board: dict | None, attachments: list[dict] | None,
         ]
 
     if history:
+        # Twelve turns, not four. Four was enough for one follow-up question
+        # and not enough for "what have we talked about", which got answered
+        # with a recap that started three messages ago and read as amnesia.
         context["recent_turns"] = [
-            {"role": turn.get("role"), "content": str(turn.get("content") or "")[:300]}
-            for turn in history[-4:]
+            {"role": turn.get("role"), "content": str(turn.get("content") or "")[:400]}
+            for turn in history[-12:]
         ]
+        context["turns_before_this"] = max(0, len(history) - 12)
     return context
 
 
@@ -220,6 +340,8 @@ def board_actions(steps: list[dict]) -> list[dict]:
     assignments: list[dict] = []
     exams: list[dict] = []
     events: list[dict] = []
+    todos: list[dict] = []
+    completed: list[dict] = []
     seen: set[str] = set()
 
     for step in steps or []:
@@ -245,13 +367,48 @@ def board_actions(steps: list[dict]) -> list[dict]:
                     seen.add(item["canvasId"])
                     events.append(item)
 
+        elif tool in _SCHEDULE_TOOLS:
+            # Study blocks and fixed commitments both land in the events
+            # column, which is what the calendar and the week strip render.
+            # source='schedule' keeps them distinguishable from Canvas events.
+            for row in result.get("blocks") or []:
+                item = _schedule_row(row)
+                if item and item["canvasId"] not in seen:
+                    seen.add(item["canvasId"])
+                    events.append(item)
+
+        elif tool in _TASK_TOOLS:
+            for row in result.get("tasks") or []:
+                item = _task_row(row)
+                if item and item["canvasId"] not in seen:
+                    seen.add(item["canvasId"])
+                    todos.append(item)
+
+        elif tool == "update_assignment":
+            # A status change has to be reflected on the board as well, or the
+            # row the student asked you to drop stays on screen.
+            for row in result.get("items") or []:
+                if row.get("status") in ("submitted", "graded", "dismissed"):
+                    completed.append({
+                        "canvasId": str(row.get("id") or "")[:120],
+                        "title": str(row.get("title") or "")[:200],
+                        "completed": True,
+                        "note": f"marked {row.get('status')} by the assistant",
+                    })
+
     actions = []
     if assignments:
         actions.append({"type": "addAssignments", "items": assignments[:40]})
     if exams:
         actions.append({"type": "addExams", "items": exams[:20]})
     if events:
-        actions.append({"type": "addEvents", "items": events[:20]})
+        actions.append({"type": "addEvents", "items": events[:40]})
+    if todos:
+        actions.append({"type": "addTodos", "items": todos[:30]})
+    if completed:
+        # Upserts on canvasId, so this ticks the existing row rather than
+        # adding a second copy of it.
+        actions.append({"type": "completeItems", "items": completed[:40]})
     return actions
 
 
@@ -284,6 +441,38 @@ def _assignment_row(row: dict) -> dict | None:
         item["completed"] = True
     if row.get("location"):
         item["location"] = str(row["location"])[:120]
+    return item
+
+
+def _schedule_row(row: dict) -> dict | None:
+    """A schedule block, as a board event so it shows up on the calendar."""
+    task = str(row.get("task") or "").strip()
+    starts = _as_iso(row.get("starts_at") or row.get("start"))
+    if not task or not starts:
+        return None
+    return {
+        "title": task[:200],
+        "startISO": starts,
+        "endISO": _as_iso(row.get("ends_at") or row.get("end")),
+        "estimateMins": row.get("est_minutes") or None,
+        # Deterministic, so re-reading the schedule updates the same rows
+        # instead of stacking duplicates every time get_schedule runs.
+        "canvasId": f"sched:{task[:60]}:{starts[:16]}",
+        "source": "schedule",
+        "location": str(row.get("location") or "")[:120] or None,
+    }
+
+
+def _task_row(row: dict) -> dict | None:
+    text = str(row.get("text") or "").strip()
+    if not text:
+        return None
+    item = {"text": text[:300], "canvasId": f"task:{text[:80]}",
+            "source": "assistant", "done": False}
+    if row.get("est_minutes"):
+        item["estimateMins"] = row["est_minutes"]
+    if row.get("due_at"):
+        item["dueISO"] = _as_iso(row["due_at"])
     return item
 
 
@@ -336,7 +525,8 @@ def _changes(actions: list[dict], surface_report: dict,
     """
     board_summary = []
     labels = {"addAssignments": "assignments", "addExams": "exams",
-              "addEvents": "events", "addTodos": "to-dos"}
+              "addEvents": "events", "addTodos": "to-dos",
+              "completeItems": "items ticked off"}
     for action in actions:
         count = len(action.get("items") or [])
         if count:
@@ -346,7 +536,7 @@ def _changes(actions: list[dict], surface_report: dict,
               if step.get("ok") and step.get("tool") in
               ("refresh_from_canvas", "make_schedule", "add_to_schedule",
                "make_study_guide", "find_campus_events", "update_preferences",
-               "log_time")]
+               "log_time", "update_assignment")]
 
     return {
         "board": board_summary,

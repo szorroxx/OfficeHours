@@ -643,10 +643,14 @@ def apply_ops(current: list[dict], ops: dict, cards: list[dict]) -> tuple[list[d
             removed.append(victim["id"])
             refused.append(f"{victim['id']}: evicted, page was over {MAX_CHUNKS} chunks")
 
+    # dict.fromkeys de-duplicates while keeping order. Two upserts to the
+    # same id in one turn are legitimate (the layout agent refreshing a panel
+    # it also just created), but reporting it as
+    # "Refreshed panel: assignment-list, assignment-list" reads like a bug.
     report = {
-        "added": added,
-        "updated": updated,
-        "removed": removed,
+        "added": list(dict.fromkeys(added)),
+        "updated": list(dict.fromkeys(u for u in updated if u not in added)),
+        "removed": list(dict.fromkeys(removed)),
         "refused": refused,
         "sanitized": stripped,
         "note": str(ops.get("note") or "")[:300],

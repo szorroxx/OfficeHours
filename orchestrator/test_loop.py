@@ -67,7 +67,7 @@ def tool_call(cid: str, name: str, args: dict) -> dict:
 def t_schema_matches_dispatch():
     advertised = {t["function"]["name"] for t in tools.TOOL_SCHEMAS}
     assert advertised == set(tools.DISPATCH), "schema and dispatch disagree"
-    assert len(advertised) == 14, f"expected 14 tools, got {len(advertised)}"
+    assert len(advertised) == 17, f"expected 17 tools, got {len(advertised)}"
 
 
 def t_every_tool_runs_in_mock():
@@ -88,6 +88,9 @@ def t_every_tool_runs_in_mock():
         "fetch_page": {"url": "https://calendar.pitt.edu/"},
         "update_preferences": {"updates": {"display_name": "Finn"}},
         "log_time": {"minutes": 90},
+        "find_assignment": {"name": "problem set"},
+        "update_assignment": {"assignment_ids": ["m1"], "status": "dismissed"},
+        "add_tasks": {"tasks": [{"text": "Email the professor"}]},
     }
     for name in tools.DISPATCH:
         result = tools.execute(name, sample_args[name])
@@ -1024,6 +1027,118 @@ def t_canvas_missing_page_is_clear():
         assert "Available" in str(exc), "error should list what IS available"
 
 
+def t_can_take_an_item_off_the_list():
+    """
+    The write that was missing, and the reason the model confabulated.
+
+    A student twice asked for a group assignment to come off their overdue
+    list. With no tool for it, the model replied that the item was "already
+    submitted by your groupmate" -- untrue, and nothing changed. There must be
+    a way to comply.
+    """
+    found = tools.execute("find_assignment", {"name": "problem set"})
+    assert found["items"], "find_assignment found nothing to act on"
+
+    result = tools.execute("update_assignment",
+                           {"assignment_ids": [found["items"][0]["id"]],
+                            "status": "dismissed"})
+    assert result.get("updated") == 1, result
+    assert result.get("status") == "dismissed", result
+
+
+def t_dismissed_is_not_submitted():
+    """
+    'Not mine to do' must be its own status.
+
+    Marking a teammate's submission as 'submitted' by this student would make
+    the workload history claim work they never did.
+    """
+    import db
+
+    assert "dismissed" in db._STATUSES
+    bad = tools.execute("update_assignment",
+                        {"assignment_ids": ["m1"], "status": "vanished"})
+    assert "error" in bad, "an unknown status should be refused"
+
+
+def t_update_assignment_needs_ids():
+    assert "error" in tools.execute("update_assignment",
+                                    {"assignment_ids": [], "status": "submitted"})
+    # A model passing a bare string instead of a list shouldn't crash the turn.
+    ok = tools.execute("update_assignment",
+                       {"assignment_ids": "m1", "status": "submitted"})
+    assert ok.get("updated") == 1, ok
+
+
+def t_tasks_can_be_created():
+    """There was no way to add a to-do at all, so 'make me a list' couldn't work."""
+    result = tools.execute("add_tasks", {"tasks": [
+        {"text": "Read chapter 3", "est_minutes": 45},
+        "Email Dr. Reyes",
+        {"text": "   "},
+    ]})
+    assert result["added"] == 2, result
+    assert result["rejected"], "a task with no text should be reported"
+    assert result["tasks"][0]["est_minutes"] == 45
+
+
+def t_course_filter_matches_how_people_type():
+    """
+    'CS1684' must find 'CS 1684'.
+
+    The old ILIKE '%CS1684%' didn't, and the empty result read as "you have no
+    assignments for that course" -- so a student was told a course was empty
+    and then shown three of its assignments in the next message.
+    """
+    import db
+
+    sql_seen = {}
+
+    def fake_query(sql, params=(), fetch="all"):
+        sql_seen["sql"] = sql
+        sql_seen["params"] = params
+        return []
+
+    original = db.query
+    db.query = fake_query
+    try:
+        db.get_assignments("s", course="CS1684")
+    finally:
+        db.query = original
+
+    assert "regexp_replace" in sql_seen["sql"], (
+        "course filter still uses a plain ILIKE, so 'CS1684' won't match "
+        "'CS 1684'")
+
+
+def t_local_times_not_utc():
+    """
+    A deadline of 11:59pm local is stored as 03:59 UTC the NEXT day. Reporting
+    it unconverted made every late-evening deadline a day late on screen.
+    """
+    import db
+    from datetime import datetime, timezone
+
+    deadline = datetime(2026, 9, 3, 3, 59, 59, tzinfo=timezone.utc)
+    local = db.jsonable(deadline)
+    assert local.startswith("2026-09-02T23:59"), (
+        f"expected Sep 2 11:59pm local, got {local}")
+
+    # Naive datetimes are left alone rather than guessed at.
+    naive = db.jsonable(datetime(2026, 9, 3, 23, 59))
+    assert naive == "2026-09-03T23:59:00", naive
+
+
+def t_prompt_forbids_claiming_unmade_changes():
+    import orchestrator as orch
+
+    prompt = orch.SYSTEM_PROMPT.lower()
+    assert "never describe a change you did not make" in prompt
+    assert "update_assignment" in prompt, (
+        "the prompt must tell the model how to honour 'take that off my list'")
+    assert "utc" in prompt, "the prompt must tell the model times are local"
+
+
 # ==========================================================================
 
 if __name__ == "__main__":
@@ -1036,6 +1151,13 @@ if __name__ == "__main__":
     check("malformed arguments handled", t_malformed_arguments_handled)
     check("wrong argument names handled", t_wrong_argument_names_handled)
     check("credentials rejected", t_credentials_are_rejected)
+    check("can take an item off the list", t_can_take_an_item_off_the_list)
+    check("dismissed is not submitted", t_dismissed_is_not_submitted)
+    check("update_assignment needs ids", t_update_assignment_needs_ids)
+    check("tasks can be created", t_tasks_can_be_created)
+    check("course filter matches how people type", t_course_filter_matches_how_people_type)
+    check("times are local, not utc", t_local_times_not_utc)
+    check("prompt forbids unmade changes", t_prompt_forbids_claiming_unmade_changes)
     check("overdue tool", t_overdue_tool)
     check("add_to_schedule", t_add_to_schedule)
     check("scheduling tools distinguished", t_scheduling_tools_are_distinguished)

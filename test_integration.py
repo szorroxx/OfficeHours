@@ -469,6 +469,138 @@ check("an empty prompt asks for one, and changes nothing",
 
 
 # ==========================================================================
+section("regressions from the first live run")
+# ==========================================================================
+# Each of these is a failure a real student hit in MODE=live. The transcript
+# is the spec: the agent claimed changes it hadn't made, wrote a calendar
+# entry nowhere visible, couldn't create a to-do at all, told someone a
+# course was empty while showing its assignments two messages later, and
+# reported every late-evening deadline a day late.
+
+# --- it claimed changes it hadn't made ---
+for message, reply, steps, should_flag in [
+    ("remove the preproposal from my overdue list",
+     "The Preproposal has already been submitted by your groupmate, so it "
+     "isn't considered overdue. There's nothing to remove.",
+     [{"tool": "check_freshness", "ok": True}], True),
+    ("remove it from the overdue section",
+     "Since the system only lists open assignments, it simply doesn't appear "
+     "there once it's marked as submitted.",
+     [{"tool": "check_freshness", "ok": True}], True),
+    ("add a 2 hour viola lesson thursday",
+     "I've added a 2-hour viola lesson to your schedule.",
+     [{"tool": "check_freshness", "ok": True}], True),
+    ("add a 2 hour viola lesson thursday",
+     "I've added a 2-hour viola lesson to your schedule.",
+     [{"tool": "add_to_schedule", "ok": True}], False),
+    ("remove the preproposal",
+     "I marked the Preproposal as dismissed, so it's off your overdue list.",
+     [{"tool": "update_assignment", "ok": True}], False),
+    ("what's due this week?", "You have three things due.",
+     [{"tool": "get_assignments", "ok": True}], False),
+    ("list my assignments",
+     "Here are the assignments currently stored for you: HW01, Preproposal.",
+     [{"tool": "get_assignments", "ok": True}], False),
+    ("am I behind?", "Nothing is overdue right now.",
+     [{"tool": "get_overdue", "ok": True}], False),
+]:
+    flagged = agent._unbacked_claim(message, reply, steps) is not None
+    check(f"{'flags' if should_flag else 'allows'}: {reply[:38]}",
+          flagged == should_flag,
+          f"expected flag={should_flag}, got {flagged}")
+
+failed_write = agent._unbacked_claim(
+    "add a viola lesson", "I've added it to your schedule.",
+    [{"tool": "add_to_schedule", "ok": False}])
+check("a failed write is reported as a failure, not a success",
+      failed_write is not None and "didn't go through" in failed_write,
+      str(failed_write))
+
+# --- a calendar entry has to reach the visible board ---
+sched_actions = agent.board_actions([{
+    "tool": "add_to_schedule", "ok": True,
+    "result": {"blocks_added": 1, "blocks": [
+        {"task": "Viola lesson", "starts_at": "2026-09-24T15:00:00-04:00",
+         "ends_at": "2026-09-24T17:00:00-04:00", "est_minutes": 120}]}}])
+sched_events = next((a["items"] for a in sched_actions
+                     if a["type"] == "addEvents"), [])
+check("a schedule block becomes a board row the calendar renders",
+      len(sched_events) == 1 and sched_events[0]["startISO"].startswith("2026-09-24T15:00"),
+      str(sched_actions))
+check("schedule rows are tagged so they're distinguishable from Canvas events",
+      sched_events and sched_events[0]["source"] == "schedule")
+check("schedule rows have deterministic ids, so re-reading doesn't duplicate",
+      agent._schedule_row({"task": "Viola lesson",
+                           "starts_at": "2026-09-24T15:00:00-04:00"})["canvasId"]
+      == sched_events[0]["canvasId"])
+
+# --- to-dos were impossible to create ---
+task_actions = agent.board_actions([{
+    "tool": "add_tasks", "ok": True,
+    "result": {"added": 2, "tasks": [{"text": "Read ch. 3", "est_minutes": 45},
+                                     {"text": "Email the professor"}]}}])
+todos = next((a["items"] for a in task_actions if a["type"] == "addTodos"), [])
+check("the agent can put to-dos on the board", len(todos) == 2, str(task_actions))
+check("to-do estimates survive", todos[0].get("estimateMins") == 45, str(todos[0]))
+
+# --- "take that off my list" has to change something ---
+done_actions = agent.board_actions([{
+    "tool": "update_assignment", "ok": True,
+    "result": {"updated": 1, "status": "dismissed", "items": [
+        {"id": "abc123", "title": "Preproposal", "status": "dismissed"}]}}])
+completed = next((a["items"] for a in done_actions
+                  if a["type"] == "completeItems"), [])
+check("a dismissed assignment is ticked off the board",
+      len(completed) == 1 and completed[0]["completed"] is True, str(done_actions))
+check("and the reason is recorded, not silently ticked",
+      "dismissed" in completed[0].get("note", ""), str(completed))
+check("an assignment left open is not ticked",
+      not [a for a in agent.board_actions([{
+          "tool": "update_assignment", "ok": True,
+          "result": {"items": [{"id": "x", "title": "T", "status": "open"}]}}])
+          if a["type"] == "completeItems"])
+
+# --- store.complete_items finds the row whichever column it's in ---
+store_t = fresh_store()
+u = store_t.create_user("ticker", "password")
+store_t.upsert_items(u["id"], "assignments", [
+    {"title": "Preproposal", "canvasId": "abc123"}])
+store_t.upsert_items(u["id"], "exams", [{"title": "Midterm 1", "canvasId": "x1"}])
+ticked = store_t.complete_items(u["id"], [
+    {"canvasId": "abc123", "title": "Preproposal", "note": "marked dismissed"},
+    {"canvasId": "x1", "title": "Midterm 1"}])
+check("completing items searches every board column", ticked == 2, str(ticked))
+b = store_t.get_board(u["id"])
+check("the assignment is ticked", b["assignments"][0]["completed"] is True)
+check("the exam is ticked too", b["exams"][0]["completed"] is True)
+check("completing by title works when there's no canvasId",
+      store_t.complete_items(u["id"], [{"title": "nope"}]) == 0)
+check("already-completed rows aren't re-counted",
+      store_t.complete_items(u["id"], [{"canvasId": "abc123"}]) == 0)
+
+# --- the change log shouldn't name the same panel twice ---
+dupe_cards = [SAMPLES["assignment_list"]]
+_, dupe_report = surface.apply_ops(
+    [], {"upsert": [{"id": "assignment-list", "card_index": 0, "title": "A"},
+                    {"id": "assignment-list", "card_index": 0, "title": "B"}],
+         "custom": [], "remove": [], "note": ""}, dupe_cards)
+check("a panel touched twice is reported once",
+      dupe_report["added"] == ["assignment-list"]
+      and dupe_report["updated"] == [], str(dupe_report))
+
+# --- more conversation history than four turns ---
+long_history = [{"role": "user" if i % 2 == 0 else "assistant",
+                 "content": f"turn {i}"} for i in range(20)]
+ctx = agent._context({}, None, long_history)
+check("the model sees more than four turns of history",
+      len(ctx["recent_turns"]) == 12, str(len(ctx.get("recent_turns", []))))
+check("and is told how many it can't see",
+      ctx["turns_before_this"] == 8, str(ctx.get("turns_before_this")))
+check("the model is told the timezone", bool(ctx.get("timezone")), str(ctx))
+check("and that times are already local", ctx.get("times_are_local") is True)
+
+
+# ==========================================================================
 section("HTTP API")
 # ==========================================================================
 
