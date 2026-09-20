@@ -1219,10 +1219,27 @@ check("it reuses the stored guide rather than asking for it to be retyped",
       "study guide" in by_course.get("saved_to_files", ""),
       str(by_course.get("saved_to_files")))
 
-check("filing with nothing to file is refused clearly",
-      "error" in _tools.execute("save_to_files", {}))
-check("a title with no content is refused",
-      "error" in _tools.execute("save_to_files", {"title": "Empty"}))
+# CHANGED DELIBERATELY: these used to assert that save_to_files({}) errors.
+# It did, and that was the bug -- "add the module to the files section" names
+# no course and carries no content, so the tool refused, and the model went
+# looking for a different one and then told the student it had none. With no
+# arguments it now files the most recent study guide, which is what "the
+# module" meant.
+bare = _tools.execute("save_to_files", {})
+check("filing with no arguments files the latest study guide",
+      bare.get("filed") == 1, str(bare)[:140])
+check("a title with no content still files something sensible",
+      _tools.execute("save_to_files", {"title": "Empty"}).get("filed") == 1)
+
+_real_sets = _tools.get_study_sets
+_tools.get_study_sets = lambda course=None: {"items": [], "count": 0}
+try:
+    nothing = _tools.execute("save_to_files", {})
+finally:
+    _tools.get_study_sets = _real_sets
+check("with genuinely nothing stored it says so, and how to fix it",
+      "error" in nothing and "make_study_guide" in str(nothing.get("hint", "")),
+      str(nothing))
 check("a filename can't escape its directory",
       "/" not in _tools.execute(
           "save_to_files",
@@ -1277,6 +1294,89 @@ check("the prompt tells the model it can write files",
       in _orch.SYSTEM_PROMPT.lower(),
       "the prompt has to name the tool, or the model reasons from an "
       "out-of-date idea of what it can do")
+
+
+# ==========================================================================
+section("refusals never reach the dashboard")
+# ==========================================================================
+# Two permanent panels appeared on a student's dashboard reading "Action Not
+# Supported / I don't have a tool to add modules or files to a files
+# section". The display agent turns whatever happened into cards, including a
+# refusal, and those became panels -- which then outlive the turn, sitting
+# there after the problem is fixed, still advertising a limitation that isn't
+# real.
+
+REFUSAL_CARDS = [
+    {"type": "alert", "title": "Action Not Supported",
+     "body": "I don't have a tool to add modules or files to a files section."},
+    {"type": "text", "title": "Note",
+     "body": "I'm not able to add modules or files. My tools let me create "
+             "study guides, schedule study time, manage assignments."},
+]
+for card in REFUSAL_CARDS:
+    check(f"a refusal card is not dashboard material: {card['title']}",
+          surface.is_conversational(card), str(card)[:100])
+
+for card in [
+    {"type": "assignment_list", "title": "Due soon", "items": [{"title": "HW01"}]},
+    {"type": "alert", "title": "2 overdue", "body": "Quiz 3 is 3 days late."},
+    {"type": "text", "title": "Refreshed from Canvas", "body": "Synced 8 assignments."},
+    {"type": "schedule", "title": "Your plan", "blocks": [{"task": "Study"}]},
+]:
+    check(f"real content still renders: {card['title']}",
+          not surface.is_conversational(card), str(card)[:100])
+
+chunks_after, refusal_report = surface.update([], "add the module to files",
+                                              "I can't do that", REFUSAL_CARDS)
+check("a refusal-only turn adds no panels", chunks_after == [],
+      str(chunks_after))
+check("and says why in the report",
+      "conversational" in refusal_report["note"], refusal_report["note"])
+
+kept = [{"id": "assignment-list", "kind": "assignment_list", "title": "Due",
+         "html": "<p>x</p>", "source": "premade"}]
+after_chat, chat_report = surface.update(
+    kept, "thanks!", "No problem",
+    [{"type": "text", "title": "Note", "body": "Let me know if you need anything."}])
+check("a chatty turn leaves existing panels alone", len(after_chat) == 1,
+      str(after_chat))
+
+no_data, no_data_report = surface.update(
+    [], "what can you do?", "I can help with coursework.",
+    [{"type": "text", "title": "About", "body": "I read your Canvas data."}],
+    had_data=False)
+check("a turn with no tool results changes nothing", no_data == [],
+      str(no_data_report))
+
+# --- and the repair path replaces a wrong refusal ---
+repair = agent._repair_denied_capability(
+    "add the module to the files section",
+    "I don't have a tool to add modules or files to a files section.", [])
+check("a wrong refusal is repaired by doing the thing", repair is not None)
+check("the corrected reply names the file",
+      "Files tab" in repair["reply"] and ".html" in repair["reply"],
+      repair["reply"][:120])
+check("the correction owns the mistake",
+      "which was wrong" in repair["reply"], repair["reply"][-120:])
+check("and it files the document",
+      any(a["type"] == "addFiles" for a in repair["actions"]))
+check("the refusal's cards are discarded", repair["cards"] == [],
+      "a corrected turn must not leave the apology it replaced on screen")
+
+check("a refusal for something genuinely unsupported is left alone",
+      agent._repair_denied_capability(
+          "delete my canvas account", "I'm not able to do that.", []) is None)
+check("a turn that already filed something isn't repaired twice",
+      agent._repair_denied_capability(
+          "save that to files", "I can't do that",
+          [{"tool": "save_to_files"}]) is None)
+
+# --- the deployment is verifiable ---
+health = client.get("/api/health").get_json() if "client" in dir() else None
+check("the tool list is exposed for checking a deployment",
+      "tools" in (web.app.test_client().get("/api/health").get_json()
+                  if "web" in dir() else {"tools": True}),
+      "a stale deploy is indistinguishable from a model bug without this")
 
 
 # ==========================================================================

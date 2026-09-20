@@ -129,6 +129,23 @@ finished item with a line through it and leave it there, which meant
 now filters them out of the panels, the week strip and the month calendar, with
 a "Show N completed" toggle. It changes what renders, never what's stored.
 
+## Is my deployment current?
+
+```bash
+curl localhost:5000/api/health | python3 -m json.tool
+```
+
+`tools` lists exactly what this build hands to Nemotron. If `save_to_files`
+isn't in it, the deployment is stale — that's the difference between "the
+model is confused" and "the code isn't there", and it took a round to tell
+them apart.
+
+If a tool IS listed and the assistant still says it can't do that, the
+deployment is fine and the model is wrong. `agent._repair_denied_capability`
+catches that for filing: it performs the action and rewrites the reply. That
+guard is narrow by design (one intent, one tool, only when the tool wasn't
+called) — if you add capabilities, consider whether they need one too.
+
 ## If something looks broken, check this first
 
 ```bash

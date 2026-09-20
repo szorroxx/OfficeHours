@@ -278,6 +278,12 @@ def health():
         # package imports and the key is present, which is what silently
         # fails.
         "model_paths": _model_paths(),
+        # The exact tool list this build hands to Nemotron. If a capability
+        # seems missing, check here first: a tool absent from this list is
+        # invisible to the model, and a tool present here but denied by the
+        # model means the deployment is current and the model is wrong (which
+        # agent._repair_denied_capability now catches for filing).
+        "tools": sorted(t["function"]["name"] for t in tools.TOOL_SCHEMAS),
         "recorded_runs": cache.recorded_count(),
         "alexa": {"skill_id_enforced": bool(os.getenv("ALEXA_SKILL_ID", "").strip())},
     })

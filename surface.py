@@ -659,11 +659,80 @@ def apply_ops(current: list[dict], ops: dict, cards: list[dict]) -> tuple[list[d
     return chunks, report
 
 
+# ---------------------------------------------------------------------------
+# What must never reach the dashboard
+#
+# The display agent turns whatever happened into cards, including a refusal.
+# Those cards then became panels, so a student asking for a file ended up with
+# two permanent boxes on their dashboard reading:
+#
+#     Action Not Supported
+#     I don't have a tool to add modules or files to a files section...
+#
+# The dashboard is for the student's coursework. An apology is conversation:
+# it belongs in the chat bubble, where it already appears, and nowhere else.
+# Worse, a refusal panel outlives the turn -- it sits there after the problem
+# is fixed, still saying the product can't do something it can.
+# ---------------------------------------------------------------------------
+
+_NOT_DASHBOARD_MATERIAL = re.compile(
+    r"(action not supported|not supported|"
+    r"i (?:don't|do not) have (?:a|any|the) tool|"
+    r"i(?:'m| am) not able to|i can(?:'t|not)\b|"
+    r"there(?:'s| is) no (?:way|tool|method) to|"
+    r"unable to|my tools (?:let me|only)|"
+    r"something went wrong|an error occurred|internal error|"
+    r"failed to|try again later|let me know if you)",
+    re.IGNORECASE,
+)
+
+
+def is_conversational(card: dict) -> bool:
+    """
+    True for a card that is talk, not data.
+
+    Only text and alert cards are candidates: a card with items, blocks,
+    sections or series carries real rows and stays regardless of wording.
+    """
+    if card.get("type") not in ("text", "alert"):
+        return False
+    blob = f"{card.get('title', '')} {card.get('body', '')}"
+    return bool(_NOT_DASHBOARD_MATERIAL.search(blob))
+
+
+def dashboard_cards(cards: list[dict]) -> list[dict]:
+    """Drop the cards that shouldn't become panels."""
+    return [card for card in cards or [] if not is_conversational(card)]
+
+
 def update(current: list[dict], prompt: str, summary: str,
-           cards: list[dict]) -> tuple[list[dict], dict]:
-    """One call: poll -> plan -> validate -> apply. What app.py uses."""
-    ops = plan_ops(prompt, summary, cards, current)
-    return apply_ops(current, ops, cards)
+           cards: list[dict], *, had_data: bool = True) -> tuple[list[dict], dict]:
+    """
+    One call: poll -> plan -> validate -> apply. What app.py uses.
+
+    `had_data=False` means no tool returned anything this turn -- a pure
+    conversational exchange. The dashboard is left exactly as it was, because
+    there is nothing new to show and the alternative is what happened above.
+    """
+    keepable = dashboard_cards(cards)
+    dropped = len(cards or []) - len(keepable)
+
+    if not keepable or not had_data:
+        report = {
+            "added": [], "updated": [], "removed": [], "refused": [],
+            "sanitized": [], "chunk_count": len(current or []),
+            "note": ("nothing to show on the dashboard this turn"
+                     + (f"; dropped {dropped} conversational card(s)"
+                        if dropped else "")),
+        }
+        return list(current or []), report
+
+    ops = plan_ops(prompt, summary, keepable, current)
+    chunks, report = apply_ops(current, ops, keepable)
+    if dropped:
+        report["note"] = ((report.get("note") or "")
+                          + f" (kept {dropped} message(s) out of the dashboard)").strip()
+    return chunks, report
 
 
 def seed_chunks() -> list[dict]:

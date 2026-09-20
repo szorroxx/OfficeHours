@@ -91,6 +91,41 @@ TOOL_SCHEMAS: list[dict] = [
     {
         "type": "function",
         "function": {
+            "name": "save_to_files",
+            "description": (
+                "Write a document into the student's Files tab, where their "
+                "generated files live. USE THIS whenever they ask you to "
+                "save, file, add, or put something in files, or to make them "
+                "a document, module, summary, handout or checklist they can "
+                "keep. Two ways to call it: pass `content` with the text of "
+                "the document, or pass `course` to file that course's most "
+                "recent study guide. Study guides made with make_study_guide "
+                "are filed automatically, so use this to re-file one or to "
+                "save anything else."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string",
+                              "description": "What to call the file, e.g. "
+                                             "'PHYS 1351 exam checklist'."},
+                    "content": {"type": "string",
+                                "description": "The document text. Headings "
+                                               "(# ##), bullets (-) and "
+                                               "numbered lists are formatted."},
+                    "course": {"type": "string",
+                               "description": "File this course's latest study "
+                                              "guide instead of writing new content."},
+                    "collection": {"type": "string",
+                                   "description": "Folder name. Defaults to "
+                                                  "'Documents'."},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "check_freshness",
             "description": (
                 "Check how old the stored data is for each course. Returns "
@@ -287,41 +322,6 @@ TOOL_SCHEMAS: list[dict] = [
                                "enum": ["flashcards", "outline", "practice_problems"]},
                 },
                 "required": ["course", "topics"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "save_to_files",
-            "description": (
-                "Write a document into the student's Files tab, where their "
-                "generated files live. USE THIS whenever they ask you to "
-                "save, file, add, or put something in files, or to make them "
-                "a document, module, summary, handout or checklist they can "
-                "keep. Two ways to call it: pass `content` with the text of "
-                "the document, or pass `course` to file that course's most "
-                "recent study guide. Study guides made with make_study_guide "
-                "are filed automatically, so use this to re-file one or to "
-                "save anything else."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string",
-                              "description": "What to call the file, e.g. "
-                                             "'PHYS 1351 exam checklist'."},
-                    "content": {"type": "string",
-                                "description": "The document text. Headings "
-                                               "(# ##), bullets (-) and "
-                                               "numbered lists are formatted."},
-                    "course": {"type": "string",
-                               "description": "File this course's latest study "
-                                              "guide instead of writing new content."},
-                    "collection": {"type": "string",
-                                   "description": "Folder name. Defaults to "
-                                                  "'Documents'."},
-                },
             },
         },
     },
@@ -1047,15 +1047,18 @@ def save_to_files(title: str = "", content: str = "", course: str = "",
     content = str(content or "").strip()
     course = str(course or "").strip()
 
-    if not title and not course:
-        return {"error": "give a title, or a course to file its study guide"}
-
     # Filing an existing study guide: fetch it rather than asking the model to
     # retype it, which is how content drifts between the panel and the file.
-    if not content and course:
-        guides = get_study_sets(course=course).get("items") or []
+    #
+    # With NO arguments at all, file the most recent study guide. "add the
+    # module to the files section" names no course and supplies no content,
+    # and erroring on that sent the model looking for a different tool -- and
+    # then telling the student it had none.
+    if not content:
+        guides = get_study_sets(course=course or None).get("items") or []
         if not guides:
-            return {"error": f"no study guide stored for {course}",
+            return {"error": f"no study guide stored"
+                             + (f" for {course}" if course else ""),
                     "hint": "call make_study_guide first, which files one "
                             "automatically"}
         newest = guides[0]
@@ -1070,10 +1073,6 @@ def save_to_files(title: str = "", content: str = "", course: str = "",
         return {"filed": 1, "files": [document],
                 "saved_to_files": document["name"],
                 "collection": document["collectionName"]}
-
-    if not content:
-        return {"error": "nothing to write -- pass content, or a course whose "
-                         "study guide should be filed"}
 
     document = documents.text_document(
         title, content, collection=collection or "Documents")

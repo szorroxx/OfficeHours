@@ -116,19 +116,11 @@ def handle(message: str, history: list[dict] | None = None,
 
     payload = run.to_json()
     display = payload.get("display") or {}
-    cards = display.get("cards") or []
     summary = payload.get("summary") or display.get("speech") or ""
 
     # 1. Board writes, from the tool results rather than from the prose.
     actions = board_actions(run.steps)
-
-    # 2. The HTML surface: poll what's there, plan, apply.
-    chunks, surface_report = surface.update(
-        current=current_surface or [],
-        prompt=message,
-        summary=summary,
-        cards=cards,
-    )
+    cards = (payload.get("display") or {}).get("cards") or []
 
     reply = summary or display.get("speech") or "Done."
     if payload.get("error"):
@@ -150,6 +142,37 @@ def handle(message: str, history: list[dict] | None = None,
     correction = _unbacked_claim(message, reply, run.steps)
     if correction:
         reply = f"{reply}\n\n{correction}"
+
+    # If it denied a capability it actually has, do the thing instead.
+    repair_note = None
+    repaired = _repair_denied_capability(message, reply, run.steps)
+    if repaired:
+        reply = repaired["reply"]
+        actions = actions + repaired["actions"]
+        # The refusal's cards are dropped: a corrected turn shouldn't leave
+        # the apology it replaced on the dashboard.
+        cards = repaired.get("cards", cards)
+        repair_note = repaired["note"]
+
+    # 2. The HTML surface: poll what's there, plan, apply. Done LAST, because
+    # the repair above can change both the reply and what should be shown.
+    #
+    # A turn where nothing was successfully read or written has no business
+    # changing the dashboard at all.
+    had_data = any(
+        step.get("ok") and isinstance(step.get("result"), dict)
+        and "error" not in step["result"]
+        for step in run.steps or []
+    )
+    chunks, surface_report = surface.update(
+        current=current_surface or [],
+        prompt=message,
+        summary=summary,
+        cards=cards,
+        had_data=had_data,
+    )
+    if repair_note:
+        surface_report["note"] = repair_note
 
     return {
         "reply": reply,
@@ -192,6 +215,93 @@ def _credential_warning(message: str) -> str | None:
         "server's .env, where you can revoke it any time. Ask me what's due "
         "and I'll go look."
     )
+
+
+# --------------------------------------------------------------------------
+# Guard against DENIED-but-available capabilities
+#
+# The mirror image of the claimed-but-unmade problem below, and the more
+# embarrassing one. Asked to put a study guide in the Files tab, the model
+# replied:
+#
+#     "I don't have a tool to add modules or files to a files section."
+#
+# save_to_files was tool #10 in the list it was given. It reasoned from an
+# out-of-date idea of itself, and no amount of prompt wording reliably stops
+# that -- so this doesn't argue with the model, it just performs the action
+# and rewrites the reply to describe what happened.
+#
+# Narrow on purpose: one intent, one tool, and only when the model both
+# denied the capability AND didn't call the tool. Everything else is left
+# alone.
+# --------------------------------------------------------------------------
+
+_DENIED_A_CAPABILITY = re.compile(
+    r"(i (?:don't|do not) have (?:a|any|the) tool|"
+    r"i(?:'m| am) not able to|"
+    r"there(?:'s| is) no (?:way|tool|method|option) to|"
+    r"i can(?:'t|not) (?:add|save|write|file|create|upload|put)|"
+    r"not supported|unable to (?:add|save|write|file|upload)|"
+    r"my tools (?:let me|only|don't|do not))",
+    re.IGNORECASE,
+)
+
+_WANTS_A_FILE = re.compile(
+    r"(files? (?:section|tab|area)|to (?:my |the )?files|"
+    r"save (?:it|that|this|the)|file (?:it|that|this)|"
+    r"add (?:it|that|this|the \w+) to (?:my |the )?files|"
+    r"as a (?:file|document|handout|pdf)|"
+    r"(?:make|write) me a (?:document|handout|module))",
+    re.IGNORECASE,
+)
+
+
+def _repair_denied_capability(message: str, reply: str,
+                              steps: list[dict]) -> dict | None:
+    """
+    Carry out an action the model wrongly said it couldn't do.
+
+    Returns {reply, actions, note} or None. Only fires when the model denied
+    the capability, the student clearly asked for it, and the tool wasn't
+    called -- so a legitimate "I couldn't find a study guide to file" is left
+    intact.
+    """
+    if not _DENIED_A_CAPABILITY.search(reply or ""):
+        return None
+    if not _WANTS_A_FILE.search(message or ""):
+        return None
+    if any(step.get("tool") == "save_to_files" for step in steps or []):
+        return None
+
+    import tools
+
+    result = tools.execute("save_to_files", {})
+    if "error" in result or not result.get("files"):
+        # Nothing to file. Say the true reason instead of the model's wrong
+        # one, because "I have no tool for that" is not why it failed.
+        detail = str(result.get("error") or "nothing to file")
+        return {
+            "reply": (
+                "I can put documents in your Files tab — but there's nothing "
+                f"to file right now: {detail}. Ask me to make a study guide "
+                "and it'll go there automatically, or tell me what the "
+                "document should say and I'll write it."),
+            "actions": [],
+            "cards": [],
+            "note": "corrected a wrong refusal; nothing available to file",
+        }
+
+    document = result["files"][0]
+    return {
+        "reply": (
+            f"Filed it: **{document['name']}** is in your Files tab under "
+            f"\"{document['collectionName']}\". Open the Files tab and it's "
+            f"there.\n\n(I first said I couldn't do that, which was wrong — "
+            f"I do have a tool for it and have now used it.)"),
+        "actions": [{"type": "addFiles", "items": result["files"]}],
+        "cards": [],
+        "note": f"corrected a wrong refusal and filed {document['name']}",
+    }
 
 
 # --------------------------------------------------------------------------
