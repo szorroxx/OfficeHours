@@ -34,8 +34,8 @@ function seedBoard() {
 
 let db = load();
 function load() {
-  try { const d = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); if (d && d.users && d.boards && d.sessions) { d.libraries = d.libraries || {}; return d; } } catch {}
-  return { users: {}, sessions: {}, boards: {}, libraries: {} };
+  try { const d = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); if (d && d.users && d.boards && d.sessions) { d.libraries = d.libraries || {}; d.google = d.google || {}; d.googleStates = d.googleStates || {}; return d; } } catch {}
+  return { users: {}, sessions: {}, boards: {}, libraries: {}, google: {}, googleStates: {} };
 }
 function save() { try { fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2)); } catch (e) { console.error('store: save failed', e); } }
 
@@ -74,6 +74,22 @@ async function verifyUser(username, password) {
 async function createSession(userId) { const token = crypto.randomBytes(24).toString('hex'); db.sessions[token] = userId; save(); return token; }
 async function userIdByToken(token) { return db.sessions[token] || null; }
 async function deleteSession(token) { if (db.sessions[token]) { delete db.sessions[token]; save(); } return true; }
+
+// ---- Google Calendar connection ----
+async function getGoogleConnection(userId) { return db.google[userId] || null; }
+async function setGoogleConnection(userId, connection) { db.google[userId] = connection; save(); return connection; }
+async function clearGoogleConnection(userId) { delete db.google[userId]; save(); return true; }
+async function createGoogleState(userId) {
+  const state = crypto.randomBytes(24).toString('hex');
+  db.googleStates[state] = { userId, expiresAt: Date.now() + 10 * 60 * 1000 };
+  save();
+  return state;
+}
+async function consumeGoogleState(state) {
+  const record = db.googleStates[state];
+  if (record) { delete db.googleStates[state]; save(); }
+  return record && record.expiresAt > Date.now() ? record : null;
+}
 
 // ---- Board (scoped to a user) ----
 function boardOf(userId) { if (!db.boards[userId]) db.boards[userId] = emptyBoard(); return db.boards[userId]; }
@@ -117,6 +133,8 @@ async function setLibrary(userId, lib) { db.libraries[userId] = { collections: (
 module.exports = {
   KINDS, isKind, init,
   createUser, verifyUser, createSession, userIdByToken, deleteSession,
+  getGoogleConnection, setGoogleConnection, clearGoogleConnection,
+  createGoogleState, consumeGoogleState,
   getBoard, addItem, upsertItems, updateItem, removeItem, loadDemo, clear,
   getLibrary, setLibrary,
 };

@@ -42,6 +42,10 @@ async function init() {
   await pool.query(`CREATE INDEX IF NOT EXISTS items_user_kind_idx ON items (user_id, kind)`);
   await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS items_user_canvas_idx ON items (user_id, kind, canvas_id) WHERE canvas_id IS NOT NULL`);
   await pool.query(`CREATE TABLE IF NOT EXISTS library (user_id text PRIMARY KEY, data jsonb NOT NULL)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS google_connections (
+    user_id text PRIMARY KEY, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS google_oauth_states (
+    state text PRIMARY KEY, user_id text NOT NULL, expires_at timestamptz NOT NULL)`);
 }
 
 // ---- Auth ----
@@ -84,6 +88,32 @@ async function userIdByToken(token) {
   return r.rows.length ? r.rows[0].user_id : null;
 }
 async function deleteSession(token) { await pool.query(`DELETE FROM sessions WHERE token = $1`, [token]); return true; }
+
+// ---- Google Calendar connection ----
+async function getGoogleConnection(userId) {
+  const r = await pool.query(`SELECT data FROM google_connections WHERE user_id = $1`, [userId]);
+  return r.rows.length ? r.rows[0].data : null;
+}
+async function setGoogleConnection(userId, connection) {
+  await pool.query(`INSERT INTO google_connections (user_id, data) VALUES ($1,$2)
+    ON CONFLICT (user_id) DO UPDATE SET data = $2, updated_at = now()`, [userId, connection]);
+  return connection;
+}
+async function clearGoogleConnection(userId) {
+  await pool.query(`DELETE FROM google_connections WHERE user_id = $1`, [userId]);
+  return true;
+}
+async function createGoogleState(userId) {
+  const state = crypto.randomBytes(24).toString('hex');
+  await pool.query(`INSERT INTO google_oauth_states (state, user_id, expires_at)
+    VALUES ($1,$2,now() + interval '10 minutes')`, [state, userId]);
+  return state;
+}
+async function consumeGoogleState(state) {
+  const r = await pool.query(`DELETE FROM google_oauth_states WHERE state = $1 AND expires_at > now()
+    RETURNING user_id`, [state]);
+  return r.rows.length ? { userId: r.rows[0].user_id } : null;
+}
 
 // ---- Board (scoped to a user) ----
 function toItem(row) { return { ...row.data, id: row.id }; }
@@ -152,6 +182,8 @@ async function setLibrary(userId, lib) {
 module.exports = {
   KINDS, isKind, init,
   createUser, verifyUser, createSession, userIdByToken, deleteSession,
+  getGoogleConnection, setGoogleConnection, clearGoogleConnection,
+  createGoogleState, consumeGoogleState,
   getBoard, addItem, upsertItems, updateItem, removeItem, loadDemo, clear,
   getLibrary, setLibrary,
 };

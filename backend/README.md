@@ -58,15 +58,15 @@ The frontend never talks to Canvas directly. It sends every chat message to one 
 
 All state is stored as JSON under these keys. When the real backend exists, these same shapes should come from the API instead of local storage.
 
-| Key           | Shape                                                                                  | Owner            |
-|---------------|----------------------------------------------------------------------------------------|------------------|
-| `assignments` | `{ id, title, course, dueISO, scheduledISO?, estimateMins?, source, completed, canvasId? }` | crawler + manual |
-| `exams`       | `{ id, title, course, dueISO, location?, estimateMins?, source, completed, canvasId? }`     | crawler + manual |
-| `events`      | `{ id, title, location, startISO, source, completed, canvasId? }`                          | crawler + manual |
-| `todos`       | `{ id, text, done, estimateMins?, createdISO, completedISO? }`                              | student          |
-| `completed`   | `[id, ...]` — ids of synced items checked off (frontend local mode)                        | student          |
-| `username`    | `string`                                                                                | student          |
-| `chat`        | `[{ role: 'user' | 'assistant', content }]`                                              | both             |
+| Key           | Shape                                                                                       | Owner                    |
+| ------------- | ------------------------------------------------------------------------------------------- | ------------------------ | ---- |
+| `assignments` | `{ id, title, course, dueISO, scheduledISO?, estimateMins?, source, completed, canvasId? }` | crawler + manual         |
+| `exams`       | `{ id, title, course, dueISO, location?, estimateMins?, source, completed, canvasId? }`     | crawler + manual         |
+| `events`      | `{ id, title, location, startISO, source, completed, canvasId? }`                           | crawler + manual         |
+| `todos`       | `{ id, text, done, estimateMins?, createdISO, completedISO? }`                              | student                  |
+| `completed`   | `[id, ...]` — ids of synced items checked off (frontend local mode)                         | student                  |
+| `username`    | `string`                                                                                    | student                  |
+| `chat`        | `[{ role: 'user'                                                                            | 'assistant', content }]` | both |
 
 `dueISO` and `startISO` are ISO 8601 date strings. For an exam, `dueISO` is the exam date/time. Urgency and the "Next up" callout are computed from these on the client, so the crawler only needs to provide a valid date.
 
@@ -80,18 +80,23 @@ All state is stored as JSON under these keys. When the real backend exists, thes
 
 The AI does not build item objects by hand. It fills a **template** per type, so field names are fixed and identical on both ends. The templates live in `backend/assistant.js` as the `TEMPLATES` registry, and the matching display slots live in `app.html` as `<template id="tpl-*">` elements with `data-field` attributes. Same vocabulary describes the data and the display.
 
-| Template     | Action type      | Fields (`?` optional)                                             |
-|--------------|------------------|-------------------------------------------------------------------|
-| `assignment` | `addAssignments` | `title, course, dueISO, estimateMins?, canvasId?`                 |
-| `exam`       | `addExams`       | `title, course, dueISO, location?, estimateMins?, canvasId?`      |
-| `event`      | `addEvents`      | `title, location, startISO, canvasId?`                            |
-| `task`       | `addTodos`       | `text, estimateMins?`                                             |
+| Template     | Action type      | Fields (`?` optional)                                        |
+| ------------ | ---------------- | ------------------------------------------------------------ |
+| `assignment` | `addAssignments` | `title, course, dueISO, estimateMins?, canvasId?`            |
+| `exam`       | `addExams`       | `title, course, dueISO, location?, estimateMins?, canvasId?` |
+| `event`      | `addEvents`      | `title, location, startISO, canvasId?`                       |
+| `task`       | `addTodos`       | `text, estimateMins?`                                        |
 
 Fill one with the helper, which stamps out an item from the template and drops anything that isn't a known field:
 
 ```js
-const { fill } = require('./assistant');
-fill('assignment', { title: 'PS6', course: 'CS 1550', dueISO: '2026-02-01T09:00:00Z', estimateMins: 120 });
+const { fill } = require("./assistant");
+fill("assignment", {
+  title: "PS6",
+  course: "CS 1550",
+  dueISO: "2026-02-01T09:00:00Z",
+  estimateMins: 120,
+});
 // -> { title:'PS6', course:'CS 1550', dueISO:'...', estimateMins:120, canvasId:null }
 ```
 
@@ -129,9 +134,9 @@ Example real implementation:
 
 ```js
 async function getAssistantReply(payload) {
-  const r = await fetch('/api/assistant', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const r = await fetch("/api/assistant", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   return await r.json();
@@ -185,23 +190,23 @@ Open `http://localhost:8787` for a built-in tester that hits every endpoint, inc
 
 **Endpoints:** (everything except register/login requires `Authorization: Bearer <token>`)
 
-| Method | Path                       | What it does                                        |
-|--------|----------------------------|-----------------------------------------------------|
-| POST   | `/api/register`            | Create an account, returns `{ token, username }`    |
-| POST   | `/api/login`               | Sign in, returns `{ token, username }`              |
-| POST   | `/api/logout`              | Invalidate the current session token                |
-| GET    | `/api/board`               | Returns the signed-in user's `{ assignments, exams, events, todos }` |
-| GET    | `/api/library`             | Files tab: `{ collections, files }` for the user   |
-| PUT    | `/api/library`             | Replace the user's library (collections + files)    |
-| GET    | `/api/files`               | Lists uploaded attachments (metadata + a fetch URL each) |
-| GET    | `/api/files/:id`           | Returns one attachment's raw bytes (for the AI to read) |
-| POST   | `/api/:kind`               | Add one item (`kind` = assignments/exams/events/todos) |
-| PATCH  | `/api/:kind/:id`           | Update an item (e.g. toggle `completed`/`done`)     |
-| DELETE | `/api/:kind/:id`           | Remove an item                                      |
-| POST   | `/api/assistant`           | Chat. In `{message, history}`, out `{reply, actions, board}` |
-| POST   | `/api/sync`               | Optional Canvas refresh without chat                |
-| POST   | `/api/demo`                | Load the demo seed data onto the board              |
-| POST   | `/api/clear`               | Empty the board                                     |
+| Method | Path             | What it does                                                         |
+| ------ | ---------------- | -------------------------------------------------------------------- |
+| POST   | `/api/register`  | Create an account, returns `{ token, username }`                     |
+| POST   | `/api/login`     | Sign in, returns `{ token, username }`                               |
+| POST   | `/api/logout`    | Invalidate the current session token                                 |
+| GET    | `/api/board`     | Returns the signed-in user's `{ assignments, exams, events, todos }` |
+| GET    | `/api/library`   | Files tab: `{ collections, files }` for the user                     |
+| PUT    | `/api/library`   | Replace the user's library (collections + files)                     |
+| GET    | `/api/files`     | Lists uploaded attachments (metadata + a fetch URL each)             |
+| GET    | `/api/files/:id` | Returns one attachment's raw bytes (for the AI to read)              |
+| POST   | `/api/:kind`     | Add one item (`kind` = assignments/exams/events/todos)               |
+| PATCH  | `/api/:kind/:id` | Update an item (e.g. toggle `completed`/`done`)                      |
+| DELETE | `/api/:kind/:id` | Remove an item                                                       |
+| POST   | `/api/assistant` | Chat. In `{message, history}`, out `{reply, actions, board}`         |
+| POST   | `/api/sync`      | Optional Canvas refresh without chat                                 |
+| POST   | `/api/demo`      | Load the demo seed data onto the board                               |
+| POST   | `/api/clear`     | Empty the board                                                      |
 
 **AI team: you edit one file, `backend/assistant.js`.** It ships with the working mock and the full contract in comments. Replace `handleAssistantMessage`, and optionally implement `syncCanvas`. The server handles persistence and routing; when you return `actions`, they land in the right folders through the same path a manual add uses. Keep the `ANTHROPIC_API_KEY` and the Canvas token server-side (see `backend/.env.example`). Student-uploaded files (notes, previous exams) are readable at `GET /api/files` and `GET /api/files/:id`; fetch the bytes and extract text if you want the assistant to read them.
 
@@ -251,6 +256,7 @@ backend/
 ## TL;DR
 
 **Inputs**
+
 - Student's chat messages (typed into the assistant).
 - Manual "+ Add item" entries: assignments, exams, events, or tasks, routed to the matching folder, with an optional time estimate.
 - Per-assignment scheduling: which day the student plans to work on it.
@@ -259,12 +265,26 @@ backend/
 - From the crawler, once hooked up: assignments, exams, and events as JSON matching the shapes in the Data model.
 
 **Outputs**
+
 - A dashboard with a This-week schedule and four folders (assignments, exams, events, to-dos), color-coded by urgency, with time-estimate chips.
 - Assistant chat replies.
 - Board updates the assistant makes (new assignments/exams/events/todos it "finds").
 
 **What teammates should do**
+
 - **AI team:** edit `backend/assistant.js`. Replace `handleAssistantMessage` with your real AI + Canvas crawl. Return `{ reply, actions }` per the contract in that file. The server handles storage and routing. Do not accept passwords or 2FA codes through the chat; use a Canvas access token kept server-side.
 - **Frontend/Kenneth:** to test end to end, set `ASSISTANT_API` in `app.html` to the backend URL. Next up is the React split and wiring the board fully to the backend.
 - **Everyone:** the Data model table is the source of truth for field names. If you add a field, update this README.
 - **To run the demo:** open `app.html` (standalone), or `cd backend && npm install && npm start` then open `http://localhost:8787` for the backend tester.
+
+## Google Calendar sync
+
+The backend supports one-way sync from the Office Hours board to Google Calendar. It creates or updates events for assignments, exams, and events; todos are not calendar events. Repeating syncs update the same Google event instead of creating duplicates.
+
+1. In Google Cloud Console, create a project, enable **Google Calendar API**, configure the OAuth consent screen, and create a **Web application** OAuth client.
+2. Add `http://localhost:8787/api/google/callback` as an authorized redirect URI.
+3. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` in the root `.env` file.
+4. With a logged-in user's bearer token, call `POST /api/google/connect`, open the returned `url` in a browser, and authorize access. `GET /api/google/connect` is also available when the request can carry the bearer token and should redirect directly.
+5. Call `GET /api/google/calendars` to list calendars, then `POST /api/google/sync` with `{ "calendarId": "primary" }` or a selected calendar ID.
+
+The OAuth refresh token is stored with the user's connection record so future syncs can refresh access without asking the user to reconnect. Use a protected database and encryption at rest before deploying this beyond the prototype.

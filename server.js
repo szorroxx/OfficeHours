@@ -8,6 +8,7 @@ const path = require('path');
 
 const store = process.env.DATABASE_URL ? require('./store.pg') : require('./store');
 const assistant = require('./assistant');
+const googleCalendar = require('./google-calendar');
 
 const app = express();
 const PORT = process.env.PORT || 8787;
@@ -54,6 +55,76 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/logout', auth, async (req, res) => {
   try { await store.deleteSession(req.token); res.json({ ok: true }); }
   catch (e) { console.error('logout error', e); res.status(500).json({ error: 'logout_failed' }); }
+});
+
+// ---- Google Calendar (one-way Office Hours -> Google sync) ----
+async function beginGoogleConnect(req, res, redirect) {
+  try {
+    const state = await store.createGoogleState(req.userId);
+    const url = googleCalendar.authorizationUrl(state);
+    if (redirect) return res.redirect(url);
+    res.json({ url });
+  } catch (e) {
+    console.error('google connect error', e);
+    res.status(500).json({ error: 'google_not_configured', message: e.message });
+  }
+}
+app.get('/api/google/connect', auth, (req, res) => beginGoogleConnect(req, res, true));
+app.post('/api/google/connect', auth, (req, res) => beginGoogleConnect(req, res, false));
+
+app.get('/api/google/callback', async (req, res) => {
+  const { code, state, error } = req.query || {};
+  if (error) return res.status(400).send(`Google authorization was cancelled: ${String(error)}`);
+  if (!code || !state) return res.status(400).send('Missing Google authorization response.');
+  try {
+    const oauthState = await store.consumeGoogleState(state);
+    if (!oauthState) return res.status(400).send('Google authorization expired. Please try connecting again.');
+    const tokens = await googleCalendar.exchangeCode(code);
+    const previous = await store.getGoogleConnection(oauthState.userId);
+    if (!tokens.refresh_token && !previous?.refreshToken)
+      return res.status(400).send('Google did not return a refresh token. Please reconnect and approve access.');
+    await store.setGoogleConnection(oauthState.userId, {
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token || previous.refreshToken,
+      expiresAt: Date.now() + (Number(tokens.expires_in) || 3600) * 1000,
+    });
+    res.send('Google Calendar connected. You can close this window and sync your board.');
+  } catch (e) {
+    console.error('google callback error', e);
+    res.status(502).send('Google Calendar connection failed. Check the server logs and try again.');
+  }
+});
+
+app.get('/api/google/status', auth, async (req, res) => {
+  const connection = await store.getGoogleConnection(req.userId);
+  res.json({ connected: Boolean(connection) });
+});
+
+app.get('/api/google/calendars', auth, async (req, res) => {
+  try {
+    const connection = await store.getGoogleConnection(req.userId);
+    if (!connection) return res.status(409).json({ error: 'google_not_connected' });
+    const result = await googleCalendar.listCalendars(connection);
+    await store.setGoogleConnection(req.userId, result.connection);
+    res.json({ calendars: result.calendars.map(c => ({ id: c.id, summary: c.summary, primary: Boolean(c.primary), timeZone: c.timeZone })) });
+  } catch (e) {
+    console.error('google calendars error', e);
+    res.status(502).json({ error: 'google_calendars_failed', message: e.message });
+  }
+});
+
+app.post('/api/google/sync', auth, async (req, res) => {
+  try {
+    const connection = await store.getGoogleConnection(req.userId);
+    if (!connection) return res.status(409).json({ error: 'google_not_connected' });
+    const calendarId = String(req.body?.calendarId || 'primary');
+    const result = await googleCalendar.syncBoard(connection, await store.getBoard(req.userId), calendarId);
+    await store.setGoogleConnection(req.userId, result.connection);
+    res.json({ calendarId, synced: result.synced, count: result.synced.length });
+  } catch (e) {
+    console.error('google sync error', e);
+    res.status(502).json({ error: 'google_sync_failed', message: e.message });
+  }
 });
 
 // ---- Board (all per-user, all require auth) ----
