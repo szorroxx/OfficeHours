@@ -67,7 +67,7 @@ def tool_call(cid: str, name: str, args: dict) -> dict:
 def t_schema_matches_dispatch():
     advertised = {t["function"]["name"] for t in tools.TOOL_SCHEMAS}
     assert advertised == set(tools.DISPATCH), "schema and dispatch disagree"
-    assert len(advertised) == 17, f"expected 17 tools, got {len(advertised)}"
+    assert len(advertised) == 19, f"expected 19 tools, got {len(advertised)}"
 
 
 def t_every_tool_runs_in_mock():
@@ -91,6 +91,8 @@ def t_every_tool_runs_in_mock():
         "find_assignment": {"name": "problem set"},
         "update_assignment": {"assignment_ids": ["m1"], "status": "dismissed"},
         "add_tasks": {"tasks": [{"text": "Email the professor"}]},
+        "remove_from_schedule": {"task_match": "viola"},
+        "remove_events": {"keyword": "lunch"},
     }
     for name in tools.DISPATCH:
         result = tools.execute(name, sample_args[name])
@@ -1027,6 +1029,54 @@ def t_canvas_missing_page_is_clear():
         assert "Available" in str(exc), "error should list what IS available"
 
 
+def t_removals_need_a_target():
+    """
+    There must be no way to delete a whole schedule or the whole event list
+    by calling a tool with no arguments.
+    """
+    assert "error" in tools.execute("remove_from_schedule", {})
+    assert "error" in tools.execute("remove_events", {})
+
+
+def t_schedule_blocks_are_internally_consistent():
+    """
+    A block that says 2:00pm-4:00pm / 60 min is wrong however you read it, and
+    that is exactly what got stored when the model sent all three fields and
+    they disagreed.
+    """
+    import db
+
+    fixed = db._normalize_block({
+        "task": "Viola lesson",
+        "starts_at": "2026-09-24T14:00:00-04:00",
+        "ends_at": "2026-09-24T16:00:00-04:00",
+        "est_minutes": 60,
+    })
+    assert fixed["est_minutes"] == 120, fixed["est_minutes"]
+
+
+def t_naive_timestamps_are_local():
+    """
+    'starts_at: 2026-09-24T14:00:00' means 2pm where the student is. Stamping
+    it UTC put one lesson at 2pm and another at 7pm in the same schedule.
+    """
+    import db
+
+    naive = db.jsonable(db._as_datetime("2026-09-24T14:00:00", "t"))
+    explicit = db.jsonable(db._as_datetime("2026-09-24T14:00:00-04:00", "t"))
+    assert naive == explicit, f"{naive} != {explicit}"
+
+
+def t_schedule_reads_expose_ids():
+    """You can't delete a block you can't name."""
+    from pathlib import Path
+
+    src = (Path(__file__).parent / "db.py").read_text()
+    getter = src[src.index("def get_schedule("):]
+    getter = getter[:getter.index("\ndef ")]
+    assert "id," in getter, "get_schedule must return block ids"
+
+
 def t_can_take_an_item_off_the_list():
     """
     The write that was missing, and the reason the model confabulated.
@@ -1152,6 +1202,10 @@ if __name__ == "__main__":
     check("wrong argument names handled", t_wrong_argument_names_handled)
     check("credentials rejected", t_credentials_are_rejected)
     check("can take an item off the list", t_can_take_an_item_off_the_list)
+    check("removals need a target", t_removals_need_a_target)
+    check("schedule blocks are consistent", t_schedule_blocks_are_internally_consistent)
+    check("naive timestamps are local", t_naive_timestamps_are_local)
+    check("schedule reads expose ids", t_schedule_reads_expose_ids)
     check("dismissed is not submitted", t_dismissed_is_not_submitted)
     check("update_assignment needs ids", t_update_assignment_needs_ids)
     check("tasks can be created", t_tasks_can_be_created)

@@ -349,6 +349,55 @@ TOOL_SCHEMAS: list[dict] = [
     {
         "type": "function",
         "function": {
+            "name": "remove_from_schedule",
+            "description": (
+                "Delete blocks from the student's schedule. Use when they say "
+                "a scheduled item is wrong, cancelled, or at the wrong time. "
+                "Target it by task_match (part of the title), by on_day "
+                "(YYYY-MM-DD), or by block_ids from get_schedule. To FIX a "
+                "time, remove the wrong block and add the right one. At least "
+                "one argument is required -- there is no 'delete everything'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task_match": {"type": "string",
+                                   "description": "Part of the block title, e.g. 'viola'."},
+                    "on_day": {"type": "string",
+                               "description": "YYYY-MM-DD, in the student's timezone."},
+                    "block_ids": {"type": "array", "items": {"type": "string"},
+                                  "description": "Ids from get_schedule."},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remove_events",
+            "description": (
+                "Delete stored campus events the student doesn't care about. "
+                "Target by keyword (matches the title), by source, or by ids. "
+                "Use when they say the event list is noisy or ask you to "
+                "clear it. Removing events does not affect assignments, "
+                "exams, or the schedule."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "keyword": {"type": "string",
+                                "description": "Title match, e.g. 'lunch-and-learn'."},
+                    "source": {"type": "string",
+                               "description": "e.g. 'calendar.pitt.edu' for everything "
+                                              "pulled from the university calendar."},
+                    "event_ids": {"type": "array", "items": {"type": "string"}},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "find_assignment",
             "description": (
                 "Look up assignments by name when the student refers to one "
@@ -501,39 +550,87 @@ def refresh_from_canvas(pages: list[str] | None = None) -> dict:
     return canvas.crawl(student(), pages)
 
 
-def make_schedule(horizon_days: int = 7, constraints: str = "") -> dict:
-    """Read assignments, ask Claude to plan, save the plan, return it."""
+def make_schedule(horizon_days: int = 7, constraints: str = "",
+                  include_undated: bool = True) -> dict:
+    """
+    Read assignments, ask Claude to plan, save the plan, return it.
+
+    WHY THE TOKEN BUDGET IS LARGE
+    This failed live with "the scheduling tool encountered an internal error"
+    on a board of nine assignments. The cause was max_tokens=3000: a plan that
+    breaks nine items into blocks is a long JSON document, the response was
+    cut off mid-object, and the parse failed. The model then retried the same
+    call and failed identically. A truncated plan is indistinguishable from a
+    broken tool unless you go and read the raw response, so: a budget with
+    room in it, one retry, and an error that says which of the two happened.
+    """
     assignments = get_assignments(due_within_days=horizon_days * 2)["items"]
+    if include_undated:
+        # Items with no due date were being dropped from every plan, because
+        # the due_within_days filter needs a date to compare. A final exam
+        # with no date in Canvas still needs studying for.
+        dated_ids = {a.get("id") for a in assignments}
+        for item in get_assignments(status="open")["items"]:
+            if item.get("id") not in dated_ids and not item.get("due_at"):
+                assignments.append(item)
     if not assignments:
         return {"error": "no open assignments stored — refresh_from_canvas first",
                 "blocks": []}
 
     profile = {} if MODE == "mock" else db.get_profile(student())
-    plan = cache.claude(
-        system=(
-            "You are a study scheduler. Given assignments with due dates and "
-            "estimated hours, produce a time-blocked plan.\n\n"
-            "Return ONLY JSON: {\"blocks\": [{\"task\": str, \"assignment_title\": str, "
-            "\"starts_at\": ISO8601 with offset, \"ends_at\": ISO8601, "
-            "\"est_minutes\": int, \"priority\": int}], \"rationale\": str}\n\n"
-            "Rules: exams and projects outrank labs and readings. Break anything "
-            "over 2 hours into separate blocks on different days. Respect the "
-            "stated constraints. Never schedule a block after its due date. "
-            "priority 1 = do first."
-        ),
-        user=json.dumps({
-            "today": _today(),
-            "horizon_days": horizon_days,
-            "constraints": constraints,
-            "timezone": profile.get("timezone", "America/New_York"),
-            "preferences": profile.get("prefs", {}),
-            "assignments": assignments,
-        }, default=str),
-        max_tokens=3000,
-        label=f"schedule:{horizon_days}d",
+    tz_name = profile.get("timezone") or os.getenv("TIMEZONE", "America/New_York")
+
+    system = (
+        "You are a study scheduler. Given assignments with due dates and "
+        "estimated hours, produce a time-blocked plan.\n\n"
+        "Return ONLY JSON: {\"blocks\": [{\"task\": str, \"assignment_title\": str, "
+        "\"starts_at\": ISO8601 with offset, \"ends_at\": ISO8601, "
+        "\"est_minutes\": int, \"priority\": int}], \"rationale\": str}\n\n"
+        "Rules:\n"
+        "- EVERY timestamp needs an explicit UTC offset, e.g. "
+        "2026-09-24T14:00:00-04:00. A timestamp without one is ambiguous and "
+        "lands the block at the wrong hour.\n"
+        "- starts_at, ends_at and est_minutes must agree with each other.\n"
+        "- Exams and projects outrank labs and readings.\n"
+        "- Break anything over 2 hours into separate blocks on different "
+        "days.\n"
+        "- Never schedule a block after its due date.\n"
+        "- An assignment with no due date still gets time; put it in the "
+        "gaps.\n"
+        "- Respect the stated constraints exactly.\n"
+        "- priority 1 = do first.\n"
+        "- Keep the rationale under 40 words. Spend the budget on blocks."
     )
+    payload = json.dumps({
+        "today": _today(),
+        "horizon_days": horizon_days,
+        "constraints": constraints,
+        "timezone": tz_name,
+        "preferences": profile.get("prefs", {}),
+        "assignments": assignments,
+    }, default=str)
+
+    # Room for roughly 60 blocks of JSON. Cheap next to a failed demo.
+    plan = cache.claude(system=system, user=payload, max_tokens=12000,
+                        label=f"schedule:{horizon_days}d:{len(assignments)}")
+
+    if "error" in plan and "JSON" in str(plan.get("error", "")):
+        # Almost always truncation. Ask for a terser plan once before giving up.
+        plan = cache.claude(
+            system=system + "\n\nBe compact: at most 2 blocks per assignment, "
+                            "and a one-sentence rationale.",
+            user=payload, max_tokens=16000,
+            label=f"schedule:{horizon_days}d:{len(assignments)}:retry",
+        )
+
     if "error" in plan:
-        return plan
+        return {"error": f"the planner could not produce a usable plan: "
+                         f"{str(plan.get('error'))[:200]}",
+                "assignments_considered": len(assignments),
+                "hint": "This is a model/response problem, not missing data. "
+                        "Retrying usually works; check the raw response with "
+                        "cache.py --list.",
+                "blocks": []}
 
     blocks = plan.get("blocks") or []
     # Attach assignment ids so the schedule links back to real rows.
@@ -570,6 +667,14 @@ def add_to_schedule(items: list[dict]) -> dict:
         })
 
     if MODE == "mock":
+        # Normalise here too, so mock and live agree on what a stored block
+        # looks like. db._normalize_block is pure -- no database needed -- and
+        # without it the mock returned blocks with no end time, which is a
+        # difference you'd only find out about in production.
+        blocks = [{**b, **{k: (v.isoformat() if hasattr(v, "isoformat") else v)
+                           for k, v in db._normalize_block(b).items()
+                           if k in ("starts_at", "ends_at", "est_minutes")}}
+                  for b in blocks]
         # Remember it for this process, so a mock get_schedule afterwards
         # shows what was just added. Without this, "add a viola lesson" then
         # "what's on my schedule" returned the canned study plan and the
@@ -749,6 +854,51 @@ def update_preferences(updates: dict) -> dict:
     return result
 
 
+def remove_from_schedule(block_ids: list[str] | None = None,
+                         task_match: str | None = None,
+                         on_day: str | None = None) -> dict:
+    """Delete schedule blocks. See db.remove_schedule_blocks."""
+    if not (block_ids or task_match or on_day):
+        return {"error": "give block_ids, task_match, or on_day -- refusing "
+                         "to delete the whole schedule"}
+    if MODE == "mock":
+        before = len(_MOCK_SCHEDULE)
+        keep, removed = [], []
+        for block in _MOCK_SCHEDULE:
+            title = str(block.get("task", "")).lower()
+            hit = ((task_match and task_match.lower().strip() in title)
+                   or (on_day and str(block.get("starts_at", "")).startswith(on_day)))
+            (removed if hit else keep).append(block)
+        _MOCK_SCHEDULE[:] = keep
+        return {"removed": before - len(keep), "blocks": removed}
+    return db.remove_schedule_blocks(student(), block_ids, task_match, on_day)
+
+
+def remove_events(event_ids: list[str] | None = None,
+                  keyword: str | None = None,
+                  source: str | None = None) -> dict:
+    """
+    Delete stored events, and tell the website to drop them from the board.
+
+    Needed because a single "what's on campus" pulls in dozens of events the
+    student has no interest in, and there was no way to clear them: the
+    assistant had to answer "I don't have a tool to delete or remove existing
+    calendar events". A tool that can only add is a tool that makes a mess.
+    """
+    # Checked BEFORE the mock branch, deliberately. The same mistake as the
+    # credential filter: a guard that only exists in the live path is one that
+    # tests can't see working, so it quietly stops working.
+    if not (event_ids or keyword or source):
+        return {"error": "give event_ids, keyword, or source -- refusing to "
+                         "delete every stored event"}
+    if MODE == "mock":
+        return {"removed": 2, "events": [
+            {"id": "mock-ev-1", "title": "[MOCK] On-Demand Lunch-and-Learn"},
+            {"id": "mock-ev-2", "title": "[MOCK] Info session"},
+        ]}
+    return db.remove_events(event_ids, keyword, source)
+
+
 def find_assignment(name: str, course: str | None = None) -> dict:
     if MODE == "mock":
         needle = str(name or "").lower().replace(" ", "")
@@ -848,6 +998,8 @@ DISPATCH: dict[str, Callable[..., dict]] = {
     "find_assignment": find_assignment,
     "update_assignment": update_assignment,
     "add_tasks": add_tasks,
+    "remove_from_schedule": remove_from_schedule,
+    "remove_events": remove_events,
 }
 
 # Sanity check: every advertised tool must actually exist.

@@ -455,6 +455,12 @@ def _apply_actions(user_id: str, actions: list[dict]) -> list[dict]:
         if not isinstance(items, list) or not items:
             continue
 
+        if action.get("type") == "removeItems":
+            gone = store.remove_matching(user_id, items)
+            applied.append({"type": "removeItems", "added": gone,
+                            "seen": len(items)})
+            continue
+
         if action.get("type") == "completeItems":
             # Tick off rows the agent marked submitted/dismissed. Searches
             # every column because an exam and an assignment are the same

@@ -359,16 +359,34 @@ def _time(value: object) -> str:
 
 
 def _dt(value: object):
+    """
+    Parse a timestamp and put it in the student's timezone.
+
+    Belt and braces with db.jsonable(), which already converts on the way out
+    of the database. This layer converts too, because not every value reaching
+    a card comes from a query: some arrive from a model's JSON, some from rows
+    written before the conversion existed. A block stored as 19:00Z rendered
+    as "7:00pm" on a dashboard whose owner had asked for 3pm, and the fix has
+    to cover the data that is already there, not just the next write.
+    """
     from datetime import datetime
 
     if value in (None, ""):
         return None
-    if isinstance(value, datetime):
-        return value
-    try:
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except (ValueError, TypeError):
-        return None
+    parsed = value if isinstance(value, datetime) else None
+    if parsed is None:
+        try:
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            return None
+    if parsed.tzinfo is not None:
+        try:
+            import db
+
+            parsed = parsed.astimezone(db._tz())
+        except Exception:  # noqa: BLE001 - formatting must not fail on tz setup
+            pass
+    return parsed
 
 
 def _int(value: object) -> int:

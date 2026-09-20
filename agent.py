@@ -63,6 +63,7 @@ _EVENT_TOOLS = ("get_events", "find_campus_events")
 # that fails.
 _SCHEDULE_TOOLS = ("make_schedule", "add_to_schedule", "get_schedule")
 _TASK_TOOLS = ("add_tasks",)
+_REMOVAL_TOOLS = ("remove_from_schedule", "remove_events")
 
 
 def handle(message: str, history: list[dict] | None = None,
@@ -194,6 +195,7 @@ WRITE_TOOLS = frozenset({
     "refresh_from_canvas", "make_schedule", "add_to_schedule",
     "make_study_guide", "find_campus_events", "update_preferences",
     "log_time", "update_assignment", "add_tasks",
+    "remove_from_schedule", "remove_events",
 })
 
 _ASKED_FOR_CHANGE = re.compile(
@@ -342,6 +344,7 @@ def board_actions(steps: list[dict]) -> list[dict]:
     events: list[dict] = []
     todos: list[dict] = []
     completed: list[dict] = []
+    removed: list[dict] = []
     seen: set[str] = set()
 
     for step in steps or []:
@@ -384,6 +387,22 @@ def board_actions(steps: list[dict]) -> list[dict]:
                     seen.add(item["canvasId"])
                     todos.append(item)
 
+        elif tool in _REMOVAL_TOOLS:
+            # A delete in Tiger Data has to delete the board row too, or the
+            # thing the student asked you to remove stays on screen and the
+            # reply is a lie by omission.
+            for row in (result.get("blocks") or []):
+                task = str(row.get("task") or "").strip()
+                starts = _as_iso(row.get("starts_at"))
+                if task and starts:
+                    removed.append({"canvasId": f"sched:{task[:60]}:{starts[:16]}",
+                                    "title": task[:200], "kind": "events"})
+            for row in (result.get("events") or []):
+                title = str(row.get("title") or "").strip()
+                if title:
+                    removed.append({"canvasId": str(row.get("id") or "")[:160],
+                                    "title": title[:200], "kind": "events"})
+
         elif tool == "update_assignment":
             # A status change has to be reflected on the board as well, or the
             # row the student asked you to drop stays on screen.
@@ -409,6 +428,20 @@ def board_actions(steps: list[dict]) -> list[dict]:
         # Upserts on canvasId, so this ticks the existing row rather than
         # adding a second copy of it.
         actions.append({"type": "completeItems", "items": completed[:40]})
+    if removed:
+        actions.append({"type": "removeItems", "items": removed[:200]})
+
+    # A block that was just deleted must not be re-added by a get_schedule in
+    # the same turn -- "remove the 3pm lesson, then show me my schedule" runs
+    # both, and the read can return stale rows from before the delete.
+    if removed:
+        gone = {r["canvasId"] for r in removed}
+        for action in actions:
+            if action["type"] in ("addEvents", "addAssignments", "addExams"):
+                action["items"] = [i for i in action["items"]
+                                   if i.get("canvasId") not in gone]
+        actions = [a for a in actions
+                   if a["items"] or a["type"] == "removeItems"]
     return actions
 
 
@@ -425,16 +458,25 @@ def _assignment_row(row: dict) -> dict | None:
     if not title:
         return None
     hours = _as_float(row.get("est_hours"))
+    # dueISO is OMITTED when there isn't one, rather than set to null.
+    #
+    # This one was ugly on screen: the frontend runs date arithmetic on
+    # dueISO, and `new Date(null)` is the Unix epoch, so an assignment with no
+    # due date -- MUSIC 0620's "Roll Call Attendance" -- rendered as "Overdue
+    # by 20716 days" at the top of the dashboard. A missing key is falsy and
+    # gets the "no due date" branch; a null is a date in 1970.
+    due = _as_iso(row.get("due_at"))
     item = {
         "title": title[:200],
         "course": str(row.get("course_code") or row.get("course") or "")[:80],
-        "dueISO": _as_iso(row.get("due_at")),
         # The orchestrator's ids are deterministic (db.make_id hashes student +
         # course + title), so using one as canvasId is what makes a re-crawl
         # update the row instead of adding a second copy of it.
         "canvasId": str(row.get("id") or f"oh:{title}")[:120],
         "source": "canvas",
     }
+    if due:
+        item["dueISO"] = due
     if hours:
         item["estimateMins"] = int(round(hours * 60))
     if row.get("status") in ("submitted", "graded"):
@@ -480,10 +522,15 @@ def _event_row(row: dict) -> dict | None:
     title = str(row.get("title") or "").strip()
     if not title:
         return None
+    starts = _as_iso(row.get("starts_at") or row.get("when"))
+    if not starts:
+        # An event with no time can't be placed on a calendar, and a null
+        # startISO renders as 1970 for the same reason dueISO did.
+        return None
     return {
         "title": title[:200],
         "location": str(row.get("location") or row.get("where") or "")[:120],
-        "startISO": _as_iso(row.get("starts_at") or row.get("when")),
+        "startISO": starts,
         "canvasId": str(row.get("id") or row.get("url") or f"ev:{title}")[:160],
         "source": "canvas",
         "url": str(row.get("url") or "")[:400] or None,
@@ -491,14 +538,30 @@ def _event_row(row: dict) -> dict | None:
 
 
 def _as_iso(value: object) -> str | None:
+    """
+    Normalise a timestamp for the board, in the student's timezone.
+
+    The instant is the same either way -- the browser renders any offset in
+    local time -- but emitting local offsets keeps the board rows readable and
+    consistent with the cards. Two representations of one moment in two parts
+    of the same response is how "is it 2pm or 7pm?" becomes a question at all.
+    """
     if not value:
         return None
-    if isinstance(value, datetime):
-        return value.isoformat()
-    try:
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).isoformat()
-    except (ValueError, TypeError):
-        return None
+    parsed = value if isinstance(value, datetime) else None
+    if parsed is None:
+        try:
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            return None
+    if parsed.tzinfo is not None:
+        try:
+            import db
+
+            parsed = parsed.astimezone(db._tz())
+        except Exception:  # noqa: BLE001
+            pass
+    return parsed.isoformat()
 
 
 def _as_float(value: object) -> float:
@@ -526,7 +589,8 @@ def _changes(actions: list[dict], surface_report: dict,
     board_summary = []
     labels = {"addAssignments": "assignments", "addExams": "exams",
               "addEvents": "events", "addTodos": "to-dos",
-              "completeItems": "items ticked off"}
+              "completeItems": "items ticked off",
+              "removeItems": "items removed"}
     for action in actions:
         count = len(action.get("items") or [])
         if count:
@@ -536,7 +600,8 @@ def _changes(actions: list[dict], surface_report: dict,
               if step.get("ok") and step.get("tool") in
               ("refresh_from_canvas", "make_schedule", "add_to_schedule",
                "make_study_guide", "find_campus_events", "update_preferences",
-               "log_time", "update_assignment")]
+               "log_time", "update_assignment", "add_tasks",
+               "remove_from_schedule", "remove_events")]
 
     return {
         "board": board_summary,

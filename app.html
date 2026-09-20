@@ -672,8 +672,20 @@
   }
 
   // ---- Date + formatting helpers ----
+  function hasDate(iso) {
+    if (!iso) return false;
+    const t = new Date(iso).getTime();
+    // NaN for junk, and a sanity window so a null-turned-epoch date (1970) or
+    // a far-future typo can't drive the urgency colours. This is the second
+    // half of the "Overdue by 20716 days" fix: the server no longer sends a
+    // null due date, and the page no longer does maths on one if it arrives.
+    if (!isFinite(t)) return false;
+    const year = new Date(t).getFullYear();
+    return year > 2000 && year < 2100;
+  }
   function daysUntil(iso) { return Math.ceil((new Date(iso) - new Date()) / 86400000); }
   function urgency(iso) {
+    if (!hasDate(iso)) return { color:'var(--muted)', label:'No due date' };
     const d = daysUntil(iso);
     if (d < 0)  return { color:'var(--red)',   label: d === -1 ? 'Overdue by 1 day' : `Overdue by ${-d} days` };
     if (d === 0) return { color:'var(--red)',   label:'Due today' };
@@ -681,6 +693,7 @@
     return { color:'var(--green)', label:`Due in ${d} days` };
   }
   function examWhen(iso) {
+    if (!hasDate(iso)) return { color:'var(--muted)', label:'No date set' };
     const d = daysUntil(iso);
     if (d < 0)  return { color:'var(--muted)', label:'Passed' };
     if (d === 0) return { color:'var(--red)',   label:'Exam today' };
@@ -688,6 +701,7 @@
     return { color:'var(--green)', label:`In ${d} days` };
   }
   function eventWhen(iso) {
+    if (!hasDate(iso)) return { color:'var(--muted)', label:'No date set' };
     const dt = new Date(iso), d = daysUntil(iso);
     const t = dt.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
     if (d <= 0)  return { color:'var(--red)',   label:`Today, ${t}` };

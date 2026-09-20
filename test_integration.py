@@ -601,6 +601,146 @@ check("and that times are already local", ctx.get("times_are_local") is True)
 
 
 # ==========================================================================
+section("regressions from the second live run")
+# ==========================================================================
+import db as _db  # noqa: E402
+
+# --- the 2pm lesson that showed up at 7pm ---
+naive = _db.jsonable(_db._as_datetime("2026-09-24T14:00:00", "starts_at"))
+explicit = _db.jsonable(_db._as_datetime("2026-09-24T14:00:00-04:00", "starts_at"))
+check("a naive timestamp means local time, not UTC",
+      naive == explicit, f"naive={naive} explicit={explicit}")
+check("2pm stays 2pm", naive.startswith("2026-09-24T14:00"), naive)
+check("_tz never raises, even with a junk timezone name",
+      bool(_db._tz()) and bool(
+          (lambda: (setattr(_db, "TIMEZONE", "Mars/Olympus"), _db._tz())[1])()))
+_db.TIMEZONE = "America/New_York"
+
+# --- the block that said 2:00pm-4:00pm / 60 min ---
+block = _db._normalize_block({"task": "Viola lesson",
+                              "starts_at": "2026-09-24T14:00:00-04:00",
+                              "ends_at": "2026-09-24T16:00:00-04:00",
+                              "est_minutes": 60})
+check("the clock wins over a wrong duration", block["est_minutes"] == 120,
+      str(block["est_minutes"]))
+filled = _db._normalize_block({"task": "x", "starts_at": "2026-09-24T14:00:00-04:00",
+                               "est_minutes": 120})
+check("a missing end time is derived from the duration",
+      _db.jsonable(filled["ends_at"]).startswith("2026-09-24T16:00"),
+      _db.jsonable(filled["ends_at"]))
+backwards = _db._normalize_block({"task": "x",
+                                  "starts_at": "2026-09-24T16:00:00-04:00",
+                                  "ends_at": "2026-09-24T14:00:00-04:00",
+                                  "est_minutes": 120})
+check("an end before its start is repaired, not stored",
+      backwards["ends_at"] > backwards["starts_at"], str(backwards))
+bare = _db._normalize_block({"task": "x", "starts_at": "2026-09-24T14:00:00-04:00"})
+check("a block with only a start gets an hour",
+      bare["est_minutes"] == 60 and bare["ends_at"] is not None, str(bare))
+
+# --- "Overdue by 20716 days" ---
+undated = agent._assignment_row({"id": "r1", "title": "Roll Call Attendance",
+                                 "course_code": "MUSIC 0620", "due_at": None,
+                                 "est_hours": 5.4, "status": "open"})
+check("an assignment with no due date omits dueISO entirely",
+      "dueISO" not in undated,
+      "a null dueISO becomes 1970 in the browser and renders as "
+      "'Overdue by 20716 days'")
+dated = agent._assignment_row({"id": "r2", "title": "HW01", "course_code": "PHYS",
+                               "due_at": "2026-09-03T03:59:59+00:00"})
+check("a real due date is still sent", "dueISO" in dated, str(dated))
+check("and it lands on the local day, not the UTC one",
+      dated["dueISO"].startswith("2026-09-02T23:59"), dated["dueISO"])
+check("an event with no start time is dropped rather than dated 1970",
+      agent._event_row({"title": "Mystery", "starts_at": None}) is None)
+
+# --- the frontend's half of the same fix ---
+page = (ROOT / "app.html").read_text()
+check("the page refuses to do date maths on a missing date",
+      "function hasDate" in page and "No due date" in page)
+for guard in ("function urgency", "function examWhen", "function eventWhen"):
+    index = page.index(guard)
+    check(f"{guard.split()[1]} checks the date first",
+          "hasDate" in page[index:index + 260], guard)
+
+# --- things can now be deleted ---
+check("schedule blocks can be removed",
+      "remove_from_schedule" in __import__("tools").DISPATCH)
+check("campus events can be removed",
+      "remove_events" in __import__("tools").DISPATCH)
+import tools as _tools  # noqa: E402
+
+check("a removal with no target is refused, not treated as 'everything'",
+      "error" in _tools.execute("remove_from_schedule", {}),
+      "there must be no way to delete a whole schedule by accident")
+_tools.execute("add_to_schedule", {"items": [
+    {"task": "Viola lesson", "starts_at": "2026-09-24T14:00:00-04:00"}]})
+gone = _tools.execute("remove_from_schedule", {"task_match": "viola"})
+check("removing by title works", gone.get("removed") == 1, str(gone))
+
+removal_actions = agent.board_actions([{
+    "tool": "remove_from_schedule", "ok": True,
+    "result": {"removed": 1, "blocks": [
+        {"id": "9", "task": "Viola lesson",
+         "starts_at": "2026-09-24T15:00:00-04:00"}]}}])
+check("a deleted block is removed from the board too",
+      any(a["type"] == "removeItems" for a in removal_actions),
+      str(removal_actions))
+
+# The read-after-delete trap: "remove it, then show me my schedule" runs both,
+# and the read can still return the row the delete just took out.
+mixed = agent.board_actions([
+    {"tool": "remove_from_schedule", "ok": True,
+     "result": {"removed": 1, "blocks": [
+         {"task": "Viola lesson", "starts_at": "2026-09-24T15:00:00-04:00"}]}},
+    {"tool": "get_schedule", "ok": True,
+     "result": {"blocks": [
+         {"task": "Viola lesson", "starts_at": "2026-09-24T15:00:00-04:00"},
+         {"task": "Problem Set 4", "starts_at": "2026-09-21T18:00:00-04:00"}]}},
+])
+re_added = [i["title"] for a in mixed if a["type"] == "addEvents"
+            for i in a["items"]]
+check("a block deleted this turn isn't re-added by a read in the same turn",
+      "Viola lesson" not in re_added, str(re_added))
+check("the other blocks survive", "Problem Set 4" in re_added, str(re_added))
+
+store_r = fresh_store()
+ur = store_r.create_user("remover", "password")
+store_r.upsert_items(ur["id"], "events", [
+    {"title": "Lunch-and-Learn", "canvasId": "ev1", "startISO": "2026-09-21T09:00:00-04:00"},
+    {"title": "SteelHacks", "canvasId": "ev2", "startISO": "2026-09-20T09:00:00-04:00"}])
+store_r.upsert_items(ur["id"], "assignments", [{"title": "HW01", "canvasId": "a1"}])
+removed_count = store_r.remove_matching(ur["id"], [
+    {"canvasId": "ev1", "title": "Lunch-and-Learn", "kind": "events"}])
+check("removing an event takes exactly that row", removed_count == 1)
+after_board = store_r.get_board(ur["id"])
+check("the other event stays", len(after_board["events"]) == 1)
+check("and removing events can't take an assignment with it",
+      len(after_board["assignments"]) == 1)
+
+# --- multi-step capacity ---
+import orchestrator as _orch  # noqa: E402
+
+check("the loop has room for a multi-step request", _orch.MAX_TURNS >= 12,
+      f"MAX_TURNS={_orch.MAX_TURNS}")
+check("answers aren't truncated mid-plan", _orch.MAX_TOKENS >= 8000,
+      f"MAX_TOKENS={_orch.MAX_TOKENS}")
+check("a 40-event tool result isn't cut off before the model reads it",
+      _orch.TOOL_RESULT_CHARS >= 24000, f"{_orch.TOOL_RESULT_CHARS}")
+prompt = _orch.SYSTEM_PROMPT.lower()
+check("the prompt tells it to finish multi-step work",
+      "multi-step" in prompt and "before you answer" in prompt)
+check("the prompt tells it removal is possible now",
+      "remove_from_schedule" in prompt and "remove_events" in prompt)
+check("the prompt demands explicit offsets",
+      "utc offset" in prompt, "a bare 14:00 is what put a lesson at 7pm")
+check("running out of turns says what got done",
+      "ran out of steps partway" in _orch.SYSTEM_PROMPT
+      or "ran out of steps partway" in open(
+          ROOT / "orchestrator" / "orchestrator.py").read())
+
+
+# ==========================================================================
 section("HTTP API")
 # ==========================================================================
 

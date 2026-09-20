@@ -420,7 +420,20 @@ def _mock_plan(prompt: str, available: set[str]) -> list[tuple[str, dict]]:
     # Change requests come first: "remove the preproposal" contains no
     # refresh/schedule keyword but is the single most common thing a student
     # asks for after seeing a list, and it needs a WRITE.
-    if has("remove", "take it off", "take that off", "drop ", "delete",
+    # Multi-step: clear the noise AND plan. This is the request that came back
+    # as an apology, so the mock should exercise the whole chain.
+    if (has("unnecessary", "don't need", "do not need", "noisy", "clear the",
+            "too many") and has("event")) or (
+            has("remove") and has("event")):
+        plan = [("remove_events", {"source": "calendar.pitt.edu"})]
+        if has("plan", "schedule", "how long", "add all"):
+            plan += [("get_assignments", {}),
+                     ("make_schedule", {"horizon_days": 7})]
+    elif has("remove the", "delete the", "wrong time", "cancel") and has(
+            "lesson", "block", "schedule", "pm", "am", "rehearsal"):
+        plan = [("get_schedule", {}),
+                ("remove_from_schedule", {"task_match": "viola"})]
+    elif has("remove", "take it off", "take that off", "drop ", "delete",
            "already submitted", "someone else", "groupmate", "group member",
            "not mine", "mark ", "did that", "finished", "turned in"):
         plan = [("find_assignment", {"name": "preproposal"}),

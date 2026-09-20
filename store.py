@@ -635,6 +635,44 @@ def complete_items(user_id: str, items: list[dict]) -> int:
     return ticked
 
 
+def remove_matching(user_id: str, items: list[dict]) -> int:
+    """
+    Delete board rows the agent removed upstream.
+
+    Matches on canvasId, then on an exact title, for the same reason
+    complete_items does: a row may predate the deterministic ids. Scoped to
+    the kinds named in the request when they're given, so removing campus
+    events can't take an assignment with it.
+    """
+    board = get_board(user_id)
+    wanted_ids = {str(i.get("canvasId")) for i in items if i.get("canvasId")}
+    wanted_titles = {str(i.get("title", "")).strip().lower()
+                     for i in items if i.get("title")}
+    kinds = {i.get("kind") for i in items if i.get("kind")} or set(KINDS)
+    gone = 0
+
+    for kind in KINDS:
+        if kind not in kinds:
+            continue
+        keep = []
+        for row in board[kind]:
+            match = (str(row.get("canvasId")) in wanted_ids
+                     or str(row.get("title", "")).strip().lower() in wanted_titles)
+            if match:
+                gone += 1
+                if backend() != "file":
+                    _pg().query(
+                        "DELETE FROM app_items WHERE user_id = %s AND id = %s",
+                        (user_id, row.get("id")), fetch="none")
+            else:
+                keep.append(row)
+        board[kind] = keep
+
+    if backend() == "file":
+        _save_board(user_id, board)
+    return gone
+
+
 def clear(user_id: str) -> dict:
     if backend() == "file":
         _save_board(user_id, _empty_board())

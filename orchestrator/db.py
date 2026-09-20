@@ -53,12 +53,26 @@ TIMEZONE = os.getenv("TIMEZONE", os.getenv("STUDENT_TZ", "America/New_York"))
 
 
 def _tz():
+    """
+    The student's timezone. NEVER raises.
+
+    The previous version's fallback was ZoneInfo("America/New_York") inside an
+    except block -- which raises again on a host with no tzdata installed
+    (slim Python images have none), so the "safe" path was the one that
+    exploded. A fixed offset is always available.
+    """
     from zoneinfo import ZoneInfo
 
+    for name in (TIMEZONE, "America/New_York"):
+        try:
+            return ZoneInfo(name)
+        except Exception:  # noqa: BLE001
+            continue
     try:
-        return ZoneInfo(TIMEZONE)
-    except Exception:  # noqa: BLE001 - bad tz name shouldn't break every query
-        return ZoneInfo("America/New_York")
+        offset = float(os.getenv("TZ_OFFSET_HOURS", "-4"))
+    except ValueError:
+        offset = -4.0
+    return timezone(timedelta(hours=offset))
 
 _pool = None
 
@@ -279,18 +293,38 @@ _STATUSES = {"open", "submitted", "graded", "dismissed"}
 
 
 def _as_datetime(value: Any, field: str) -> datetime | None:
-    """Accept ISO strings, datetimes, or None. Reject anything else."""
+    """
+    Accept ISO strings, datetimes, or None. Reject anything else.
+
+    A NAIVE TIMESTAMP MEANS THE STUDENT'S LOCAL TIME.
+
+    This line used to read `.replace(tzinfo=timezone.utc)`, and it was the
+    cause of a genuinely baffling bug. Ask for a viola lesson at 2pm and the
+    model emits one of two things depending on its mood:
+
+        "2026-09-24T14:00:00-04:00"   explicit offset -> correct
+        "2026-09-24T14:00:00"         naive           -> stamped as 14:00 UTC
+
+    The second stored 2pm as 10am, and combined with a display layer that
+    wasn't converting either, the same schedule showed one lesson at 2pm and
+    another at 7pm -- neither of which was the time anyone asked for. Two
+    entries created minutes apart, disagreeing by five hours, because one
+    carried an offset and the other didn't.
+
+    Nobody writing "2pm" means 2pm UTC. Assume the student's timezone, which
+    is what every other layer now displays in.
+    """
     if value in (None, "", "null"):
         return None
     if isinstance(value, datetime):
-        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        return value if value.tzinfo else value.replace(tzinfo=_tz())
     if isinstance(value, str):
         text = value.strip().replace("Z", "+00:00")
         try:
             parsed = datetime.fromisoformat(text)
         except ValueError:
             raise ValidationError(f"{field}: could not read '{value}' as a date")
-        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=_tz())
     raise ValidationError(f"{field}: expected a date, got {type(value).__name__}")
 
 
@@ -419,7 +453,8 @@ def get_schedule(student_id: str = DEFAULT_STUDENT) -> dict:
     if not newest:
         return {"blocks": [], "generated_at": None}
     blocks = query(
-        """SELECT assignment_id, task, starts_at, ends_at, est_minutes, priority
+        """SELECT id, assignment_id, task, starts_at, ends_at, est_minutes,
+                  priority
            FROM schedule_blocks WHERE generation_id = %s ORDER BY starts_at""",
         (newest["generation_id"],),
     )
@@ -657,6 +692,44 @@ def save_schedule(student_id: str, blocks: list[dict], rationale: str = "") -> d
     return out
 
 
+def _normalize_block(block: dict) -> dict:
+    """
+    Make a schedule block internally consistent before it is stored.
+
+    Three facts -- start, end, duration -- arrive from a model that does not
+    always make them agree. A real example: asked for a lesson from 2 to 4pm,
+    it sent starts_at 2pm, ends_at 4pm, and est_minutes 60. The card then said
+    "2:00pm-4:00pm / 60 min", which is wrong however you read it.
+
+    The rule: if both ends are known, the clock decides the duration. If only
+    a duration is known, it decides the end. A stored block can then never
+    contradict itself, no matter what the model said.
+    """
+    out = dict(block)
+    starts = _as_datetime(out.get("starts_at") or out.get("start"), "starts_at")
+    ends = _as_datetime(out.get("ends_at") or out.get("end"), "ends_at")
+    minutes = _as_int(out.get("est_minutes"), "est_minutes")
+
+    if starts and ends:
+        if ends <= starts:
+            # An end before its start is a model slip, usually a missed pm.
+            # Trust the duration if there is one, otherwise an hour.
+            ends = starts + timedelta(minutes=minutes or 60)
+        measured = int((ends - starts).total_seconds() // 60)
+        if measured > 0:
+            minutes = measured
+    elif starts and minutes:
+        ends = starts + timedelta(minutes=minutes)
+    elif starts and not ends:
+        minutes = minutes or 60
+        ends = starts + timedelta(minutes=minutes)
+
+    out["starts_at"] = starts
+    out["ends_at"] = ends
+    out["est_minutes"] = minutes
+    return out
+
+
 def add_schedule_blocks(student_id: str, blocks: list[dict],
                         note: str = "") -> dict:
     """
@@ -675,36 +748,42 @@ def add_schedule_blocks(student_id: str, blocks: list[dict],
     )
     gen = newest["generation_id"] if newest else uuid.uuid4().hex[:12]
 
-    written, errors = 0, []
-    for b in blocks or []:
+    written, errors, saved = 0, [], []
+    for raw in blocks or []:
         try:
-            starts = _as_datetime(b.get("starts_at") or b.get("start"), "starts_at")
+            b = _normalize_block(raw)
+            starts = b["starts_at"]
             if starts is None:
                 raise ValidationError("starts_at is required")
-            query(
+            row = query(
                 """INSERT INTO schedule_blocks
                        (student_id, assignment_id, task, starts_at, ends_at,
                         est_minutes, priority, generation_id, rationale)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                   RETURNING id, task, starts_at, ends_at, est_minutes""",
                 (
                     student_id,
                     _text(b.get("assignment_id"), "assignment_id", limit=40),
                     _text(b.get("task"), "task", required=True, limit=300),
                     starts,
-                    _as_datetime(b.get("ends_at") or b.get("end"), "ends_at"),
-                    _as_int(b.get("est_minutes"), "est_minutes"),
+                    b["ends_at"],
+                    b["est_minutes"],
                     _as_int(b.get("priority"), "priority"),
                     gen,
                     _text(note, "note", limit=2000),
                 ),
-                fetch="none",
+                fetch="one",
             )
+            saved.append(row)
             written += 1
         except ValidationError as exc:
             if len(errors) < 5:
                 errors.append(str(exc))
 
-    out = {"blocks_added": written, "generation_id": gen}
+    # Return the rows themselves, with ids. The caller needs the ids to be
+    # able to delete a block later, and needs the stored times so the reply
+    # quotes what was actually saved rather than what was requested.
+    out = {"blocks_added": written, "generation_id": gen, "blocks": saved}
     if errors:
         out["validation_errors"] = errors
     return out
@@ -871,6 +950,78 @@ def set_assignment_status(student_id: str, assignment_ids: list[str],
     )
     return {"updated": len(rows), "status": status, "items": list(rows),
             "not_found": sorted(set(ids) - {r["id"] for r in rows})}
+
+
+def remove_schedule_blocks(student_id: str, block_ids: list[str] | None = None,
+                           task_match: str | None = None,
+                           on_day: str | None = None) -> dict:
+    """
+    Delete schedule blocks. By id, by title, or by day.
+
+    There was no way to do this at all, and the gap was visible: asked to
+    remove a wrongly-timed viola lesson, the assistant had to answer "I don't
+    have a tool that can delete or modify existing schedule entries". Adding
+    an entry you can't remove means the first mistake is permanent.
+
+    Returns the rows it deleted, so the reply can name them instead of
+    claiming a vague success.
+    """
+    where, params = ["student_id = %s"], [student_id]
+
+    if block_ids:
+        where.append("id = ANY(%s)")
+        params.append([int(i) for i in block_ids if str(i).isdigit()][:100])
+    if task_match:
+        where.append("regexp_replace(lower(task), '[^a-z0-9]', '', 'g') "
+                     "LIKE regexp_replace(lower(%s), '[^a-z0-9]', '', 'g')")
+        params.append(f"%{task_match}%")
+    if on_day:
+        # Compared in the student's timezone, so "Thursday" means their
+        # Thursday and not a UTC day that starts at 8pm the night before.
+        where.append("(starts_at AT TIME ZONE %s)::date = %s::date")
+        params.extend([TIMEZONE, on_day])
+
+    if len(where) == 1:
+        return {"error": "give block_ids, task_match, or on_day -- "
+                         "refusing to delete the whole schedule"}
+
+    rows = query(
+        f"""DELETE FROM schedule_blocks WHERE {' AND '.join(where)}
+            RETURNING id, task, starts_at, ends_at, est_minutes""",
+        tuple(params),
+    )
+    return {"removed": len(rows), "blocks": list(rows)}
+
+
+def remove_events(event_ids: list[str] | None = None,
+                  keyword: str | None = None,
+                  source: str | None = None) -> dict:
+    """
+    Delete stored campus events.
+
+    campus_events is shared rather than per-student, so this is scoped by id,
+    keyword or source and never takes an "everything" argument.
+    """
+    where, params = [], []
+    if event_ids:
+        where.append("id = ANY(%s)")
+        params.append([str(i) for i in event_ids][:200])
+    if keyword:
+        where.append("title ILIKE %s")
+        params.append(f"%{keyword}%")
+    if source:
+        where.append("source = %s")
+        params.append(source)
+
+    if not where:
+        return {"error": "give event_ids, keyword, or source"}
+
+    rows = query(
+        f"""DELETE FROM campus_events WHERE {' AND '.join(where)}
+            RETURNING id, title, starts_at""",
+        tuple(params),
+    )
+    return {"removed": len(rows), "events": list(rows)}
 
 
 def log_study_session(student_id: str, assignment_id: str | None,
