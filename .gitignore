@@ -1,3 +1,17 @@
+# Dependencies
+node_modules/
+
+# Secrets (never commit; .env.example is committed instead)
+.env
+.env.local
+
+# Generated file-backed store (changes on every interaction)
+data.json
+
+# Logs and OS cruft
+*.log
+npm-debug.log*
+.DS_Store
 canvas_pages/canvas_export.json
 
 .vercel
