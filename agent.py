@@ -38,6 +38,7 @@ design and it's why a confused model can't do much damage.
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
@@ -64,6 +65,9 @@ _EVENT_TOOLS = ("get_events", "find_campus_events")
 _SCHEDULE_TOOLS = ("make_schedule", "add_to_schedule", "get_schedule")
 _TASK_TOOLS = ("add_tasks",)
 _REMOVAL_TOOLS = ("remove_from_schedule", "remove_events")
+# Tools whose output is a DOCUMENT, not a board row. These go to the Files
+# tab, which is where the UI says the assistant's generated files land.
+_DOCUMENT_TOOLS = ("make_study_guide", "get_study_sets")
 
 
 def handle(message: str, history: list[dict] | None = None,
@@ -346,6 +350,7 @@ def board_actions(steps: list[dict]) -> list[dict]:
     todos: list[dict] = []
     completed: list[dict] = []
     removed: list[dict] = []
+    documents: list[dict] = []
     seen: set[str] = set()
 
     for step in steps or []:
@@ -380,6 +385,12 @@ def board_actions(steps: list[dict]) -> list[dict]:
                 if item and item["canvasId"] not in seen:
                     seen.add(item["canvasId"])
                     events.append(item)
+
+        elif tool in _DOCUMENT_TOOLS:
+            for guide in _guides_in(result):
+                document = _study_guide_file(guide)
+                if document:
+                    documents.append(document)
 
         elif tool in _TASK_TOOLS:
             for row in result.get("tasks") or []:
@@ -451,6 +462,8 @@ def board_actions(steps: list[dict]) -> list[dict]:
         actions.append({"type": "completeItems", "items": completed[:40]})
     if removed:
         actions.append({"type": "removeItems", "items": removed[:200]})
+    if documents:
+        actions.append({"type": "addFiles", "items": documents[:10]})
 
     # A block that was just deleted must not be re-added by a get_schedule in
     # the same turn -- "remove the 3pm lesson, then show me my schedule" runs
@@ -523,6 +536,102 @@ def _schedule_row(row: dict) -> dict | None:
         "canvasId": f"sched:{task[:60]}:{starts[:16]}",
         "source": "schedule",
         "location": str(row.get("location") or "")[:120] or None,
+    }
+
+
+def _guides_in(result: dict) -> list[dict]:
+    """
+    Pull study sets out of a tool result.
+
+    make_study_guide returns one guide inline; get_study_sets returns a list
+    of stored rows whose content is nested under `content`. Both shapes end up
+    here so a guide written last week can be re-filed as easily as one made a
+    second ago.
+    """
+    if result.get("sections"):
+        return [result]
+    guides = []
+    for row in result.get("items") or result.get("study_sets") or []:
+        if not isinstance(row, dict):
+            continue
+        content = row.get("content") if isinstance(row.get("content"), dict) else row
+        if content.get("sections"):
+            guides.append({**content,
+                           "course": row.get("course_code") or content.get("course"),
+                           "topic": row.get("topic"),
+                           "format": row.get("format") or content.get("format")})
+    return guides
+
+
+def _study_guide_file(guide: dict) -> dict | None:
+    """
+    Render a study set as a standalone HTML file for the Files tab.
+
+    HTML rather than markdown or a PDF: the frontend opens a file by turning
+    its data URL into a blob and opening that in a tab, so HTML displays
+    immediately with no reader, no dependency, and no print step. Everything
+    interpolated is escaped -- this is model output being written to a file
+    the student will open in a browser.
+    """
+    sections = guide.get("sections") or []
+    if not sections:
+        return None
+
+    course = str(guide.get("course") or "").strip()
+    topic = str(guide.get("topic") or "").strip()
+    title = " ".join(part for part in [course, "study guide"] if part) or "Study guide"
+
+    def esc(value: object) -> str:
+        return (str(value or "")
+                .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace('"', "&quot;"))
+
+    body = []
+    for section in sections[:20]:
+        body.append(f"<section><h2>{esc(section.get('topic'))}</h2>")
+        summary = str(section.get("summary") or "").strip()
+        if summary:
+            body.append(f"<p>{esc(summary)}</p>")
+        questions = [q for q in (section.get("questions") or []) if q][:12]
+        if questions:
+            body.append("<h3>Practice questions</h3><ol>")
+            body.extend(f"<li>{esc(q)}</li>" for q in questions)
+            body.append("</ol>")
+        body.append("</section>")
+
+    made = datetime.now(timezone.utc).astimezone().strftime("%d %b %Y, %H:%M")
+    document = f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{esc(title)}</title>
+<style>
+  body {{ font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+          max-width: 46rem; margin: 3rem auto; padding: 0 1.5rem 4rem;
+          color: #1B1F3B; line-height: 1.6; }}
+  h1 {{ font-size: 1.6rem; margin-bottom: .25rem; }}
+  .sub {{ color: #6B7280; font-size: .9rem; margin-bottom: 2.5rem; }}
+  section {{ border-top: 1px solid #E6E7EB; padding-top: 1.5rem;
+             margin-top: 2rem; }}
+  h2 {{ font-size: 1.15rem; margin-bottom: .5rem; }}
+  h3 {{ font-size: .8rem; text-transform: uppercase; letter-spacing: .05em;
+        color: #6B7280; margin: 1.25rem 0 .5rem; }}
+  ol {{ padding-left: 1.4rem; }} li {{ margin-bottom: .4rem; }}
+  @media print {{ body {{ margin: 0; }} }}
+</style></head>
+<body>
+<h1>{esc(title)}</h1>
+<div class="sub">{esc(topic) + " &middot; " if topic else ""}{len(sections)} topic{"s" if len(sections) != 1 else ""} &middot; made by Office Hours, {esc(made)}</div>
+{"".join(body)}
+</body></html>"""
+
+    encoded = base64.b64encode(document.encode("utf-8")).decode("ascii")
+    filename = (f"{course} study guide.html" if course else "Study guide.html")
+    return {
+        "name": filename,
+        "type": "text/html",
+        "size": len(document.encode("utf-8")),
+        "dataUrl": f"data:text/html;base64,{encoded}",
+        "collectionName": "Study guides",
     }
 
 
@@ -616,7 +725,9 @@ def _changes(actions: list[dict], surface_report: dict,
               "addEvents": ("event", "events"),
               "addTodos": ("to-do", "to-dos"),
               "completeItems": ("item ticked off", "items ticked off"),
-              "removeItems": ("item removed", "items removed")}
+              "removeItems": ("item removed", "items removed"),
+              "addFiles": ("file in your Files tab",
+                           "files in your Files tab")}
     for action in actions:
         count = len(action.get("items") or [])
         if count:
@@ -630,7 +741,8 @@ def _changes(actions: list[dict], surface_report: dict,
                "make_study_guide", "find_campus_events", "update_preferences",
                "log_time", "update_assignment", "add_tasks",
                "remove_from_schedule", "remove_events",
-               "delete_assignments", "restore_assignments")]
+               "delete_assignments", "restore_assignments",
+               "make_study_guide")]
 
     # Tools that FAILED, with the actual error. The student was told four
     # times that "the scheduling tool encountered an internal error (missing

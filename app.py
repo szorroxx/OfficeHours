@@ -498,6 +498,12 @@ def _apply_actions(user_id: str, actions: list[dict]) -> list[dict]:
         if not isinstance(items, list) or not items:
             continue
 
+        if action.get("type") == "addFiles":
+            filed = store.add_library_files(user_id, items)
+            applied.append({"type": "addFiles", "added": filed,
+                            "seen": len(items)})
+            continue
+
         if action.get("type") == "removeItems":
             gone = store.remove_matching(user_id, items)
             applied.append({"type": "removeItems", "added": gone,

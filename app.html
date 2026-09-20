@@ -1319,9 +1319,29 @@
     const s = changes.surface || {};
 
     (changes.applied || []).forEach(a => {
-      const label = { addAssignments:'assignment', addExams:'exam', addEvents:'event', addTodos:'to-do' }[a.type] || a.type;
-      if (a.added) lines.push(`Added ${a.added} ${label}${a.added === 1 ? '' : 's'} to your board`);
-      else if (a.seen) lines.push(`Checked ${a.seen} ${label}${a.seen === 1 ? '' : 's'}, already on your board`);
+      // Pairs, not "label + s": "addFiles" has no sensible plural by suffix,
+      // and the removal/completion actions aren't "added to your board" at
+      // all -- the old wording said "Added 1 removeItems to your board".
+      const WORDS = {
+        addAssignments: ['assignment', 'assignments', 'to your board'],
+        addExams:       ['exam', 'exams', 'to your board'],
+        addEvents:      ['event', 'events', 'to your board'],
+        addTodos:       ['to-do', 'to-dos', 'to your board'],
+        addFiles:       ['file', 'files', 'to your Files tab'],
+        completeItems:  ['item', 'items', 'ticked off'],
+        removeItems:    ['item', 'items', 'removed'],
+      };
+      const [one, many, where] = WORDS[a.type] || [a.type, a.type, ''];
+      const noun = n => n === 1 ? one : many;
+      if (a.type === 'removeItems') {
+        if (a.added) lines.push(`Removed ${a.added} ${noun(a.added)} from your board`);
+      } else if (a.type === 'completeItems') {
+        if (a.added) lines.push(`Ticked off ${a.added} ${noun(a.added)}`);
+      } else if (a.added) {
+        lines.push(`Added ${a.added} ${noun(a.added)} ${where}`);
+      } else if (a.seen) {
+        lines.push(`Checked ${a.seen} ${noun(a.seen)}, already there`);
+      }
     });
     (changes.failures || []).forEach(f =>
       lines.push('\u26a0 ' + f.tool + ' failed: ' + f.error));

@@ -673,6 +673,65 @@ def remove_matching(user_id: str, items: list[dict]) -> int:
     return gone
 
 
+def add_library_files(user_id: str, files: list[dict]) -> int:
+    """
+    Put generated documents in the Files tab.
+
+    The Files tab's own header says "Where the assistant's generated files
+    land, plus anything you add" -- and nothing could put a file there. A
+    student asked for a study guide module, got one (saved in Tiger Data,
+    rendered as a dashboard panel), opened Files, and found it empty. The tab
+    reads app_library; make_study_guide writes study_sets; no code joined the
+    two.
+
+    `collectionName` is resolved to a collection here, creating it if needed,
+    so callers name a folder rather than inventing ids. Files are marked
+    source='ai', which the frontend already styles with an "AI" badge -- that
+    badge existed before anything could produce one.
+    """
+    library = get_library(user_id)
+    collections = library.get("collections") or []
+    existing = library.get("files") or []
+    added = 0
+
+    for item in files or []:
+        name = str(item.get("name") or "").strip()
+        data_url = item.get("dataUrl")
+        if not name or not data_url:
+            continue
+
+        collection_id = item.get("collectionId")
+        wanted = str(item.get("collectionName") or "").strip()
+        if wanted and not collection_id:
+            match = next((c for c in collections
+                          if str(c.get("name", "")).lower() == wanted.lower()), None)
+            if match is None:
+                match = {"id": _gen_id("c"), "name": wanted[:80]}
+                collections.append(match)
+            collection_id = match["id"]
+
+        # Replacing by name keeps a regenerated guide from stacking up: ask
+        # for the same study guide twice and you get one current file, not two.
+        existing = [f for f in existing
+                    if not (str(f.get("name")) == name
+                            and f.get("source") == "ai"
+                            and f.get("collectionId") == collection_id)]
+        existing.append({
+            "id": _gen_id("lf"),
+            "name": name[:200],
+            "type": str(item.get("type") or "text/html")[:80],
+            "size": int(item.get("size") or len(str(data_url))),
+            "dataUrl": str(data_url),
+            "source": "ai",
+            "collectionId": collection_id,
+            "createdISO": _now(),
+        })
+        added += 1
+
+    set_library(user_id, {"collections": collections, "files": existing})
+    return added
+
+
 def clear(user_id: str) -> dict:
     if backend() == "file":
         _save_board(user_id, _empty_board())

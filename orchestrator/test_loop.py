@@ -67,7 +67,7 @@ def tool_call(cid: str, name: str, args: dict) -> dict:
 def t_schema_matches_dispatch():
     advertised = {t["function"]["name"] for t in tools.TOOL_SCHEMAS}
     assert advertised == set(tools.DISPATCH), "schema and dispatch disagree"
-    assert len(advertised) == 22, f"expected 22 tools, got {len(advertised)}"
+    assert len(advertised) == 23, f"expected 23 tools, got {len(advertised)}"
 
 
 def t_every_tool_runs_in_mock():
@@ -96,6 +96,7 @@ def t_every_tool_runs_in_mock():
         "delete_assignments": {"assignment_ids": ["m1"]},
         "restore_assignments": {"titles": ["Preproposal"]},
         "schedule_events": {"within_days": 7},
+        "get_study_sets": {"course": "PHYS 1361"},
     }
     for name in tools.DISPATCH:
         result = tools.execute(name, sample_args[name])
@@ -1089,6 +1090,34 @@ def t_scheduler_respects_its_own_rules():
         "double-booked an existing commitment"
 
 
+def t_generated_documents_become_files():
+    """
+    A study guide that exists only in the database is invisible: the student
+    who asked for one found the Files tab empty.
+    """
+    import sys as _sys
+    from pathlib import Path as _Path
+
+    _sys.path.insert(0, str(_Path(__file__).parent.parent))
+    import agent
+
+    guide = tools.execute("make_study_guide",
+                          {"course": "PHYS 1351", "topics": ["Kinematics"]})
+    assert guide.get("sections"), guide
+    actions = agent.board_actions([
+        {"tool": "make_study_guide", "ok": True, "result": guide}])
+    files = [a for a in actions if a["type"] == "addFiles"]
+    assert files and files[0]["items"], actions
+    assert files[0]["items"][0]["dataUrl"].startswith("data:text/html"), files
+
+
+def t_saved_study_guides_are_readable():
+    """make_study_guide had no counterpart, so 'show me that guide' regenerated it."""
+    out = tools.execute("get_study_sets", {})
+    assert out.get("items"), out
+    assert out["items"][0].get("content", {}).get("sections"), out
+
+
 def t_events_keep_their_own_times():
     """
     The model retyped a 4pm career fair onto the calendar at 23:16.
@@ -1292,6 +1321,8 @@ if __name__ == "__main__":
     check("scheduling never needs a model", t_scheduling_never_needs_a_model)
     check("scheduler respects its rules", t_scheduler_respects_its_own_rules)
     check("events keep their own times", t_events_keep_their_own_times)
+    check("documents become files", t_generated_documents_become_files)
+    check("saved guides are readable", t_saved_study_guides_are_readable)
     check("schedule blocks are consistent", t_schedule_blocks_are_internally_consistent)
     check("naive timestamps are local", t_naive_timestamps_are_local)
     check("schedule reads expose ids", t_schedule_reads_expose_ids)

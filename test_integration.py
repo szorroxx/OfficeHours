@@ -1060,6 +1060,122 @@ check("the page shows tool failures to the student",
 
 
 # ==========================================================================
+section("generated documents reach the Files tab")
+# ==========================================================================
+# A student asked for a study guide module, got one -- saved in Tiger Data,
+# rendered as a dashboard panel -- and found the Files tab empty. The tab's
+# own header says "Where the assistant's generated files land"; it reads
+# app_library, make_study_guide wrote study_sets, and no code joined them.
+
+guide = _tools.execute("make_study_guide",
+                       {"course": "PHYS 1351", "topics": ["Kinematics"]})
+check("a study guide is produced", bool(guide.get("sections")), str(guide)[:160])
+
+guide_actions = agent.board_actions([
+    {"tool": "make_study_guide", "ok": True, "result": guide}])
+files = next((a["items"] for a in guide_actions if a["type"] == "addFiles"), [])
+check("a study guide becomes a file", len(files) == 1, str(guide_actions))
+check("named after the course", files and "PHYS 1351" in files[0]["name"],
+      str(files[:1]))
+check("filed in a collection", files[0].get("collectionName") == "Study guides")
+check("with a real byte size", files[0]["size"] > 200, str(files[0]["size"]))
+
+import base64 as _b64  # noqa: E402
+
+rendered = _b64.b64decode(files[0]["dataUrl"].split(",", 1)[1]).decode()
+check("the file is a complete html document",
+      rendered.startswith("<!DOCTYPE html>") and "</html>" in rendered)
+check("the guide's content is in it",
+      "Kinematics" in rendered or "Gauss" in rendered, rendered[:200])
+
+# Model output is being written to a file the student opens in a browser.
+nasty_guide = {"course": "X", "sections": [
+    {"topic": "<script>alert(1)</script>",
+     "summary": "<img src=x onerror=alert(1)>",
+     "questions": ["</style><script>alert(2)</script>"]}]}
+nasty_file = agent._study_guide_file(nasty_guide)
+nasty_html = _b64.b64decode(nasty_file["dataUrl"].split(",", 1)[1]).decode()
+check("markup in a guide is escaped, not executable",
+      "<script>alert" not in nasty_html and "&lt;script&gt;" in nasty_html,
+      nasty_html[nasty_html.index("<body>"):][:200])
+# The escaped text legitimately contains the words "onerror=alert(1)" as
+# visible characters, and should. What must not survive is a live tag.
+check("and an onerror attribute can't survive",
+      "<img" not in nasty_html and "&lt;img" in nasty_html,
+      nasty_html[nasty_html.index("<body>"):][:200])
+
+check("a guide with no sections produces no file",
+      agent._study_guide_file({"course": "X", "sections": []}) is None)
+
+# --- saved guides can be read back ---
+check("there is a tool to read saved study guides",
+      "get_study_sets" in _tools.DISPATCH,
+      "make_study_guide was write-only, so 'show me that guide' meant "
+      "regenerating it")
+saved = _tools.execute("get_study_sets", {})
+check("it returns the stored content", bool(saved.get("items")), str(saved)[:120])
+refiled = agent.board_actions([
+    {"tool": "get_study_sets", "ok": True, "result": saved}])
+check("reading a saved guide re-files it",
+      any(a["type"] == "addFiles" for a in refiled), str(refiled))
+
+# --- the store side ---
+store_l = fresh_store()
+ul = store_l.create_user("filer", "password")
+count = store_l.add_library_files(ul["id"], [
+    {"name": "PHYS study guide.html", "type": "text/html", "size": 900,
+     "dataUrl": "data:text/html;base64,PHA+aGk8L3A+",
+     "collectionName": "Study guides"}])
+check("a file is stored", count == 1)
+lib = store_l.get_library(ul["id"])
+check("the collection is created once",
+      len(lib["collections"]) == 1
+      and lib["collections"][0]["name"] == "Study guides", str(lib["collections"]))
+check("the file is linked to it",
+      lib["files"][0]["collectionId"] == lib["collections"][0]["id"])
+check("and marked as AI-generated, which the UI badges",
+      lib["files"][0]["source"] == "ai")
+
+store_l.add_library_files(ul["id"], [
+    {"name": "PHYS study guide.html", "type": "text/html", "size": 950,
+     "dataUrl": "data:text/html;base64,PHA+bmV3PC9wPg==",
+     "collectionName": "Study guides"}])
+lib = store_l.get_library(ul["id"])
+check("regenerating replaces rather than duplicating",
+      len(lib["files"]) == 1 and lib["files"][0]["size"] == 950,
+      f"{len(lib['files'])} files")
+check("and doesn't create a second collection", len(lib["collections"]) == 1)
+
+store_l.add_library_files(ul["id"], [
+    {"name": "manual.pdf", "dataUrl": "data:application/pdf;base64,AAA",
+     "collectionName": "Study guides"}])
+check("a differently-named file is kept alongside",
+      len(store_l.get_library(ul["id"])["files"]) == 2)
+check("a file with no data is refused",
+      store_l.add_library_files(ul["id"], [{"name": "empty.html"}]) == 0)
+
+# --- a study guide failure names the fix ---
+_real = _cache.claude
+_cache.claude = _no_anthropic
+try:
+    broken = _tools.execute("make_study_guide",
+                            {"course": "PHYS", "topics": ["x"]})
+finally:
+    _cache.claude = _real
+check("a study guide that can't be written explains why",
+      "error" in broken and "hint" in broken, str(broken)[:160])
+check("and the hint is actionable",
+      "anthropic" in broken["hint"] or "ANTHROPIC_API_KEY" in broken["hint"]
+      or "model_paths" in broken["hint"], broken.get("hint"))
+
+# --- the change log wording ---
+page = (ROOT / "app.html").read_text()
+check("the change log knows how to word each action type",
+      "to your Files tab" in page and "Removed ${a.added}" in page,
+      "'Added 1 removeItems to your board' was the old wording")
+
+
+# ==========================================================================
 section("HTTP API")
 # ==========================================================================
 

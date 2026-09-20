@@ -480,7 +480,11 @@ def _mock_plan(prompt: str, available: set[str]) -> list[tuple[str, dict]]:
              "when should i", "time block"):
         plan = [("get_assignments", {"due_within_days": 14}),
                 ("make_schedule", {"horizon_days": 7})]
-    elif has("study", "review", "flashcard", "practice", "prepare for"):
+    elif has("show me the guide", "that study guide", "my study guides",
+             "open the guide", "study sets"):
+        plan = [("get_study_sets", {})]
+    elif has("module", "study", "review", "flashcard", "practice",
+             "prepare for", "study guide", "revision"):
         plan = [("make_study_guide", {"course": "PHYS 1361",
                                       "topics": ["Gauss's law", "electric potential"]})]
     elif has("overdue", "behind", "did i miss", "missed", "late"):

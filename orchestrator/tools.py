@@ -293,6 +293,26 @@ TOOL_SCHEMAS: list[dict] = [
     {
         "type": "function",
         "function": {
+            "name": "get_study_sets",
+            "description": (
+                "List study guides already made for this student, with their "
+                "full contents. Call this BEFORE make_study_guide when they "
+                "ask to see, re-open, or continue a guide -- regenerating it "
+                "costs a model call and produces different content. Also "
+                "re-files the guide in the Files tab."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "course": {"type": "string",
+                               "description": "Optional course filter, e.g. 'PHYS 1351'."},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "get_events",
             "description": "Read upcoming on-campus events.",
             "parameters": {
@@ -892,7 +912,38 @@ def get_schedule() -> dict:
 
 def make_study_guide(course: str, topics: list[str], format: str = "outline") -> dict:  # noqa: A002
     context = get_assignments(course=course, status="any")["items"][:10]
-    guide = cache.claude(
+    try:
+        guide = _write_study_guide(course, topics, format, context)
+    except Exception as exc:  # noqa: BLE001
+        # cache.claude RAISES when the SDK is missing or the key is absent --
+        # it does not return {"error": ...}. Checking for an error key alone
+        # let the exception escape to tools.execute, which wrapped it as
+        # "make_study_guide failed: ModuleNotFoundError", i.e. exactly the
+        # unreadable failure this was meant to replace.
+        return {"error": f"could not write the study guide: "
+                         f"{type(exc).__name__}: {str(exc)[:160]}",
+                "hint": _study_guide_hint(), "sections": []}
+
+    if "error" in guide:
+        # A study guide genuinely needs a model -- there is no honest
+        # deterministic fallback for "explain Gauss's law". But the error can
+        # at least name the fix instead of arriving as "internal error".
+        return {"error": f"could not write the study guide: "
+                         f"{str(guide.get('error'))[:200]}",
+                "hint": _study_guide_hint(),
+                "sections": []}
+    if MODE != "mock":
+        saved = db.save_study_set(student(), course, ", ".join(topics), format, guide)
+        guide.update(saved)
+    guide["course"] = course
+    guide["topic"] = ", ".join(topics)
+    guide["format"] = format
+    return guide
+
+
+def _write_study_guide(course: str, topics: list[str], format: str,  # noqa: A002
+                       context: list[dict]) -> dict:
+    return cache.claude(
         system=(
             "You build study sets for university students.\n\n"
             "Return ONLY JSON: {\"sections\": [{\"topic\": str, \"summary\": str, "
@@ -906,14 +957,38 @@ def make_study_guide(course: str, topics: list[str], format: str = "outline") ->
         max_tokens=4000,
         label=f"study:{course}:{','.join(topics)[:40]}",
     )
-    if "error" in guide:
-        return guide
-    if MODE != "mock":
-        saved = db.save_study_set(student(), course, ", ".join(topics), format, guide)
-        guide.update(saved)
-    guide["course"] = course
-    guide["format"] = format
-    return guide
+
+
+def _study_guide_hint() -> str:
+    import importlib.util
+
+    if importlib.util.find_spec("anthropic") is None:
+        return ("The anthropic package isn't installed on the server: "
+                "pip install -r requirements.txt. Scheduling and the "
+                "dashboard work without it; writing study guides does not.")
+    if not os.getenv("ANTHROPIC_API_KEY", "").strip():
+        return "ANTHROPIC_API_KEY isn't set on the server."
+    return "Check /api/health -> model_paths for which model path is failing."
+
+
+def get_study_sets(course: str | None = None) -> dict:
+    """
+    Read study guides made earlier.
+
+    make_study_guide saved to study_sets and nothing could read it back, so
+    every "show me that guide again" meant regenerating it -- a model call,
+    new content, and a second file. db.get_study_sets existed the whole time;
+    it just wasn't wired to a tool.
+    """
+    if MODE == "mock":
+        return {"items": [{
+            "id": 1, "course_code": course or "PHYS 1361",
+            "topic": "[MOCK] Gauss's Law", "format": "outline",
+            "created_at": "2026-09-19T20:00:00-04:00",
+            "content": cache._mock_claude("study"),
+        }], "count": 1}
+    items = db.get_study_sets(student(), course)
+    return {"items": items, "count": len(items)}
 
 
 def get_events(within_days: int = 14) -> dict:
@@ -1218,6 +1293,7 @@ DISPATCH: dict[str, Callable[..., dict]] = {
     "delete_assignments": delete_assignments,
     "restore_assignments": restore_assignments,
     "schedule_events": schedule_events,
+    "get_study_sets": get_study_sets,
 }
 
 # Sanity check: every advertised tool must actually exist.
