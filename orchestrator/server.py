@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -72,6 +72,30 @@ class VoiceIn(BaseModel):
 
 class CrawlIn(BaseModel):
     pages: list[str] | None = None   # omit for all pages
+
+
+def alexa_response(
+    speech: str,
+    *,
+    title: str = "Office Hours",
+    end_session: bool = True,
+    reprompt: str | None = None,
+) -> dict:
+    response = {
+        "shouldEndSession": end_session,
+        "outputSpeech": {"type": "PlainText", "text": speech},
+    }
+    if end_session:
+        response["card"] = {
+            "type": "Simple",
+            "title": title,
+            "content": speech,
+        }
+    elif reprompt:
+        response["reprompt"] = {
+            "outputSpeech": {"type": "PlainText", "text": reprompt}
+        }
+    return {"version": "1.0", "response": response}
 
 
 @app.get("/health")
@@ -126,41 +150,42 @@ def voice(body: VoiceIn) -> dict:
 @app.post("/alexa")
 def alexa(body: dict) -> dict:
     """Translate Alexa Custom Skill requests into the existing voice path."""
+    expected_skill_id = os.getenv("ALEXA_SKILL_ID", "").strip()
+    actual_skill_id = (
+        body.get("session", {}).get("application", {}).get("applicationId")
+        or body.get("context", {}).get("System", {}).get("application", {}).get("applicationId")
+    )
+    if expected_skill_id and actual_skill_id != expected_skill_id:
+        raise HTTPException(status_code=403, detail="Invalid Alexa skill ID")
+
     request = body.get("request", {})
     request_type = request.get("type")
 
     if request_type == "LaunchRequest":
-        utterance = "Give me my Office Hours update."
+        return alexa_response(
+            "Welcome to Office Hours. You can ask what is due, what is overdue, or what is on your schedule.",
+            end_session=False,
+            reprompt="What would you like to know?",
+        )
     elif request_type == "IntentRequest":
         intent = request.get("intent", {})
         intent_name = intent.get("name", "")
         slots = intent.get("slots", {})
 
         if intent_name == "AMAZON.HelpIntent":
-            return {
-                "version": "1.0",
-                "response": {
-                    "shouldEndSession": False,
-                    "outputSpeech": {
-                        "type": "PlainText",
-                        "text": "You can ask about what is due, overdue work, your schedule, campus events, data freshness, or workload.",
-                    },
-                    "reprompt": {
-                        "outputSpeech": {
-                            "type": "PlainText",
-                            "text": "What would you like to know?",
-                        }
-                    },
-                },
-            }
+            return alexa_response(
+                "You can ask about what is due, overdue work, your schedule, campus events, data freshness, or workload.",
+                end_session=False,
+                reprompt="What would you like to know?",
+            )
         if intent_name in {"AMAZON.CancelIntent", "AMAZON.StopIntent"}:
-            return {
-                "version": "1.0",
-                "response": {
-                    "shouldEndSession": True,
-                    "outputSpeech": {"type": "PlainText", "text": "Goodbye."},
-                },
-            }
+            return alexa_response("Goodbye.")
+        if intent_name == "AMAZON.FallbackIntent":
+            return alexa_response(
+                "I did not understand that. Ask what is due, what is overdue, or what is on your schedule.",
+                end_session=False,
+                reprompt="What would you like to know?",
+            )
 
         def slot(name: str) -> str | None:
             value = slots.get(name, {}).get("value")
@@ -168,7 +193,7 @@ def alexa(body: dict) -> dict:
 
         course = slot("Course")
         days = slot("Days")
-        utterance = {
+        utterances = {
             "DueIntent": "What assignments are due"
                          + (f" in {course}" if course else "")
                          + (f" within {days} days" if days else "") + "?",
@@ -179,29 +204,44 @@ def alexa(body: dict) -> dict:
             "FreshnessIntent": "Is my coursework up to date?",
             "WorkloadIntent": "How has my workload changed"
                               + (f" over the last {days} days" if days else "") + "?",
-        }.get(intent_name, "Give me my Office Hours update.")
+        }
+        utterance = utterances.get(intent_name)
+        if utterance is None:
+            return alexa_response(
+                "I did not understand that. Ask what is due, what is overdue, or what is on your schedule.",
+                end_session=False,
+                reprompt="What would you like to know?",
+            )
     elif request_type == "SessionEndedRequest":
         return {"version": "1.0", "response": {"shouldEndSession": True}}
     else:
-        utterance = "Give me my Office Hours update."
+        return alexa_response(
+            "I did not understand that. Ask what is due, what is overdue, or what is on your schedule.",
+            end_session=False,
+            reprompt="What would you like to know?",
+        )
 
-    result = voice(VoiceIn(
-        utterance=utterance,
-        session_id=body.get("session", {}).get("sessionId"),
-    ))
-    speech = result.get("speech") or "I could not get your Office Hours update."
-    return {
-        "version": "1.0",
-        "response": {
-            "shouldEndSession": True,
-            "outputSpeech": {"type": "PlainText", "text": speech},
-            "card": {
-                "type": "Simple",
-                "title": result.get("card_title", "Office Hours"),
-                "content": speech,
-            },
-        },
-    }
+    try:
+        result = voice(VoiceIn(
+            utterance=utterance,
+            session_id=body.get("session", {}).get("sessionId"),
+        ))
+    except Exception:
+        return alexa_response(
+            "Office Hours is temporarily unavailable. Please try again.",
+            end_session=False,
+            reprompt="Please try your question again.",
+        )
+
+    if result.get("error"):
+        return alexa_response(
+            "I could not get that Office Hours update. Please try again.",
+            end_session=False,
+            reprompt="Please try your question again.",
+        )
+
+    speech = result.get("speech") or "I do not have an update for that yet."
+    return alexa_response(speech, title=result.get("card_title", "Office Hours"))
 
 
 @app.post("/crawl")
