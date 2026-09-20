@@ -95,6 +95,18 @@ MODE=mock python3 test_integration.py       # 161 tests: store, surface, API, Al
 cd orchestrator && MODE=mock python3 test_loop.py   # 58: agent loop, cards, parser
 ```
 
+**The Canvas data.** `orchestrator/canvas_pages/` is what the crawler reads.
+`rowanCanvas.html` (a saved Canvas dashboard) and `cs1684_assignments.html`
+are committed, so the crawler has something to read on any clone or
+deployment. `canvas_export.json` — the full 358-assignment API export — is
+gitignored, because it's a real student's coursework; copy it in locally if
+you want the richer data. `python3 canvas.py` prints exactly what Claude will
+see from each page.
+
+> Heads up: `rowanCanvas.html` is a real Canvas dashboard with a real name and
+> real course enrolments in it, and it's committed. Fine for a private repo;
+> worth a thought before you make this public.
+
 **Database** (only for `live`, and for anything that has to persist):
 
 ```bash

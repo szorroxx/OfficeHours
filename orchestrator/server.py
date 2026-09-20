@@ -1,17 +1,38 @@
 """
-HTTP surface. This is what Rowan's website backend talks to.
+HTTP surface (FastAPI). NO LONGER WHAT THE WEBSITE OR ALEXA TALKS TO.
+
+    !!  app.py at the repo root is now the canonical backend.  !!
+
+It serves the site, the API, the agent, /api/voice and /alexa in one process,
+which is what gets deployed. This file is kept for two narrower jobs:
+
+  1. FastAPI's interactive /docs page, which is a genuinely nicer way to poke
+     at the orchestrator by hand than writing curl commands.
+  2. Running the orchestrator as a standalone service, if you ever want the
+     agent on a different host from the website.
+
+WHAT TO WATCH OUT FOR
+This file and app.py now BOTH implement /voice and /alexa. That duplication
+is exactly the shape of the bug that bit this project once already -- two
+halves implementing one contract and drifting apart, so a fix applied to one
+silently doesn't apply to the other. If you change the Alexa translation or
+the voice path, change it in app.py first; that's the one Alexa is pointed at
+in production. If you find yourself editing this file's copy, consider
+deleting it instead and importing from app.py.
+
+Also note: the endpoints here read whatever STUDENT_ID says, because there
+are no accounts in this process. app.py scopes each request to the signed-in
+account via tools.use_student(). So data you see through /docs is the demo
+student's, not any particular user's.
 
 Run it:
     MODE=mock uvicorn server:app --reload --port 8000
 
-Then open http://localhost:8000/docs -- FastAPI generates an interactive page
-where you can click "Try it out" on any endpoint and see the real response.
-Use that instead of writing curl commands by hand.
-
 Endpoints:
     GET  /health      is everything configured? which mode am I in?
-    POST /prompt      the text box on the website          <- the main one
-    POST /voice       Alexa (later). Fast path, speech only.
+    POST /prompt      one prompt through the full agent loop
+    POST /voice       fast path, speech only
+    POST /alexa       Alexa Custom Skill requests (see the warning above)
     POST /crawl       manually re-read Canvas pages
     GET  /workload    time-series data for the trend chart
     GET  /calls       every model call this process made

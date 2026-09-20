@@ -34,3 +34,7 @@ orchestrator/cache/
 
 # The file store, when not using Postgres
 data.json
+
+# Editor/OS cruft that has snuck in before
+.Rhistory
+*.swp
