@@ -52,6 +52,25 @@ that, a replay deploy raises `ReplayMiss` on every prompt.
 **5. One `MODE=live` run hasn't happened yet.** Everything below is verified
 in mock only.
 
+**6. Real student data is committed.** `orchestrator/canvas_pages/` holds
+`rowanCanvas.html` (a saved Canvas dashboard with a name in it) and
+`canvas_export.json` (180KB: 358 assignments, 23 courses, two finished
+semesters). The `.gitignore` line that looked like it covered the export was
+anchored to `<repo>/canvas_pages/` while the file lives under
+`orchestrator/`, so it never matched and the file has been tracked since it
+was added. The pattern is fixed now, but that doesn't untrack anything — git
+only ignores files it isn't already following, and these are in earlier
+commits too. If this repo goes public, deal with it first:
+
+```bash
+git rm --cached orchestrator/canvas_pages/canvas_export.json
+# and for the history, one of: git filter-repo, or squash to a fresh initial commit
+```
+
+The crawler works fine without the export — `rowanCanvas.html` alone strips
+to 5,090 characters of real assignments, and `cs1684_assignments.html` is a
+synthetic page. Decide as a team whether Rowan minds.
+
 ## What still needs a real run
 
 Do this well before you present, in this order:
