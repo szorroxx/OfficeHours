@@ -293,6 +293,41 @@ TOOL_SCHEMAS: list[dict] = [
     {
         "type": "function",
         "function": {
+            "name": "save_to_files",
+            "description": (
+                "Write a document into the student's Files tab, where their "
+                "generated files live. USE THIS whenever they ask you to "
+                "save, file, add, or put something in files, or to make them "
+                "a document, module, summary, handout or checklist they can "
+                "keep. Two ways to call it: pass `content` with the text of "
+                "the document, or pass `course` to file that course's most "
+                "recent study guide. Study guides made with make_study_guide "
+                "are filed automatically, so use this to re-file one or to "
+                "save anything else."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string",
+                              "description": "What to call the file, e.g. "
+                                             "'PHYS 1351 exam checklist'."},
+                    "content": {"type": "string",
+                                "description": "The document text. Headings "
+                                               "(# ##), bullets (-) and "
+                                               "numbered lists are formatted."},
+                    "course": {"type": "string",
+                               "description": "File this course's latest study "
+                                              "guide instead of writing new content."},
+                    "collection": {"type": "string",
+                                   "description": "Folder name. Defaults to "
+                                                  "'Documents'."},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "get_study_sets",
             "description": (
                 "List study guides already made for this student, with their "
@@ -722,6 +757,15 @@ def make_schedule(horizon_days: int = 7, constraints: str = "",
         strategy=strategy if strategy in ("spread", "asap", "day_before") else "spread",
     )
     result["planner"] = "deterministic" + (" + claude ordering" if order else "")
+
+    import documents
+
+    document = documents.schedule_document(
+        result.get("blocks") or [], title="Study plan",
+        rationale=result.get("rationale", ""))
+    if document:
+        result["files"] = [document]
+        result["saved_to_files"] = document["name"]
     if model_note:
         result["note"] = model_note
 
@@ -938,6 +982,18 @@ def make_study_guide(course: str, topics: list[str], format: str = "outline") ->
     guide["course"] = course
     guide["topic"] = ", ".join(topics)
     guide["format"] = format
+
+    # Build the file HERE and return it, rather than having the agent notice
+    # the result later and file it quietly. The tool result now says a file
+    # was created and what it's called, so the model can tell the student
+    # truthfully instead of denying it can make files.
+    import documents
+
+    document = documents.study_guide(guide)
+    if document:
+        guide["files"] = [document]
+        guide["saved_to_files"] = document["name"]
+        guide["collection"] = document["collectionName"]
     return guide
 
 
@@ -971,6 +1027,63 @@ def _study_guide_hint() -> str:
     return "Check /api/health -> model_paths for which model path is failing."
 
 
+def save_to_files(title: str = "", content: str = "", course: str = "",
+                  collection: str = "") -> dict:
+    """
+    Write a document into the student's Files tab.
+
+    This tool exists because filing used to be a side effect of other tools,
+    invisible to the model. Asked to "add the module to the files section",
+    Nemotron replied that it had no way to write files -- an accurate
+    description of its tool list, and a capability the student therefore
+    could not ask for. Now it is a named tool that does one thing.
+
+    Either pass `content` (the text of the document), or pass `course` to
+    file that course's most recent study guide.
+    """
+    import documents
+
+    title = str(title or "").strip()
+    content = str(content or "").strip()
+    course = str(course or "").strip()
+
+    if not title and not course:
+        return {"error": "give a title, or a course to file its study guide"}
+
+    # Filing an existing study guide: fetch it rather than asking the model to
+    # retype it, which is how content drifts between the panel and the file.
+    if not content and course:
+        guides = get_study_sets(course=course).get("items") or []
+        if not guides:
+            return {"error": f"no study guide stored for {course}",
+                    "hint": "call make_study_guide first, which files one "
+                            "automatically"}
+        newest = guides[0]
+        body = newest.get("content") if isinstance(newest.get("content"), dict) else newest
+        document = documents.study_guide({
+            **body,
+            "course": newest.get("course_code") or course,
+            "topic": newest.get("topic"),
+        })
+        if document is None:
+            return {"error": "that study guide has no content to file"}
+        return {"filed": 1, "files": [document],
+                "saved_to_files": document["name"],
+                "collection": document["collectionName"]}
+
+    if not content:
+        return {"error": "nothing to write -- pass content, or a course whose "
+                         "study guide should be filed"}
+
+    document = documents.text_document(
+        title, content, collection=collection or "Documents")
+    if document is None:
+        return {"error": "nothing to write once the content was cleaned up"}
+    return {"filed": 1, "files": [document],
+            "saved_to_files": document["name"],
+            "collection": document["collectionName"]}
+
+
 def get_study_sets(course: str | None = None) -> dict:
     """
     Read study guides made earlier.
@@ -988,7 +1101,9 @@ def get_study_sets(course: str | None = None) -> dict:
             "content": cache._mock_claude("study"),
         }], "count": 1}
     items = db.get_study_sets(student(), course)
-    return {"items": items, "count": len(items)}
+    return {"items": items, "count": len(items),
+            "note": "Use save_to_files with a course to put one of these in "
+                    "the Files tab."}
 
 
 def get_events(within_days: int = 14) -> dict:
@@ -1294,6 +1409,7 @@ DISPATCH: dict[str, Callable[..., dict]] = {
     "restore_assignments": restore_assignments,
     "schedule_events": schedule_events,
     "get_study_sets": get_study_sets,
+    "save_to_files": save_to_files,
 }
 
 # Sanity check: every advertised tool must actually exist.

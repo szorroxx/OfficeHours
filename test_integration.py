@@ -1176,6 +1176,110 @@ check("the change log knows how to word each action type",
 
 
 # ==========================================================================
+section("the model can name the filing capability")
+# ==========================================================================
+# Asked "add the module to the files section", Nemotron answered: "I'm not
+# able to add modules or files to a 'files' section -- my tools let me create
+# study guides, schedule study time, manage assignments, and handle campus
+# events, but there isn't a way to write or upload arbitrary files."
+#
+# That was an accurate description of its tool list. Filing existed, but as a
+# side effect inside agent.py that no tool named -- so the student could not
+# ask for it. A capability the model can't name is a capability that doesn't
+# exist as far as anyone using it is concerned.
+
+check("there is a tool for filing documents", "save_to_files" in _tools.DISPATCH)
+schema_names = {t["function"]["name"] for t in _tools.TOOL_SCHEMAS}
+check("and the model is told about it", "save_to_files" in schema_names,
+      "a tool missing from TOOL_SCHEMAS is invisible to Nemotron")
+save_schema = next(t["function"] for t in _tools.TOOL_SCHEMAS
+                   if t["function"]["name"] == "save_to_files")
+check("its description uses the words a student would",
+      all(word in save_schema["description"].lower()
+          for word in ("files tab", "save", "file")),
+      save_schema["description"][:120])
+
+filed = _tools.execute("save_to_files",
+                       {"title": "PHYS checklist",
+                        "content": "# Before the exam\n- Review Ch 2\n1. Sleep"})
+check("filing free text works", filed.get("filed") == 1, str(filed)[:140])
+check("the result names the file, so the reply can too",
+      filed.get("saved_to_files") == "PHYS checklist.html",
+      str(filed.get("saved_to_files")))
+
+filed_html = _b64.b64decode(filed["files"][0]["dataUrl"].split(",", 1)[1]).decode()
+check("markdown headings become headings", "<h2>Before the exam</h2>" in filed_html)
+check("bullets become a list", "<ul><li>Review Ch 2</li></ul>" in filed_html)
+check("numbered items become an ordered list", "<ol><li>Sleep</li></ol>" in filed_html)
+
+by_course = _tools.execute("save_to_files", {"course": "PHYS 1361"})
+check("filing an existing guide by course works",
+      by_course.get("filed") == 1, str(by_course)[:140])
+check("it reuses the stored guide rather than asking for it to be retyped",
+      "study guide" in by_course.get("saved_to_files", ""),
+      str(by_course.get("saved_to_files")))
+
+check("filing with nothing to file is refused clearly",
+      "error" in _tools.execute("save_to_files", {}))
+check("a title with no content is refused",
+      "error" in _tools.execute("save_to_files", {"title": "Empty"}))
+check("a filename can't escape its directory",
+      "/" not in _tools.execute(
+          "save_to_files",
+          {"title": "../../etc/passwd", "content": "x"}
+      )["files"][0]["name"],
+      "a model-supplied title becomes a filename")
+
+# --- tools that make documents say so in their result ---
+guide_result = _tools.execute("make_study_guide",
+                              {"course": "PHYS 1351", "topics": ["Kinematics"]})
+check("make_study_guide reports the file it created",
+      guide_result.get("saved_to_files"), str(guide_result.get("saved_to_files")))
+check("and which collection it's in",
+      guide_result.get("collection") == "Study guides")
+
+plan_result = _tools.execute("make_schedule", {"horizon_days": 7})
+check("a schedule can be filed too", plan_result.get("files"),
+      str(plan_result.get("saved_to_files")))
+plan_html = _b64.b64decode(
+    plan_result["files"][0]["dataUrl"].split(",", 1)[1]).decode()
+check("the schedule file is grouped by day",
+      plan_html.count("<section>") >= 2, str(plan_html.count("<section>")))
+
+# --- filing is generic, not a hardcoded list of tools ---
+invented = agent.board_actions([{
+    "tool": "some_future_tool", "ok": True,
+    "result": {"files": [{"name": "x.html", "dataUrl": "data:text/html;base64,eA=="}]}}])
+check("any tool returning files gets its files filed",
+      any(a["type"] == "addFiles" for a in invented), str(invented))
+check("a file with no data is ignored",
+      not [a for a in agent.board_actions([
+          {"tool": "t", "ok": True, "result": {"files": [{"name": "x"}]}}])
+          if a["type"] == "addFiles"])
+check("a study guide isn't filed twice when the tool already returned a file",
+      sum(len(a["items"]) for a in agent.board_actions([
+          {"tool": "make_study_guide", "ok": True, "result": guide_result}])
+          if a["type"] == "addFiles") == 1)
+
+# --- the model gets told what's already in the tab ---
+ctx = agent._context({}, None, None,
+                     {"collections": [{"name": "Study guides"}],
+                      "files": [{"name": "PHYS 1351 study guide.html"}]})
+check("the model can see what's in the Files tab",
+      ctx["files_tab"]["count"] == 1
+      and "Study guides" in ctx["files_tab"]["collections"], str(ctx.get("files_tab")))
+check("and no files means no files_tab noise in the context",
+      "files_tab" not in agent._context({}, None, None, None))
+
+check("the prompt tells the model it can write files",
+      "save_to_files" in _orch.SYSTEM_PROMPT
+      and "never tell a student you have no way to write files"
+      in _orch.SYSTEM_PROMPT.lower(),
+      "the prompt has to name the tool, or the model reasons from an "
+      "out-of-date idea of what it can do")
+
+
+# ==========================================================================
 section("HTTP API")
 # ==========================================================================
 

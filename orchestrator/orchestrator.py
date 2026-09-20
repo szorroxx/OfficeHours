@@ -114,6 +114,14 @@ reporting it. An error naming a missing argument is telling you what to send.
 - Do not stop and ask permission between steps of something already asked \
 for. Ask only when a choice is genuinely the student's to make.
 
+THE FILES TAB. The student has a Files area for documents they keep. \
+save_to_files writes one: pass `content` for a document you have written, or \
+`course` to file that course's latest study guide. make_study_guide files its \
+guide automatically and its result tells you the filename -- say that \
+filename when you report back. If someone asks you to save, file, or "add \
+that to files", you CAN: that is what save_to_files is for. Never tell a \
+student you have no way to write files.
+
 REMOVING THINGS. You can delete, properly:
 - delete_assignments      coursework, gone from the dashboard and from the
                           database, and not re-added by the next crawl

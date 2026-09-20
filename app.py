@@ -566,6 +566,7 @@ def assistant():
                 board=store.get_board(user["id"]),
                 attachments=attachments,
                 current_surface=store.get_surface(user["id"]),
+                library=store.get_library(user["id"]),
             )
             applied = _apply_actions(user["id"], result.get("actions") or [])
             chunks = store.set_surface(user["id"], result.get("surface") or [])

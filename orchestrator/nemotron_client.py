@@ -451,7 +451,11 @@ def _mock_plan(prompt: str, available: set[str]) -> list[tuple[str, dict]]:
     elif (has("todo list", "to-do list", "list of todos", "list of to-dos",
               "make me a list", "add a task", "add a todo", "remind me",
               "checklist")
-          and not has("what ", "do i have", "which ")):
+          # "save a checklist to files" is a document request, not a to-do
+          # request, and the files branch below handles it.
+          and not has("what ", "do i have", "which ", "to files",
+                      "files section", "files tab", "as a document",
+                      "as a file", "save")):
         plan = [("add_tasks", {"tasks": [
             {"text": "[MOCK] Read the project brief", "est_minutes": 30},
             {"text": "[MOCK] Email the professor about groups"}]})]
@@ -480,6 +484,10 @@ def _mock_plan(prompt: str, available: set[str]) -> list[tuple[str, dict]]:
              "when should i", "time block"):
         plan = [("get_assignments", {"due_within_days": 14}),
                 ("make_schedule", {"horizon_days": 7})]
+    elif has("to files", "to the files", "files section", "files tab",
+             "save that", "save it", "file that", "save this as",
+             "make me a document", "as a document", "as a file"):
+        plan = [("save_to_files", {"course": "PHYS 1361"})]
     elif has("show me the guide", "that study guide", "my study guides",
              "open the guide", "study sets"):
         plan = [("get_study_sets", {})]

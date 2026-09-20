@@ -155,6 +155,30 @@ Tool failures now appear in the chat under the reply, with the real error
 text. If you see `⚠ make_schedule failed: …`, that line is the bug report —
 don't ask the model what went wrong, it will guess.
 
+## The Files tab
+
+`save_to_files` is the tool. Two ways to call it:
+
+- `content` — the text of a document. Headings (`#`), bullets (`-`) and
+  numbered lists are formatted; everything is escaped.
+- `course` — files that course's most recent study guide, reusing the stored
+  content rather than having the model retype it.
+
+`make_study_guide` and `make_schedule` file their output automatically and
+their tool results say the filename, so the assistant can name it when it
+reports back. Files are HTML: the frontend opens one by decoding its data URL
+into a blob, so it displays in a tab with no reader and prints cleanly.
+
+Any tool that returns a `files` list gets those files stored — filing is not
+a hardcoded list of tools, so a new document-producing tool needs no change
+to the web layer.
+
+**The lesson, if you add capabilities later:** filing worked for a full round
+before this and the assistant still told a student it couldn't write files,
+because the work happened as a side effect that no tool named. If the model
+can't name a capability in its tool list, the student can't ask for it, and
+the model will correctly deny having it.
+
 ## Known gaps, honestly
 
 - **Attachment contents don't reach the model.** `/api/files` serves uploaded

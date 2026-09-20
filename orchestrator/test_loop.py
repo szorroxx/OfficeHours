@@ -67,7 +67,7 @@ def tool_call(cid: str, name: str, args: dict) -> dict:
 def t_schema_matches_dispatch():
     advertised = {t["function"]["name"] for t in tools.TOOL_SCHEMAS}
     assert advertised == set(tools.DISPATCH), "schema and dispatch disagree"
-    assert len(advertised) == 23, f"expected 23 tools, got {len(advertised)}"
+    assert len(advertised) == 24, f"expected 24 tools, got {len(advertised)}"
 
 
 def t_every_tool_runs_in_mock():
@@ -97,6 +97,7 @@ def t_every_tool_runs_in_mock():
         "restore_assignments": {"titles": ["Preproposal"]},
         "schedule_events": {"within_days": 7},
         "get_study_sets": {"course": "PHYS 1361"},
+        "save_to_files": {"title": "Notes", "content": "- one\n- two"},
     }
     for name in tools.DISPATCH:
         result = tools.execute(name, sample_args[name])
@@ -1090,6 +1091,43 @@ def t_scheduler_respects_its_own_rules():
         "double-booked an existing commitment"
 
 
+def t_filing_is_a_tool_the_model_can_name():
+    """
+    Filing used to be a side effect inside the web layer. Asked to "add the
+    module to the files section", the model said it had no way to write files
+    -- true of its tool list. A capability the model can't name can't be
+    asked for.
+    """
+    assert "save_to_files" in tools.DISPATCH
+    advertised = {t["function"]["name"] for t in tools.TOOL_SCHEMAS}
+    assert "save_to_files" in advertised, "not in TOOL_SCHEMAS = invisible"
+
+    result = tools.execute("save_to_files",
+                           {"title": "Checklist", "content": "- revise"})
+    assert result.get("filed") == 1, result
+    assert result.get("saved_to_files") == "Checklist.html", result
+    assert result["files"][0]["dataUrl"].startswith("data:text/html"), result
+
+
+def t_document_tools_report_their_files():
+    """
+    The tool result has to mention the file, or the model can't tell the
+    student what it made -- and will guess, or deny it happened.
+    """
+    guide = tools.execute("make_study_guide",
+                          {"course": "PHYS 1351", "topics": ["Kinematics"]})
+    assert guide.get("saved_to_files"), guide
+    assert guide.get("files"), guide
+
+
+def t_filenames_are_safe():
+    """A model-supplied title becomes a filename."""
+    out = tools.execute("save_to_files",
+                        {"title": "../../etc/passwd", "content": "x"})
+    name = out["files"][0]["name"]
+    assert "/" not in name and ".." not in name, name
+
+
 def t_generated_documents_become_files():
     """
     A study guide that exists only in the database is invisible: the student
@@ -1322,6 +1360,9 @@ if __name__ == "__main__":
     check("scheduler respects its rules", t_scheduler_respects_its_own_rules)
     check("events keep their own times", t_events_keep_their_own_times)
     check("documents become files", t_generated_documents_become_files)
+    check("filing is a nameable tool", t_filing_is_a_tool_the_model_can_name)
+    check("document tools report their files", t_document_tools_report_their_files)
+    check("filenames are safe", t_filenames_are_safe)
     check("saved guides are readable", t_saved_study_guides_are_readable)
     check("schedule blocks are consistent", t_schedule_blocks_are_internally_consistent)
     check("naive timestamps are local", t_naive_timestamps_are_local)

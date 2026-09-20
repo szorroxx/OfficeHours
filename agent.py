@@ -67,13 +67,17 @@ _TASK_TOOLS = ("add_tasks",)
 _REMOVAL_TOOLS = ("remove_from_schedule", "remove_events")
 # Tools whose output is a DOCUMENT, not a board row. These go to the Files
 # tab, which is where the UI says the assistant's generated files land.
-_DOCUMENT_TOOLS = ("make_study_guide", "get_study_sets")
+# Any tool result carrying a "files" list gets filed. Generic on purpose: the
+# previous version hardcoded which tools produce documents, so a new one had
+# to be added in two places and the model still couldn't name the capability.
+# Now a tool that returns files is a tool that creates files.
 
 
 def handle(message: str, history: list[dict] | None = None,
            board: dict | None = None, attachments: list[dict] | None = None,
            current_surface: list[dict] | None = None,
-           student_id: str | None = None) -> dict:
+           student_id: str | None = None,
+           library: dict | None = None) -> dict:
     """
     Run one turn. Never raises: a failure comes back as a reply the student
     can read, because a 500 in the chat box during a demo tells nobody
@@ -98,7 +102,7 @@ def handle(message: str, history: list[dict] | None = None,
                 "changes": {"blocked": "message looked like it contained a credential"},
                 "trace": {}}
 
-    context = _context(board, attachments, history)
+    context = _context(board, attachments, history, library)
 
     try:
         run = orchestrator.run(message, channel="web", context=context)
@@ -200,7 +204,7 @@ WRITE_TOOLS = frozenset({
     "make_study_guide", "find_campus_events", "update_preferences",
     "log_time", "update_assignment", "add_tasks",
     "remove_from_schedule", "remove_events",
-    "delete_assignments", "restore_assignments",
+    "delete_assignments", "restore_assignments", "save_to_files",
 })
 
 _ASKED_FOR_CHANGE = re.compile(
@@ -283,7 +287,8 @@ def _unbacked_claim(message: str, reply: str, steps: list[dict]) -> str | None:
 
 
 def _context(board: dict | None, attachments: list[dict] | None,
-             history: list[dict] | None) -> dict:
+             history: list[dict] | None,
+             library: dict | None = None) -> dict:
     """
     What the model gets to know besides the prompt.
 
@@ -302,6 +307,18 @@ def _context(board: dict | None, attachments: list[dict] | None,
                          for kind in ("assignments", "exams")
                          for row in (board.get(kind) or [])][:25],
     }
+
+    if library:
+        # What's already in the Files tab. Without this the model can't answer
+        # "what's in my files?" or notice that the thing it's about to write
+        # is already there.
+        files = library.get("files") or []
+        context["files_tab"] = {
+            "count": len(files),
+            "collections": [str(c.get("name"))[:60]
+                            for c in (library.get("collections") or [])][:12],
+            "names": [str(f.get("name"))[:80] for f in files][:20],
+        }
 
     if attachments:
         # File CONTENTS are not sent to the orchestrator. Names and types are
@@ -361,6 +378,19 @@ def board_actions(steps: list[dict]) -> list[dict]:
             continue
         tool = step.get("tool")
 
+        # Files first, and independent of which tool produced them: the tool
+        # built the document and said so in its result, so this just forwards
+        # it to the store.
+        for document in result.get("files") or []:
+            if isinstance(document, dict) and document.get("dataUrl"):
+                documents.append(document)
+        # Older result shapes (a study set with no files key) still get filed.
+        if tool in ("make_study_guide", "get_study_sets") and not result.get("files"):
+            for guide in _guides_in(result):
+                built = _study_guide_file(guide)
+                if built:
+                    documents.append(built)
+
         if tool in _ASSIGNMENT_TOOLS:
             for row in result.get("items") or []:
                 item = _assignment_row(row)
@@ -385,12 +415,6 @@ def board_actions(steps: list[dict]) -> list[dict]:
                 if item and item["canvasId"] not in seen:
                     seen.add(item["canvasId"])
                     events.append(item)
-
-        elif tool in _DOCUMENT_TOOLS:
-            for guide in _guides_in(result):
-                document = _study_guide_file(guide)
-                if document:
-                    documents.append(document)
 
         elif tool in _TASK_TOOLS:
             for row in result.get("tasks") or []:
@@ -565,14 +589,19 @@ def _guides_in(result: dict) -> list[dict]:
 
 def _study_guide_file(guide: dict) -> dict | None:
     """
-    Render a study set as a standalone HTML file for the Files tab.
+    Render a study set as a file. Delegates to orchestrator/documents.py.
 
-    HTML rather than markdown or a PDF: the frontend opens a file by turning
-    its data URL into a blob and opening that in a tab, so HTML displays
-    immediately with no reader, no dependency, and no print step. Everything
-    interpolated is escaped -- this is model output being written to a file
-    the student will open in a browser.
+    Kept as a thin wrapper rather than deleted: it's the fallback for a result
+    shape that predates tools returning their own files, and it's the name the
+    tests call.
     """
+    import documents as doc_module
+
+    return doc_module.study_guide(guide)
+
+
+def _study_guide_file_legacy(guide: dict) -> dict | None:
+    """Unused. The original inline renderer, kept only for reference."""
     sections = guide.get("sections") or []
     if not sections:
         return None
@@ -742,7 +771,7 @@ def _changes(actions: list[dict], surface_report: dict,
                "log_time", "update_assignment", "add_tasks",
                "remove_from_schedule", "remove_events",
                "delete_assignments", "restore_assignments",
-               "make_study_guide")]
+               "make_study_guide", "save_to_files")]
 
     # Tools that FAILED, with the actual error. The student was told four
     # times that "the scheduling tool encountered an internal error (missing
