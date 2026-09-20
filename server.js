@@ -75,6 +75,16 @@ app.get('/api/board', auth, async (req, res) => {
   catch (e) { console.error('board error', e); res.status(500).json({ error: 'board_failed' }); }
 });
 
+// ---- Library (Files tab: AI-output + manual files in collections) ----
+app.get('/api/library', auth, async (req, res) => {
+  try { res.json(await store.getLibrary(req.userId)); }
+  catch (e) { console.error('library get error', e); res.status(500).json({ error: 'library_failed' }); }
+});
+app.put('/api/library', auth, async (req, res) => {
+  try { res.json(await store.setLibrary(req.userId, req.body || {})); }
+  catch (e) { console.error('library put error', e); res.status(500).json({ error: 'library_failed' }); }
+});
+
 // ---- Files (student attachments), per-user ----
 function collectAttachments(board) {
   const out = [];

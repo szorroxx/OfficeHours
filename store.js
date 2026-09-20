@@ -34,8 +34,8 @@ function seedBoard() {
 
 let db = load();
 function load() {
-  try { const d = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); if (d && d.users && d.boards && d.sessions) return d; } catch {}
-  return { users: {}, sessions: {}, boards: {} };
+  try { const d = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); if (d && d.users && d.boards && d.sessions) { d.libraries = d.libraries || {}; return d; } } catch {}
+  return { users: {}, sessions: {}, boards: {}, libraries: {} };
 }
 function save() { try { fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2)); } catch (e) { console.error('store: save failed', e); } }
 
@@ -62,6 +62,7 @@ async function createUser(username, password) {
   const id = genId('u');
   db.users[key] = { id, username: String(username).trim(), salt, hash };
   db.boards[id] = emptyBoard();
+  db.libraries[id] = { collections: [], files: [] };
   save();
   return { id, username: db.users[key].username };
 }
@@ -108,8 +109,14 @@ async function removeItem(userId, kind, id) {
 async function loadDemo(userId) { db.boards[userId] = seedBoard(); save(); return db.boards[userId]; }
 async function clear(userId) { db.boards[userId] = emptyBoard(); save(); return db.boards[userId]; }
 
+// ---- Library (AI-output + manual files, grouped into collections) ----
+function libraryOf(userId) { if (!db.libraries[userId]) db.libraries[userId] = { collections: [], files: [] }; return db.libraries[userId]; }
+async function getLibrary(userId) { return libraryOf(userId); }
+async function setLibrary(userId, lib) { db.libraries[userId] = { collections: (lib && lib.collections) || [], files: (lib && lib.files) || [] }; save(); return db.libraries[userId]; }
+
 module.exports = {
   KINDS, isKind, init,
   createUser, verifyUser, createSession, userIdByToken, deleteSession,
   getBoard, addItem, upsertItems, updateItem, removeItem, loadDemo, clear,
+  getLibrary, setLibrary,
 };

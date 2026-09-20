@@ -13,7 +13,7 @@ Status: hackathon prototype. Last updated to reflect `app.html` (login + dashboa
 Everything currently lives in one self-contained file: **`app.html`**. It runs in the browser with no build step and has three parts. Items render from HTML `<template>` elements (one per type) whose `data-field` slots are filled by the renderer, so the structure each item exposes is visible in the markup. The AI fills a matching data template (see Templates).
 
 1. **Sign-in screen.** Username + password. Demo mode, so any input gets you in. The password is never read or stored; only the username is kept, and only to personalize the greeting.
-2. **Dashboard.** A **This week** schedule strip plus four folders: Assignments, Upcoming exams, Events, and a To-do list. Items reach a folder two ways, both through the same routing code: the crawler adds them via the chat, or the student adds them manually with **"+ Add item"** (type selector: Assignment / Exam / Event / Task). **Click any item to expand it** and see full details (course, exact date and time, location, source), edit its time estimate, set which day to work on an assignment, or delete it. Assignments, exams, and tasks can carry an optional **time estimate** (hours + minutes), shown as a chip. The schedule strip places events on their date, exams on theirs, and each assignment on its scheduled day (or its due date if unscheduled). Synced items are color-coded by urgency, and the header surfaces the most urgent assignment or exam as "Next up."
+2. **Dashboard, in three tabs.** **Dashboard** is the "This week" schedule strip plus four folders: Assignments, Upcoming exams, Events, and a To-do list. **Files** is where the assistant's generated files land, with manual file upload and user-created collections to group them (each file tagged AI or Added). **Calendar** is a full month view of the same board data (assignments on their scheduled/due day, exams, events, completed to-dos) with month navigation; clicking a day opens the add form pre-set to that date, and the AI populates it through the board it already fills. Items reach a folder two ways, both through the same routing code: the crawler adds them via the chat, or the student adds them manually with **"+ Add item"**. **Click any item to expand it** for full details, its time estimate, the day to work on it, file attachments, or delete. The prominent **ask bar** in the hero is the main way to reach the assistant.
 3. **Assistant chat.** A launcher in the bottom-right opens a chat panel. The student types, the assistant replies, and the assistant can add items to the board. This is the surface the AI crawler drives.
 
 State persists between reloads using the browser storage API (see Data model). Right now that's a stand-in for a real backend.
@@ -191,6 +191,8 @@ Open `http://localhost:8787` for a built-in tester that hits every endpoint, inc
 | POST   | `/api/login`               | Sign in, returns `{ token, username }`              |
 | POST   | `/api/logout`              | Invalidate the current session token                |
 | GET    | `/api/board`               | Returns the signed-in user's `{ assignments, exams, events, todos }` |
+| GET    | `/api/library`             | Files tab: `{ collections, files }` for the user   |
+| PUT    | `/api/library`             | Replace the user's library (collections + files)    |
 | GET    | `/api/files`               | Lists uploaded attachments (metadata + a fetch URL each) |
 | GET    | `/api/files/:id`           | Returns one attachment's raw bytes (for the AI to read) |
 | POST   | `/api/:kind`               | Add one item (`kind` = assignments/exams/events/todos) |
@@ -216,6 +218,7 @@ Open `http://localhost:8787` for a built-in tester that hits every endpoint, inc
 - [x] Template system: HTML display templates + an AI-facing `fill(type, data)` registry.
 - [x] Backend: Express server with board storage + CRUD + the AI hook.
 - [x] Basic accounts: username + password (scrypt-hashed), session tokens, per-user boards.
+- [x] Tabs: Dashboard, Files (collections + manual/AI files), and a month Calendar view.
 - [x] Backend-driven frontend: board loads from and writes to the server; AI changes return as the updated board.
 - [x] Swappable storage: local file store, or Postgres/TigerData via `DATABASE_URL`.
 - [ ] AI team fills in `backend/assistant.js` (real Claude call + Canvas crawl).

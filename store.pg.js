@@ -41,6 +41,7 @@ async function init() {
     data jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`);
   await pool.query(`CREATE INDEX IF NOT EXISTS items_user_kind_idx ON items (user_id, kind)`);
   await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS items_user_canvas_idx ON items (user_id, kind, canvas_id) WHERE canvas_id IS NOT NULL`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS library (user_id text PRIMARY KEY, data jsonb NOT NULL)`);
 }
 
 // ---- Auth ----
@@ -137,8 +138,20 @@ async function clear(userId) {
   return getBoard(userId);
 }
 
+// ---- Library ----
+async function getLibrary(userId) {
+  const r = await pool.query(`SELECT data FROM library WHERE user_id = $1`, [userId]);
+  return r.rows.length ? r.rows[0].data : { collections: [], files: [] };
+}
+async function setLibrary(userId, lib) {
+  const data = { collections: (lib && lib.collections) || [], files: (lib && lib.files) || [] };
+  await pool.query(`INSERT INTO library (user_id, data) VALUES ($1,$2) ON CONFLICT (user_id) DO UPDATE SET data = $2`, [userId, data]);
+  return data;
+}
+
 module.exports = {
   KINDS, isKind, init,
   createUser, verifyUser, createSession, userIdByToken, deleteSession,
   getBoard, addItem, upsertItems, updateItem, removeItem, loadDemo, clear,
+  getLibrary, setLibrary,
 };

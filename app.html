@@ -63,6 +63,67 @@
   .focus-title { font-weight: 600; font-size: 15px; }
   .focus-when { margin-left: auto; font-size: 13px; font-weight: 600; white-space: nowrap; }
 
+  /* ---------- Tabs ---------- */
+  .tabs { display: flex; gap: 4px; padding: 14px 40px 0; border-bottom: 1px solid var(--line); background: var(--paper); }
+  .tab { font: inherit; font-weight: 600; font-size: 14px; color: var(--muted); background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 14px; margin-bottom: -1px; cursor: pointer; }
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--ink); border-bottom-color: var(--accent); }
+  .view { min-height: 200px; }
+
+  /* ---------- Files ---------- */
+  .files-bar { display: flex; gap: 10px; padding: 4px 40px 0; }
+  .add-btn.dark { background: var(--ink); color: #fff; border: 1px solid var(--ink); }
+  .add-btn.dark:hover { background: #2a2f52; }
+  .files { padding: 16px 40px 48px; display: flex; flex-direction: column; gap: 16px; }
+  .collection { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .collection-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .collection-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; flex: 1; min-width: 0; }
+  .collection-actions { display: flex; gap: 6px; }
+  .mini-btn { font: inherit; font-size: 12px; font-weight: 600; color: var(--ink-soft); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; cursor: pointer; }
+  .mini-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .mini-btn.danger:hover { border-color: #F3C6C8; color: var(--red); }
+  .file-rows { padding: 6px 8px 10px; display: flex; flex-direction: column; }
+  .file-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 9px; }
+  .file-row:hover { background: var(--paper); }
+  .file-ico { width: 30px; height: 30px; border-radius: 7px; background: var(--paper); display: grid; place-items: center; color: var(--muted); flex-shrink: 0; }
+  .file-ico svg { width: 16px; height: 16px; }
+  .file-main { flex: 1; min-width: 0; }
+  .file-name { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-meta { font-size: 12px; color: var(--muted); }
+  .src-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 20px; padding: 1px 7px; }
+  .src-ai { background: rgba(79,70,229,0.12); color: var(--accent); }
+  .src-manual { background: var(--paper); color: var(--muted); border: 1px solid var(--line); }
+  .files-empty { padding: 30px; text-align: center; color: var(--muted); font-size: 13px; }
+
+  /* ---------- Calendar ---------- */
+  .cal-head { display: flex; align-items: center; gap: 12px; padding: 20px 40px 12px; }
+  .cal-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; min-width: 190px; }
+  .cal-nav { font: inherit; font-size: 20px; line-height: 1; color: var(--ink-soft); background: var(--panel); border: 1px solid var(--line); border-radius: 9px; width: 34px; height: 34px; cursor: pointer; }
+  .cal-nav:hover { border-color: var(--accent); color: var(--accent); }
+  .cal-today { margin-left: 6px; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-soft); background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 7px 12px; cursor: pointer; }
+  .cal-today:hover { border-color: var(--accent); color: var(--accent); }
+  .calendar { padding: 0 40px 48px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  .cal-dow { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; text-align: center; padding-bottom: 4px; }
+  .cal-cell { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; min-height: 104px; padding: 7px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; }
+  .cal-cell.blank { background: transparent; border: none; cursor: default; }
+  .cal-cell.today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .cal-cell:not(.blank):hover { border-color: var(--accent); }
+  .cal-daynum { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+  .cal-cell.today .cal-daynum { color: var(--accent); }
+  .cal-pill { display: flex; align-items: center; gap: 5px; font-size: 11px; line-height: 1.25; overflow: hidden; }
+  .cal-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .cal-pill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cal-pill.done span { text-decoration: line-through; color: var(--muted); }
+  .cal-more { font-size: 10px; color: var(--muted); font-weight: 600; }
+  @media (max-width: 860px) {
+    .tabs { padding: 12px 20px 0; }
+    .files-bar { padding: 4px 20px 0; } .files { padding: 16px 20px 40px; }
+    .cal-head { padding: 16px 20px 10px; } .calendar { padding: 0 20px 40px; }
+    .cal-cell { min-height: 76px; }
+    .cal-title { font-size: 17px; min-width: 150px; }
+  }
+
   /* Prominent AI ask bar, the main way in */
   .ask { display: flex; align-items: center; gap: 11px; margin-top: 22px; background: var(--panel); border-radius: 14px; padding: 9px 9px 9px 16px; box-shadow: 0 12px 34px rgba(0,0,0,0.22); }
   .ask-spark { width: 21px; height: 21px; color: var(--accent); flex-shrink: 0; }
@@ -287,46 +348,74 @@
       </div>
     </header>
 
-    <div class="section-title">This week</div>
-    <div class="schedule"><div class="week" id="week"></div></div>
+    <nav class="tabs">
+      <button class="tab active" data-view="dashboard">Dashboard</button>
+      <button class="tab" data-view="files">Files</button>
+      <button class="tab" data-view="calendar">Calendar</button>
+    </nav>
 
-    <main class="board">
-      <section class="panel" id="panel-assignments">
-        <div class="panel-head">
-          <div class="panel-title">Assignments <span class="count" id="a-count">0</span></div>
-          <div class="source">Synced from Canvas</div>
-        </div>
-        <div class="list" id="assignments"></div>
-      </section>
+    <div id="view-dashboard" class="view">
+      <div class="section-title">This week</div>
+      <div class="schedule"><div class="week" id="week"></div></div>
 
-      <section class="panel" id="panel-exams">
-        <div class="panel-head">
-          <div class="panel-title">Upcoming exams <span class="count" id="x-count">0</span></div>
-          <div class="source">Synced from Canvas</div>
-        </div>
-        <div class="list" id="exams"></div>
-      </section>
+      <main class="board">
+        <section class="panel" id="panel-assignments">
+          <div class="panel-head">
+            <div class="panel-title">Assignments <span class="count" id="a-count">0</span></div>
+            <div class="source">Synced from Canvas</div>
+          </div>
+          <div class="list" id="assignments"></div>
+        </section>
 
-      <section class="panel" id="panel-events">
-        <div class="panel-head">
-          <div class="panel-title">Events <span class="count" id="e-count">0</span></div>
-          <div class="source">Synced from Canvas</div>
-        </div>
-        <div class="list" id="events"></div>
-      </section>
+        <section class="panel" id="panel-exams">
+          <div class="panel-head">
+            <div class="panel-title">Upcoming exams <span class="count" id="x-count">0</span></div>
+            <div class="source">Synced from Canvas</div>
+          </div>
+          <div class="list" id="exams"></div>
+        </section>
 
-      <section class="panel" id="panel-todos">
-        <div class="panel-head">
-          <div class="panel-title">To-do <span class="count" id="t-count">0</span></div>
-          <div class="source">Yours to manage</div>
-        </div>
-        <div class="todo-add">
-          <input id="todo-input" type="text" placeholder="Add a task and press Enter" maxlength="140" />
-          <button id="todo-btn">Add</button>
-        </div>
-        <div class="list" id="todos"></div>
-      </section>
-    </main>
+        <section class="panel" id="panel-events">
+          <div class="panel-head">
+            <div class="panel-title">Events <span class="count" id="e-count">0</span></div>
+            <div class="source">Synced from Canvas</div>
+          </div>
+          <div class="list" id="events"></div>
+        </section>
+
+        <section class="panel" id="panel-todos">
+          <div class="panel-head">
+            <div class="panel-title">To-do <span class="count" id="t-count">0</span></div>
+            <div class="source">Yours to manage</div>
+          </div>
+          <div class="todo-add">
+            <input id="todo-input" type="text" placeholder="Add a task and press Enter" maxlength="140" />
+            <button id="todo-btn">Add</button>
+          </div>
+          <div class="list" id="todos"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="view-files" class="view" hidden>
+      <div class="section-title">Files <span class="source" style="font-weight:400">Where the assistant's generated files land, plus anything you add</span></div>
+      <div class="files-bar">
+        <button class="add-btn dark" id="new-collection">+ New collection</button>
+        <button class="add-btn dark" id="add-file">+ Add file</button>
+        <input id="file-input" type="file" multiple style="display:none" />
+      </div>
+      <div class="files" id="files"></div>
+    </div>
+
+    <div id="view-calendar" class="view" hidden>
+      <div class="cal-head">
+        <button class="cal-nav" id="cal-prev">&lsaquo;</button>
+        <div class="cal-title" id="cal-title"></div>
+        <button class="cal-nav" id="cal-next">&rsaquo;</button>
+        <button class="cal-today" id="cal-today">Today</button>
+      </div>
+      <div class="calendar" id="calendar"></div>
+    </div>
 
     <div class="footer">
       <button class="linkbtn pos" id="load-demo">Load demo data</button>
@@ -882,6 +971,143 @@
     renderHeader(); renderSchedule();
     renderAssignments(); renderExams(); renderEvents(); renderTodos();
     counts();
+    renderCalendar();
+  }
+
+  // ===== Tabs =====
+  function switchView(name) {
+    document.querySelectorAll('.view').forEach(v => { v.hidden = (v.id !== 'view-' + name); });
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
+    if (name === 'files') renderFiles();
+    if (name === 'calendar') renderCalendar();
+  }
+
+  // ===== Files tab (AI-output + manual files, grouped in collections) =====
+  let library = { collections: [], files: [] };
+  let fileTargetCollection = null;
+  const FILE_SVG = '<svg viewBox="0 0 24 24" fill="none"><path d="M6 2h8l4 4v16H6z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 2v4h4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+
+  async function loadLibrary() {
+    if (backend()) {
+      try { library = await apiGet('/library'); }
+      catch (e) { if (e.status === 401) return; console.error('library load failed', e); library = { collections: [], files: [] }; }
+    } else {
+      library = await get('library', { collections: [], files: [] });
+    }
+    library.collections = library.collections || []; library.files = library.files || [];
+    renderFiles();
+  }
+  async function saveLibrary() {
+    if (backend()) { try { await apiSend('PUT', '/library', library); } catch (e) { console.error('library save failed', e); } }
+    else await set('library', library);
+    renderFiles();
+  }
+  function newCollection() {
+    const name = (prompt('Collection name:') || '').trim(); if (!name) return;
+    library.collections.push({ id: 'c' + Date.now(), name }); saveLibrary();
+  }
+  function renameCollection(id) {
+    const c = library.collections.find(c => c.id === id); if (!c) return;
+    const name = (prompt('Rename collection:', c.name) || '').trim(); if (!name) return;
+    c.name = name; saveLibrary();
+  }
+  function deleteCollection(id) {
+    if (!confirm('Delete this collection? Its files move to Uncategorized.')) return;
+    library.collections = library.collections.filter(c => c.id !== id);
+    library.files.forEach(f => { if (f.collectionId === id) f.collectionId = null; });
+    saveLibrary();
+  }
+  async function addLibraryFiles(collectionId, fileList) {
+    for (const f of Array.from(fileList || [])) {
+      if (f.size > MAX_FILE) { alert('"' + f.name + '" is ' + fmtSize(f.size) + '. The demo caps uploads at ' + fmtSize(MAX_FILE) + '.'); continue; }
+      const dataUrl = await readAsDataURL(f);
+      library.files.push({ id: 'lf' + Date.now() + Math.random().toString(36).slice(2,5), name: f.name, type: f.type || 'application/octet-stream', size: f.size, dataUrl, source: 'manual', collectionId: collectionId || null, createdISO: new Date().toISOString() });
+    }
+    saveLibrary();
+  }
+  function removeLibraryFile(id) { library.files = library.files.filter(f => f.id !== id); saveLibrary(); }
+
+  function fileRow(f) {
+    const row = el('div','file-row');
+    row.appendChild(el('div','file-ico', FILE_SVG));
+    const main = el('div','file-main');
+    main.appendChild(el('div','file-name', escapeHtml(f.name)));
+    const meta = el('div','file-meta'); meta.appendChild(document.createTextNode(fmtSize(f.size) + ' \u00b7 '));
+    meta.appendChild(el('span','src-badge ' + (f.source === 'ai' ? 'src-ai' : 'src-manual'), f.source === 'ai' ? 'AI' : 'Added'));
+    main.appendChild(meta);
+    row.appendChild(main);
+    const open = el('button','mini-btn','Open'); open.onclick = () => openAttachment(f); row.appendChild(open);
+    const del = el('button','mini-btn danger','Remove'); del.onclick = () => removeLibraryFile(f.id); row.appendChild(del);
+    return row;
+  }
+  function collectionCard(name, files, opts) {
+    const card = el('div','collection');
+    const head = el('div','collection-head');
+    head.appendChild(el('div','collection-name', escapeHtml(name)));
+    if (opts) {
+      const acts = el('div','collection-actions');
+      const addF = el('button','mini-btn','+ File'); addF.onclick = () => { fileTargetCollection = opts.id; document.getElementById('file-input').click(); }; acts.appendChild(addF);
+      const ren = el('button','mini-btn','Rename'); ren.onclick = () => renameCollection(opts.id); acts.appendChild(ren);
+      const del = el('button','mini-btn danger','Delete'); del.onclick = () => deleteCollection(opts.id); acts.appendChild(del);
+      head.appendChild(acts);
+    }
+    card.appendChild(head);
+    const rows = el('div','file-rows');
+    if (!files.length) rows.appendChild(el('div','files-empty','No files yet.'));
+    else files.forEach(f => rows.appendChild(fileRow(f)));
+    card.appendChild(rows);
+    return card;
+  }
+  function renderFiles() {
+    const box = document.getElementById('files'); if (!box) return; box.innerHTML = '';
+    library.collections.forEach(c => box.appendChild(collectionCard(c.name, library.files.filter(f => f.collectionId === c.id), { id: c.id })));
+    const unc = library.files.filter(f => !f.collectionId);
+    if (unc.length) box.appendChild(collectionCard('Uncategorized', unc, null));
+    if (!library.collections.length && !library.files.length) {
+      box.appendChild(el('div','files-empty','No files yet. Files the assistant generates will show up here, and you can add your own or group them into collections.'));
+    }
+  }
+
+  // ===== Calendar tab (month view of the same board data) =====
+  let calMonth = new Date(); calMonth.setDate(1); calMonth.setHours(0,0,0,0);
+  function calItemsByDay() {
+    const map = {};
+    const push = (iso, e) => { if (!iso) return; const k = dayKey(iso); (map[k] = map[k] || []).push(e); };
+    events.forEach(e => push(e.startISO, { color: TYPE_COLOR.event, title: e.title, done: !!e.completed }));
+    exams.forEach(x => push(x.dueISO, { color: TYPE_COLOR.exam, title: x.title, done: !!x.completed }));
+    assignments.forEach(a => push(a.scheduledISO || a.dueISO, { color: TYPE_COLOR.assignment, title: a.title, done: !!a.completed }));
+    todos.filter(t => t.done && t.completedISO).forEach(t => push(t.completedISO, { color: TYPE_COLOR.todo, title: t.text, done: true }));
+    return map;
+  }
+  function renderCalendar() {
+    const box = document.getElementById('calendar'); if (!box) return;
+    const titleEl = document.getElementById('cal-title'); if (titleEl) titleEl.textContent = calMonth.toLocaleDateString([], { month: 'long', year: 'numeric' });
+    const byDay = calItemsByDay(), todayKey = dayKey(new Date());
+    const startPad = new Date(calMonth).getDay();
+    const daysInMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 0).getDate();
+    const grid = el('div','cal-grid');
+    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => grid.appendChild(el('div','cal-dow', d)));
+    for (let i = 0; i < startPad; i++) grid.appendChild(el('div','cal-cell blank'));
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(calMonth.getFullYear(), calMonth.getMonth(), day), k = dayKey(date);
+      const cell = el('div','cal-cell' + (k === todayKey ? ' today' : ''));
+      cell.appendChild(el('div','cal-daynum', String(day)));
+      const items = byDay[k] || [];
+      items.slice(0, 3).forEach(it => {
+        const p = el('div','cal-pill' + (it.done ? ' done' : ''));
+        const dot = el('span','cal-dot'); dot.style.background = it.color; p.appendChild(dot);
+        p.appendChild(el('span', null, escapeHtml(it.title)));
+        cell.appendChild(p);
+      });
+      if (items.length > 3) cell.appendChild(el('div','cal-more', '+' + (items.length - 3) + ' more'));
+      cell.onclick = () => openAddOn(date);
+      grid.appendChild(cell);
+    }
+    box.innerHTML = ''; box.appendChild(grid);
+  }
+  function openAddOn(date) {
+    presetDate = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    openAdd();
   }
 
   // ---- Mutations (route through the backend when configured, else local) ----
@@ -1057,6 +1283,7 @@
 
   // ---- Add modal ----
   let currentType = 'assignment';
+  let presetDate = null;  // set when adding from a calendar day click
   function isoAt(dateStr, defHour, timeStr) {
     const [y,m,d] = dateStr.split('-').map(Number);
     let hh = defHour, mm = 0;
@@ -1072,7 +1299,7 @@
   }
   function renderFields(type) {
     const box = document.getElementById('add-fields');
-    const today = new Date().toISOString().slice(0,10);
+    const today = presetDate || new Date().toISOString().slice(0,10);
     if (type === 'assignment') {
       box.innerHTML = `
         <div><label>Title</label><input id="f-title" type="text" placeholder="Problem Set 6"></div>
@@ -1141,7 +1368,7 @@
     renderFields('assignment');
     document.getElementById('add-overlay').style.display = 'grid';
   }
-  function closeAdd() { document.getElementById('add-overlay').style.display = 'none'; }
+  function closeAdd() { document.getElementById('add-overlay').style.display = 'none'; presetDate = null; }
 
   // ---- Auth + views ----
   async function loadData() {
@@ -1168,7 +1395,8 @@
     document.getElementById('login-view').style.display = 'none';
     document.getElementById('dashboard-view').style.display = 'block';
     document.getElementById('chat-launch').style.display = 'flex';
-    loadData(); loadChat();
+    switchView('dashboard');
+    loadData(); loadChat(); loadLibrary();
   }
   function showLogin() {
     document.getElementById('dashboard-view').style.display = 'none';
@@ -1214,6 +1442,14 @@
   }
 
   // ---- Wiring ----
+  document.querySelectorAll('.tab').forEach(t => { t.onclick = () => switchView(t.dataset.view); });
+  document.getElementById('new-collection').onclick = newCollection;
+  document.getElementById('add-file').onclick = () => { fileTargetCollection = null; document.getElementById('file-input').click(); };
+  document.getElementById('file-input').onchange = (e) => { addLibraryFiles(fileTargetCollection, e.target.files); e.target.value = ''; };
+  document.getElementById('cal-prev').onclick = () => { calMonth.setMonth(calMonth.getMonth() - 1); renderCalendar(); };
+  document.getElementById('cal-next').onclick = () => { calMonth.setMonth(calMonth.getMonth() + 1); renderCalendar(); };
+  document.getElementById('cal-today').onclick = () => { calMonth = new Date(); calMonth.setDate(1); calMonth.setHours(0,0,0,0); renderCalendar(); };
+
   document.getElementById('signin').onclick = signIn;
   document.getElementById('login-toggle').onclick = () => setAuthMode(authMode === 'login' ? 'register' : 'login');
   document.getElementById('login-logo').src = LOGO_WORDMARK;
