@@ -98,14 +98,21 @@ cd orchestrator && MODE=mock python3 test_loop.py   # 58: agent loop, cards, par
 **The Canvas data.** `orchestrator/canvas_pages/` is what the crawler reads.
 `rowanCanvas.html` (a saved Canvas dashboard) and `cs1684_assignments.html`
 are committed, so the crawler has something to read on any clone or
-deployment. `canvas_export.json` — the full 358-assignment API export — is
-gitignored, because it's a real student's coursework; copy it in locally if
-you want the richer data. `python3 canvas.py` prints exactly what Claude will
-see from each page.
+deployment. `canvas_export.json` — the full 358-assignment API export — is also
+committed. `python3 canvas.py` prints exactly what Claude will see from each
+page.
 
-> Heads up: `rowanCanvas.html` is a real Canvas dashboard with a real name and
-> real course enrolments in it, and it's committed. Fine for a private repo;
-> worth a thought before you make this public.
+> **Before this repo goes public, read this.** Two files in
+> `orchestrator/canvas_pages/` contain a real student's real data:
+> `rowanCanvas.html` (a saved dashboard, with a name in it) and
+> `canvas_export.json` (184KB — 358 assignments across 23 courses, two
+> finished semesters included). Both are tracked. The `.gitignore` entry that
+> looks like it covers the export never matched: it was anchored to
+> `<repo>/canvas_pages/`, and the file lives under `orchestrator/`. Fixing the
+> pattern doesn't untrack it either — git only ignores files it isn't already
+> following. To actually remove them you need
+> `git rm --cached <file>` plus a history rewrite, since they're in earlier
+> commits too. Left as your call; the crawler works without the export.
 
 **Database** (only for `live`, and for anything that has to persist):
 
