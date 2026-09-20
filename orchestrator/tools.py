@@ -329,7 +329,7 @@ TOOL_SCHEMAS: list[dict] = [
 
 # Trimmed read-only set for the voice path (Alexa, later). Fast tools only.
 FAST_TOOL_NAMES = {"check_freshness", "get_assignments", "get_overdue",
-                   "get_schedule", "get_events"}
+                   "get_schedule", "get_events", "get_workload_history"}
 FAST_TOOL_SCHEMAS = [t for t in TOOL_SCHEMAS if t["function"]["name"] in FAST_TOOL_NAMES]
 
 

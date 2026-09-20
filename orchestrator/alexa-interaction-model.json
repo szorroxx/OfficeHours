@@ -1,0 +1,84 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "office hours",
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": [
+            "what can you do",
+            "help"
+          ]
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "DueIntent",
+          "slots": [
+            { "name": "Course", "type": "AMAZON.SearchQuery" },
+            { "name": "Days", "type": "AMAZON.NUMBER" }
+          ],
+          "samples": [
+            "what assignments are due",
+            "what is due this week",
+            "what is due in {Days} days",
+            "what is due for {Course}",
+            "what assignments are due for {Course}"
+          ]
+        },
+        {
+          "name": "OverdueIntent",
+          "samples": [
+            "what is overdue",
+            "what assignments did I miss",
+            "am I behind"
+          ]
+        },
+        {
+          "name": "ScheduleIntent",
+          "samples": [
+            "what is on my schedule",
+            "what do I have today",
+            "read my study schedule"
+          ]
+        },
+        {
+          "name": "EventsIntent",
+          "slots": [
+            { "name": "Days", "type": "AMAZON.NUMBER" }
+          ],
+          "samples": [
+            "what events are coming up",
+            "what is happening on campus",
+            "what events are happening in {Days} days"
+          ]
+        },
+        {
+          "name": "FreshnessIntent",
+          "samples": [
+            "is my coursework up to date",
+            "when was Canvas last checked",
+            "is my data current"
+          ]
+        },
+        {
+          "name": "WorkloadIntent",
+          "slots": [
+            { "name": "Days", "type": "AMAZON.NUMBER" }
+          ],
+          "samples": [
+            "how has my workload changed",
+            "how busy am I",
+            "show my workload over the last {Days} days"
+          ]
+        }
+      ]
+    }
+  }
+}

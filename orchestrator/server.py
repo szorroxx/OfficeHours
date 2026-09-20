@@ -132,14 +132,54 @@ def alexa(body: dict) -> dict:
     if request_type == "LaunchRequest":
         utterance = "Give me my Office Hours update."
     elif request_type == "IntentRequest":
-        intent_name = request.get("intent", {}).get("name", "")
+        intent = request.get("intent", {})
+        intent_name = intent.get("name", "")
+        slots = intent.get("slots", {})
+
+        if intent_name == "AMAZON.HelpIntent":
+            return {
+                "version": "1.0",
+                "response": {
+                    "shouldEndSession": False,
+                    "outputSpeech": {
+                        "type": "PlainText",
+                        "text": "You can ask about what is due, overdue work, your schedule, campus events, data freshness, or workload.",
+                    },
+                    "reprompt": {
+                        "outputSpeech": {
+                            "type": "PlainText",
+                            "text": "What would you like to know?",
+                        }
+                    },
+                },
+            }
+        if intent_name in {"AMAZON.CancelIntent", "AMAZON.StopIntent"}:
+            return {
+                "version": "1.0",
+                "response": {
+                    "shouldEndSession": True,
+                    "outputSpeech": {"type": "PlainText", "text": "Goodbye."},
+                },
+            }
+
+        def slot(name: str) -> str | None:
+            value = slots.get(name, {}).get("value")
+            return value.strip() if isinstance(value, str) and value.strip() else None
+
+        course = slot("Course")
+        days = slot("Days")
         utterance = {
-            "DueIntent": "What assignments are due?",
+            "DueIntent": "What assignments are due"
+                         + (f" in {course}" if course else "")
+                         + (f" within {days} days" if days else "") + "?",
+            "OverdueIntent": "What assignments are overdue?",
             "ScheduleIntent": "What is on my schedule?",
-            "EventsIntent": "What events are coming up?",
-        }.get(intent_name)
-        if utterance is None:
-            utterance = "Give me my Office Hours update."
+            "EventsIntent": "What events are coming up"
+                            + (f" within {days} days" if days else "") + "?",
+            "FreshnessIntent": "Is my coursework up to date?",
+            "WorkloadIntent": "How has my workload changed"
+                              + (f" over the last {days} days" if days else "") + "?",
+        }.get(intent_name, "Give me my Office Hours update.")
     elif request_type == "SessionEndedRequest":
         return {"version": "1.0", "response": {"shouldEndSession": True}}
     else:
